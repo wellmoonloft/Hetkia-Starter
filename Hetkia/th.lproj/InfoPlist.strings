@@ -1,0 +1,4 @@
+"CFBundleDisplayName" = "Hetkia";
+"NSPhotoLibraryUsageDescription" = "Hetkia ต้องการเข้าถึงรูปภาพเพื่อจัดรูปที่คุณเลือกลงในหน้าบันทึก รูปภาพจะประมวลผลบนอุปกรณ์นี้";
+"NSLocationWhenInUseUsageDescription" = "ตำแหน่งที่ตั้งจะใช้เพิ่มสถานที่ใกล้เคียงลงในบันทึกเฉพาะเมื่อคุณอนุญาตเท่านั้น";
+"NSLocationUsageDescription" = "Hetkia ใช้ตำแหน่งของคุณโดยได้รับอนุญาต เพื่อเพิ่มสถานที่ใกล้เคียงลงในบันทึก";

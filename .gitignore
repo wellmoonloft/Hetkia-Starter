@@ -1,0 +1,21 @@
+# macOS
+.DS_Store
+
+# Xcode user-specific state and build products
+**/xcuserdata/
+*.xcuserstate
+DerivedData/
+build/
+
+# Swift Package Manager local state/build products
+.build/
+.swiftpm/xcode/package.xcworkspace/xcuserdata/
+
+# Signing and generated archives
+*.ipa
+*.xcarchive
+*.dSYM/
+*.hmap
+*.moved-aside
+*.xccheckout
+*.xcscmblueprint

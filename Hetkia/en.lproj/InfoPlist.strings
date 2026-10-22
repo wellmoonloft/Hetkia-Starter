@@ -1,0 +1,4 @@
+"CFBundleDisplayName" = "Hetkia";
+"NSPhotoLibraryUsageDescription" = "Hetkia needs access to your photos to organize selected images into a personal journal page. Photos are processed on this device.";
+"NSLocationWhenInUseUsageDescription" = "Only when you allow it, location is used to add a nearby place to a journal.";
+"NSLocationUsageDescription" = "Hetkia uses your location while in use, with your permission, to add a nearby place to a journal.";

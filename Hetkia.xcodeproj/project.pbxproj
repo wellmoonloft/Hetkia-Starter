@@ -1,0 +1,497 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		A10000000000000000000001 /* HetkiaApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000001 /* HetkiaApp.swift */; };
+		A10000000000000000000002 /* JournalPageComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000002 /* JournalPageComponents.swift */; };
+		A10000000000000000000003 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000003 /* Assets.xcassets */; };
+		A10000000000000000000004 /* Hetkia-App-Icon-Concept.png in Resources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000004 /* Hetkia-App-Icon-Concept.png */; };
+		A10000000000000000000005 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000006 /* Localizable.xcstrings */; };
+		A10000000000000000000006 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = A40000000000000000000009 /* InfoPlist.strings */; };
+		A10000000000000000000007 /* JournalEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000000A /* JournalEntry.swift */; };
+		A10000000000000000000008 /* TimelineComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000000B /* TimelineComponents.swift */; };
+		A10000000000000000000009 /* TimelineHomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000000C /* TimelineHomeView.swift */; };
+		A1000000000000000000000A /* YearOverviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000000D /* YearOverviewView.swift */; };
+		A1000000000000000000000B /* MonthCalendarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000000E /* MonthCalendarView.swift */; };
+		A1000000000000000000000C /* PhotoWallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000000F /* PhotoWallView.swift */; };
+		A1000000000000000000000D /* JournalDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000010 /* JournalDetailView.swift */; };
+		A1000000000000000000000E /* JournalSearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000011 /* JournalSearchView.swift */; };
+		A1000000000000000000000F /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000012 /* SettingsView.swift */; };
+		A10000000000000000000010 /* OnboardingFlowModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000015 /* OnboardingFlowModel.swift */; };
+		A10000000000000000000011 /* OnboardingFlowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000016 /* OnboardingFlowView.swift */; };
+		A10000000000000000000012 /* JournalModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000017 /* JournalModels.swift */; };
+		A10000000000000000000013 /* PersistentJournalViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000018 /* PersistentJournalViews.swift */; };
+		A10000000000000000000014 /* PhotoLibraryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000019 /* PhotoLibraryService.swift */; };
+		A10000000000000000000015 /* PhotoAssetResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000001A /* PhotoAssetResolver.swift */; };
+		A10000000000000000000016 /* PhotoImportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000001B /* PhotoImportView.swift */; };
+		A10000000000000000000017 /* JournalDraftService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000001C /* JournalDraftService.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		A20000000000000000000001 /* HetkiaApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HetkiaApp.swift; sourceTree = "<group>"; };
+		A20000000000000000000002 /* JournalPageComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JournalPageComponents.swift; sourceTree = "<group>"; };
+		A20000000000000000000003 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		A20000000000000000000004 /* Hetkia-App-Icon-Concept.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Hetkia-App-Icon-Concept.png"; sourceTree = "<group>"; };
+		A20000000000000000000005 /* Hetkia.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Hetkia.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A20000000000000000000006 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
+		A20000000000000000000007 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
+		A20000000000000000000008 /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/InfoPlist.strings"; sourceTree = "<group>"; };
+		A20000000000000000000009 /* zh-Hant */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hant"; path = "zh-Hant.lproj/InfoPlist.strings"; sourceTree = "<group>"; };
+		A2000000000000000000000A /* JournalEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JournalEntry.swift; sourceTree = "<group>"; };
+		A2000000000000000000000B /* TimelineComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelineComponents.swift; sourceTree = "<group>"; };
+		A2000000000000000000000C /* TimelineHomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelineHomeView.swift; sourceTree = "<group>"; };
+		A2000000000000000000000D /* YearOverviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YearOverviewView.swift; sourceTree = "<group>"; };
+		A2000000000000000000000E /* MonthCalendarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonthCalendarView.swift; sourceTree = "<group>"; };
+		A2000000000000000000000F /* PhotoWallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoWallView.swift; sourceTree = "<group>"; };
+		A20000000000000000000010 /* JournalDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JournalDetailView.swift; sourceTree = "<group>"; };
+		A20000000000000000000011 /* JournalSearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JournalSearchView.swift; sourceTree = "<group>"; };
+		A20000000000000000000012 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		A20000000000000000000013 /* es */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = es; path = es.lproj/InfoPlist.strings; sourceTree = "<group>"; };
+		A20000000000000000000014 /* th */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = th; path = th.lproj/InfoPlist.strings; sourceTree = "<group>"; };
+		A20000000000000000000015 /* OnboardingFlowModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingFlowModel.swift; sourceTree = "<group>"; };
+		A20000000000000000000016 /* OnboardingFlowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingFlowView.swift; sourceTree = "<group>"; };
+		A20000000000000000000017 /* JournalModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JournalModels.swift; sourceTree = "<group>"; };
+		A20000000000000000000018 /* PersistentJournalViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersistentJournalViews.swift; sourceTree = "<group>"; };
+		A20000000000000000000019 /* PhotoLibraryService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoLibraryService.swift; sourceTree = "<group>"; };
+		A2000000000000000000001A /* PhotoAssetResolver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoAssetResolver.swift; sourceTree = "<group>"; };
+		A2000000000000000000001B /* PhotoImportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoImportView.swift; sourceTree = "<group>"; };
+		A2000000000000000000001C /* JournalDraftService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JournalDraftService.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		A30000000000000000000001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		A40000000000000000000001 = {
+			isa = PBXGroup;
+			children = (
+				A40000000000000000000002 /* Hetkia */,
+				A40000000000000000000003 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		A40000000000000000000002 /* Hetkia */ = {
+			isa = PBXGroup;
+			children = (
+				A40000000000000000000004 /* App */,
+				A40000000000000000000005 /* Features */,
+				A20000000000000000000003 /* Assets.xcassets */,
+				A40000000000000000000006 /* Resources */,
+				A40000000000000000000009 /* InfoPlist.strings */,
+			);
+			path = Hetkia;
+			sourceTree = "<group>";
+		};
+		A40000000000000000000003 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				A20000000000000000000005 /* Hetkia.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		A40000000000000000000004 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				A20000000000000000000001 /* HetkiaApp.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		A40000000000000000000005 /* Features */ = {
+			isa = PBXGroup;
+			children = (
+				A40000000000000000000007 /* Journal */,
+				A4000000000000000000000A /* Timeline */,
+				A4000000000000000000000B /* Search */,
+				A4000000000000000000000C /* Settings */,
+				A4000000000000000000000D /* Onboarding */,
+				A4000000000000000000000E /* Photos */,
+				A4000000000000000000000F /* AI */,
+			);
+			path = Features;
+			sourceTree = "<group>";
+		};
+		A40000000000000000000006 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				A40000000000000000000008 /* Branding */,
+				A20000000000000000000006 /* Localizable.xcstrings */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		A40000000000000000000007 /* Journal */ = {
+			isa = PBXGroup;
+			children = (
+				A20000000000000000000002 /* JournalPageComponents.swift */,
+				A20000000000000000000010 /* JournalDetailView.swift */,
+				A20000000000000000000017 /* JournalModels.swift */,
+				A20000000000000000000018 /* PersistentJournalViews.swift */,
+			);
+			path = Journal;
+			sourceTree = "<group>";
+		};
+		A40000000000000000000008 /* Branding */ = {
+			isa = PBXGroup;
+			children = (
+				A20000000000000000000004 /* Hetkia-App-Icon-Concept.png */,
+			);
+			path = Branding;
+			sourceTree = "<group>";
+		};
+		A4000000000000000000000A /* Timeline */ = {
+			isa = PBXGroup;
+			children = (
+				A2000000000000000000000A /* JournalEntry.swift */,
+				A2000000000000000000000B /* TimelineComponents.swift */,
+				A2000000000000000000000C /* TimelineHomeView.swift */,
+				A2000000000000000000000D /* YearOverviewView.swift */,
+				A2000000000000000000000E /* MonthCalendarView.swift */,
+				A2000000000000000000000F /* PhotoWallView.swift */,
+			);
+			path = Timeline;
+			sourceTree = "<group>";
+		};
+		A4000000000000000000000B /* Search */ = {
+			isa = PBXGroup;
+			children = (
+				A20000000000000000000011 /* JournalSearchView.swift */,
+			);
+			path = Search;
+			sourceTree = "<group>";
+		};
+		A4000000000000000000000C /* Settings */ = {
+			isa = PBXGroup;
+			children = (
+				A20000000000000000000012 /* SettingsView.swift */,
+			);
+			path = Settings;
+			sourceTree = "<group>";
+		};
+		A4000000000000000000000D /* Onboarding */ = {
+			isa = PBXGroup;
+			children = (
+				A20000000000000000000015 /* OnboardingFlowModel.swift */,
+				A20000000000000000000016 /* OnboardingFlowView.swift */,
+			);
+			path = Onboarding;
+			sourceTree = "<group>";
+		};
+		A4000000000000000000000E /* Photos */ = {
+			isa = PBXGroup;
+			children = (
+				A20000000000000000000019 /* PhotoLibraryService.swift */,
+				A2000000000000000000001A /* PhotoAssetResolver.swift */,
+				A2000000000000000000001B /* PhotoImportView.swift */,
+			);
+			path = Photos;
+			sourceTree = "<group>";
+		};
+		A4000000000000000000000F /* AI */ = {
+			isa = PBXGroup;
+			children = (
+				A2000000000000000000001C /* JournalDraftService.swift */,
+			);
+			path = AI;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		A50000000000000000000001 /* Hetkia */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A60000000000000000000002 /* Build configuration list for PBXNativeTarget "Hetkia" */;
+			buildPhases = (
+				A70000000000000000000001 /* Sources */,
+				A30000000000000000000001 /* Frameworks */,
+				A70000000000000000000002 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Hetkia;
+			productName = Hetkia;
+			productReference = A20000000000000000000005 /* Hetkia.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		A80000000000000000000001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastUpgradeCheck = 2710;
+				TargetAttributes = {
+					A50000000000000000000001 = {
+						CreatedOnToolsVersion = 27.0;
+					};
+				};
+			};
+			buildConfigurationList = A60000000000000000000001 /* Build configuration list for PBXProject "Hetkia" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				es,
+				th,
+				Base,
+				"zh-Hans",
+				"zh-Hant",
+			);
+			mainGroup = A40000000000000000000001;
+			productRefGroup = A40000000000000000000003 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				A50000000000000000000001 /* Hetkia */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		A70000000000000000000002 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A10000000000000000000003 /* Assets.xcassets in Resources */,
+				A10000000000000000000004 /* Hetkia-App-Icon-Concept.png in Resources */,
+				A10000000000000000000005 /* Localizable.xcstrings in Resources */,
+				A10000000000000000000006 /* InfoPlist.strings in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		A70000000000000000000001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A10000000000000000000001 /* HetkiaApp.swift in Sources */,
+				A10000000000000000000002 /* JournalPageComponents.swift in Sources */,
+				A10000000000000000000007 /* JournalEntry.swift in Sources */,
+				A10000000000000000000008 /* TimelineComponents.swift in Sources */,
+				A10000000000000000000009 /* TimelineHomeView.swift in Sources */,
+				A1000000000000000000000A /* YearOverviewView.swift in Sources */,
+				A1000000000000000000000B /* MonthCalendarView.swift in Sources */,
+				A1000000000000000000000C /* PhotoWallView.swift in Sources */,
+				A1000000000000000000000D /* JournalDetailView.swift in Sources */,
+				A1000000000000000000000E /* JournalSearchView.swift in Sources */,
+				A1000000000000000000000F /* SettingsView.swift in Sources */,
+				A10000000000000000000010 /* OnboardingFlowModel.swift in Sources */,
+				A10000000000000000000011 /* OnboardingFlowView.swift in Sources */,
+				A10000000000000000000012 /* JournalModels.swift in Sources */,
+				A10000000000000000000013 /* PersistentJournalViews.swift in Sources */,
+				A10000000000000000000014 /* PhotoLibraryService.swift in Sources */,
+				A10000000000000000000015 /* PhotoAssetResolver.swift in Sources */,
+				A10000000000000000000016 /* PhotoImportView.swift in Sources */,
+				A10000000000000000000017 /* JournalDraftService.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXVariantGroup section */
+		A40000000000000000000009 /* InfoPlist.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				A20000000000000000000007 /* en */,
+				A20000000000000000000013 /* es */,
+				A20000000000000000000014 /* th */,
+				A20000000000000000000008 /* zh-Hans */,
+				A20000000000000000000009 /* zh-Hant */,
+			);
+			name = InfoPlist.strings;
+			sourceTree = "<group>";
+		};
+/* End PBXVariantGroup section */
+
+/* Begin XCBuildConfiguration section */
+		A90000000000000000000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				DEAD_CODE_STRIPPING = YES;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = auto;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		A90000000000000000000002 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				DEAD_CODE_STRIPPING = YES;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
+				SDKROOT = auto;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		A90000000000000000000003 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				"ASSETCATALOG_COMPILER_APPICON_NAME[sdk=macosx*]" = HetkiaMacIcon;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = Hetkia;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.lifestyle";
+				INFOPLIST_KEY_NSLocationUsageDescription = "Location is used only to add a nearby place to a journal when you choose to allow it.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Location is used only to add a nearby place to a journal when you choose to allow it.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Photo access is used to organize selected images into a personal journal page.";
+				INFOPLIST_KEY_UIRequiresFullScreen = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = UIInterfaceOrientationPortrait;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = UIInterfaceOrientationPortrait;
+				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.hetkia.app;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		A90000000000000000000004 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				"ASSETCATALOG_COMPILER_APPICON_NAME[sdk=macosx*]" = HetkiaMacIcon;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = Hetkia;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.lifestyle";
+				INFOPLIST_KEY_NSLocationUsageDescription = "Location is used only to add a nearby place to a journal when you choose to allow it.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Location is used only to add a nearby place to a journal when you choose to allow it.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Photo access is used to organize selected images into a personal journal page.";
+				INFOPLIST_KEY_UIRequiresFullScreen = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = UIInterfaceOrientationPortrait;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = UIInterfaceOrientationPortrait;
+				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.hetkia.app;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		A60000000000000000000001 /* Build configuration list for PBXProject "Hetkia" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A90000000000000000000001 /* Debug */,
+				A90000000000000000000002 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A60000000000000000000002 /* Build configuration list for PBXNativeTarget "Hetkia" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A90000000000000000000003 /* Debug */,
+				A90000000000000000000004 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = A80000000000000000000001 /* Project object */;
+}
