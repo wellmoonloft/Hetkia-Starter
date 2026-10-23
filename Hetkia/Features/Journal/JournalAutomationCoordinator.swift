@@ -2,9 +2,14 @@ import Foundation
 import Photos
 import SwiftData
 import CoreGraphics
+import Combine
 #if !os(macOS)
 import UIKit
 #endif
+
+extension Notification.Name {
+    static let hetkiaJournalRecordsDidChange = Notification.Name("hetkia.journalRecordsDidChange")
+}
 
 private struct IndexedPhotoMetadata: Sendable {
     let identifier: String
@@ -19,13 +24,31 @@ private struct IndexedPhotoMetadata: Sendable {
 /// Runs only on foreground opportunities. The persistent task queue makes an interrupted
 /// generation retryable on the next activation; iOS background timing is not guaranteed.
 @MainActor
-final class JournalAutomationCoordinator {
+final class JournalAutomationCoordinator: ObservableObject {
     static let shared = JournalAutomationCoordinator()
+    @Published private(set) var historicalIndexProgress: Double
+    @Published private(set) var historicalIndexRequested: Bool
+    @Published private(set) var historicalIndexCompleted: Bool
+    @Published private(set) var historicalIndexIsRunning = false
     private var isRunning = false
     private var historicalIndexTask: Task<Void, Never>?
 
     private let historicalIndexRequestedKey = "hetkia.historicalIndex.requested"
     private let historicalIndexCompletedKey = "hetkia.historicalIndex.completed"
+    private let historicalIndexProgressKey = "hetkia.historicalIndex.progress"
+
+    private init() {
+        historicalIndexProgress = UserDefaults.standard.double(forKey: historicalIndexProgressKey)
+        historicalIndexRequested = UserDefaults.standard.bool(forKey: historicalIndexRequestedKey)
+        historicalIndexCompleted = UserDefaults.standard.bool(forKey: historicalIndexCompletedKey)
+    }
+
+    func refreshHistoricalIndexStatus() {
+        historicalIndexProgress = UserDefaults.standard.double(forKey: historicalIndexProgressKey)
+        historicalIndexRequested = UserDefaults.standard.bool(forKey: historicalIndexRequestedKey)
+        historicalIndexCompleted = UserDefaults.standard.bool(forKey: historicalIndexCompletedKey)
+        historicalIndexIsRunning = historicalIndexTask != nil
+    }
 
     /// Creates photo-only journal entries for the most recent 30 calendar days. No AI task
     /// is inserted; users can request text generation later from each journal.
@@ -42,9 +65,17 @@ final class JournalAutomationCoordinator {
 
     /// Starts a resumable metadata-only scan for all photos older than the recent 30-day
     /// window. The preference survives termination; the next foreground activation resumes it.
-    func startHistoricalLibraryIndex(context: ModelContext) {
-        guard !UserDefaults.standard.bool(forKey: historicalIndexCompletedKey) else { return }
+    func startHistoricalLibraryIndex(context: ModelContext, restartIfCompleted: Bool = false) {
+        guard historicalIndexTask == nil else { return }
+        if UserDefaults.standard.bool(forKey: historicalIndexCompletedKey) {
+            guard restartIfCompleted else { return }
+            UserDefaults.standard.set(0.0, forKey: historicalIndexProgressKey)
+            historicalIndexProgress = 0
+            UserDefaults.standard.set(false, forKey: historicalIndexCompletedKey)
+            historicalIndexCompleted = false
+        }
         UserDefaults.standard.set(true, forKey: historicalIndexRequestedKey)
+        historicalIndexRequested = true
         resumeHistoricalLibraryIndexIfNeeded(context: context)
     }
 
@@ -52,6 +83,7 @@ final class JournalAutomationCoordinator {
         guard UserDefaults.standard.bool(forKey: historicalIndexRequestedKey), historicalIndexTask == nil else { return }
         historicalIndexTask = Task { [weak self] in
             guard let self else { return }
+            self.historicalIndexIsRunning = true
             defer { self.historicalIndexTask = nil }
 #if !os(macOS)
             let backgroundTaskID = UIApplication.shared.beginBackgroundTask(withName: "HetkiaHistoricalPhotoIndex") {
@@ -63,16 +95,30 @@ final class JournalAutomationCoordinator {
                 }
             }
 #endif
-            guard self.canReadPhotoLibrary else { return }
+            guard self.canReadPhotoLibrary else {
+                self.historicalIndexIsRunning = false
+                return
+            }
             do {
+                // Show that the scan has started while PhotoKit enumerates the library.
+                self.historicalIndexProgress = max(self.historicalIndexProgress, 0.01)
+                UserDefaults.standard.set(self.historicalIndexProgress, forKey: self.historicalIndexProgressKey)
                 let calendar = Calendar.autoupdatingCurrent
                 let recentStart = calendar.date(byAdding: .day, value: -29, to: calendar.startOfDay(for: .now)) ?? .now
-                try await self.indexPhotoDays(from: .distantPast, through: recentStart.addingTimeInterval(-1), context: context) { _ in }
+                try await self.indexPhotoDays(from: .distantPast, through: recentStart.addingTimeInterval(-1), context: context) { value in
+                    self.historicalIndexProgress = value
+                    UserDefaults.standard.set(value, forKey: self.historicalIndexProgressKey)
+                }
                 UserDefaults.standard.set(true, forKey: self.historicalIndexCompletedKey)
                 UserDefaults.standard.set(false, forKey: self.historicalIndexRequestedKey)
+                self.historicalIndexProgress = 1
+                self.historicalIndexCompleted = true
+                self.historicalIndexRequested = false
             } catch {
                 // Keep the request flag set so a later foreground activation can resume safely.
+                context.rollback()
             }
+            self.historicalIndexIsRunning = false
         }
     }
 
@@ -164,6 +210,7 @@ final class JournalAutomationCoordinator {
 
             try context.save()
             await processOnePendingTask(context: context, onlyDayKey: includeOnThisDay ? nil : todayKey)
+            NotificationCenter.default.post(name: .hetkiaJournalRecordsDidChange, object: nil)
         } catch {
             // A later foreground activation retries the scan without creating empty records.
             try? context.save()
@@ -228,6 +275,7 @@ final class JournalAutomationCoordinator {
             }
             if index.isMultiple(of: 24) || index == groups.count - 1 {
                 try context.save()
+                NotificationCenter.default.post(name: .hetkiaJournalRecordsDidChange, object: nil)
                 progress(Double(index + 1) / Double(groups.count))
                 await Task.yield()
                 try Task.checkCancellation()
@@ -360,7 +408,17 @@ final class JournalAutomationCoordinator {
                 try context.save()
                 return
             }
-            let result = try await JournalDraftService.generate(date: journal.localDay, photoCount: photos.count, imageSamples: images)
+            let locationContext = Array(Set(photos.compactMap { photo -> String? in
+                if let place = photo.placeName?.trimmingCharacters(in: .whitespacesAndNewlines), !place.isEmpty { return place }
+                guard let latitude = photo.latitude, let longitude = photo.longitude else { return nil }
+                return String(format: "%.5f, %.5f", latitude, longitude)
+            }))
+            let result = try await JournalDraftService.generate(
+                date: journal.localDay,
+                photoCount: photos.count,
+                imageSamples: images,
+                locationContext: locationContext
+            )
 
             // Recheck immediately before saving, in case the user created the manual entry while AI ran.
             let refreshed = try records(dayKey: task.dayKey, context: context)

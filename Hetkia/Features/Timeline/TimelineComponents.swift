@@ -146,7 +146,6 @@ struct TimelineSectionHeading: View {
 
 struct BottomNavigationBar: View {
     let selectedMode: TimelineBrowseMode
-    let isPhotoWall: Bool
     let onSettings: () -> Void
     let onYear: () -> Void
     let onMonth: () -> Void
@@ -182,7 +181,6 @@ struct BottomNavigationBar: View {
         }
         .padding(.horizontal, 12)
         .animation(.spring(response: 0.32, dampingFraction: 0.86), value: selectedMode)
-        .animation(.easeInOut(duration: 0.2), value: isPhotoWall)
     }
 
     private func roundButton(_ title: LocalizedStringKey, symbol: String, action: @escaping () -> Void) -> some View {

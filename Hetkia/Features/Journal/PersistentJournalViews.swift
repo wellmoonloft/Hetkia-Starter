@@ -4,6 +4,7 @@ import CoreGraphics
 import ImageIO
 import CoreLocation
 import MapKit
+import OSLog
 #if os(iOS)
 import UIKit
 #elseif os(macOS)
@@ -12,6 +13,7 @@ import AppKit
 
 struct PersistentJournalDetailView: View {
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.dismiss) private var dismiss
     @Bindable var record: JournalRecord
     @State private var isGenerating = false
     @State private var notice: String?
@@ -22,6 +24,7 @@ struct PersistentJournalDetailView: View {
     @State private var mapDestination: PhotoMapDestination?
     @State private var sharePayload: ShareImagePayload?
     @State private var isPreparingShare = false
+    @State private var showDeleteConfirmation = false
     @FocusState private var focusedInput: InputTarget?
     @ScaledMetric(relativeTo: .body) private var bodyFontSize: CGFloat = 16
     @ScaledMetric(relativeTo: .headline) private var headingFontSize: CGFloat = 18
@@ -36,11 +39,18 @@ struct PersistentJournalDetailView: View {
     private var locationCities: [JournalLocationItem] {
         var seen = Set<String>()
         return selectedPhotos.compactMap { photo in
-            guard photo.latitude != nil, photo.longitude != nil,
-                  let name = photo.placeName?.trimmingCharacters(in: .whitespacesAndNewlines),
-                  !name.isEmpty else { return nil }
-            let key = name.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
-                .components(separatedBy: .whitespacesAndNewlines).joined()
+            guard let latitude = photo.latitude, let longitude = photo.longitude else { return nil }
+            let storedName = photo.placeName?.trimmingCharacters(in: .whitespacesAndNewlines)
+            let name = storedName.flatMap { $0.isEmpty ? nil : $0 }
+                ?? String(format: "%.5f, %.5f", latitude, longitude)
+            let key: String
+            if storedName?.isEmpty == false {
+                key = name.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
+                    .components(separatedBy: .whitespacesAndNewlines).joined()
+            } else {
+                // Keep unresolved photos at their actual coordinate until a name is found.
+                key = String(format: "%.5f,%.5f", latitude, longitude)
+            }
             guard seen.insert(key).inserted else { return nil }
             return JournalLocationItem(name: name, photo: photo)
         }
@@ -92,6 +102,16 @@ struct PersistentJournalDetailView: View {
         }
         .background(HetkiaPalette.paper.ignoresSafeArea())
         .navigationTitle(record.localDay.formatted(date: .long, time: .omitted))
+        .toolbar {
+            ToolbarItem(placement: .automatic) {
+                Button(role: .destructive) {
+                    showDeleteConfirmation = true
+                } label: {
+                    Image(systemName: "trash")
+                }
+                .accessibilityLabel(Text("journal.delete.action"))
+            }
+        }
 #if os(macOS)
         .sheet(item: $photoGallery) { session in
             PhotoFullScreenGallery(photos: selectedPhotos, initialIndex: session.initialIndex)
@@ -125,11 +145,17 @@ struct PersistentJournalDetailView: View {
 #endif
         .task {
             migrateExistingBodyToMessagePost()
-            await resolvePhotoLocations()
+            resolvePhotoLocations()
         }
         .alert("photos.generate.status", isPresented: Binding(get: { notice != nil }, set: { if !$0 { notice = nil } })) {
             Button("common.ok", role: .cancel) { notice = nil }
         } message: { Text(notice ?? "") }
+        .confirmationDialog("journal.delete.confirm-title", isPresented: $showDeleteConfirmation, titleVisibility: .visible) {
+            Button("journal.delete.action", role: .destructive, action: deleteJournal)
+            Button("common.cancel", role: .cancel) { }
+        } message: {
+            Text("journal.delete.confirm-detail")
+        }
     }
 
     private func persistentPage(photoAreaHeight: CGFloat) -> some View {
@@ -443,59 +469,35 @@ struct PersistentJournalDetailView: View {
         try? modelContext.save()
     }
 
-    private func resolvePhotoLocations() async {
-        var resolvedByCoordinate: [String: String] = [:]
-        for photo in selectedPhotos where photo.latitude != nil && photo.longitude != nil {
-            guard let latitude = photo.latitude, let longitude = photo.longitude else { continue }
-            let coordinateKey = "\(latitude),\(longitude)"
-            if let existing = photo.placeName?.trimmingCharacters(in: .whitespacesAndNewlines), !existing.isEmpty {
-                resolvedByCoordinate[coordinateKey] = existing
-                continue
-            }
-            if let cached = resolvedByCoordinate[coordinateKey] {
-                photo.placeName = cached
-                continue
-            }
-            let location = CLLocation(latitude: latitude, longitude: longitude)
-            guard let place = await reverseGeocodedPlace(for: location), !place.isEmpty else { continue }
-            photo.placeName = place
-            resolvedByCoordinate[coordinateKey] = place
-        }
-        if let firstPlace = selectedPhotos.compactMap({ $0.placeName }).first(where: { !$0.isEmpty }) {
-            record.locationText = firstPlace
-        }
-        try? modelContext.save()
-    }
-
-    private func reverseGeocodedPlace(for location: CLLocation) async -> String? {
-        if #available(iOS 26, macOS 26, *) {
-            guard let request = MKReverseGeocodingRequest(location: location),
-                  let item = try? await request.mapItems.first else { return nil }
-            let representations = item.addressRepresentations
-            return representations?.cityWithContext(.full)
-                ?? representations?.cityName
-                ?? representations?.fullAddress(includingRegion: true, singleLine: true)
-        } else {
-            let geocoder = CLGeocoder()
-            guard let placemark = try? await geocoder.reverseGeocodeLocation(location).first else { return nil }
-            let city = placemark.locality
-            let region = placemark.administrativeArea
-            let regionIsCity = if let city, let region {
-                region.localizedCaseInsensitiveContains(city) || city.localizedCaseInsensitiveContains(region)
-            } else { false }
-            let components = [placemark.subLocality ?? placemark.subAdministrativeArea, city, regionIsCity ? nil : region, placemark.country]
-                .compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
-                .filter { !$0.isEmpty }
-            var uniqueComponents: [String] = []
-            for component in components where !uniqueComponents.contains(component) { uniqueComponents.append(component) }
-            return uniqueComponents.joined(separator: " · ")
-        }
+    private func resolvePhotoLocations() {
+        PhotoLocationResolver.shared.enqueue(photos: selectedPhotos, record: record, context: modelContext)
     }
 
     private func appendPost(text: String, kind: JournalMessagePost.Kind) {
         var updated = record.messagePosts
         updated.append(JournalMessagePost(text: text, createdAt: .now, kind: kind))
         record.messagePosts = updated
+    }
+
+    private func deleteJournal() {
+        let thumbnailPaths = Set(record.photos.map(\.thumbnailRelativePath).filter { !$0.isEmpty })
+        let tasks = (try? modelContext.fetch(FetchDescriptor<JournalGenerationTask>())) ?? []
+        for task in tasks where task.journal?.persistentModelID == record.persistentModelID {
+            modelContext.delete(task)
+        }
+        modelContext.delete(record)
+        do {
+            try modelContext.save()
+            for path in thumbnailPaths {
+                if let url = try? PhotoAssetResolver.thumbnailURL(relativePath: path) {
+                    try? FileManager.default.removeItem(at: url)
+                }
+            }
+            dismiss()
+        } catch {
+            modelContext.rollback()
+            notice = error.localizedDescription
+        }
     }
 
     private func addMessage() {
@@ -546,7 +548,17 @@ struct PersistentJournalDetailView: View {
             if #available(iOS 27, macOS 27, *) {
                 for photo in selectedPhotos { if let image = await PhotoAssetResolver.aiImage(for: photo) { images.append(image) } }
             }
-            let result = try await JournalDraftService.generate(date: record.localDay, photoCount: selectedPhotos.count, imageSamples: images)
+            let locationContext = Array(Set(selectedPhotos.compactMap { photo -> String? in
+                if let place = photo.placeName?.trimmingCharacters(in: .whitespacesAndNewlines), !place.isEmpty { return place }
+                guard let latitude = photo.latitude, let longitude = photo.longitude else { return nil }
+                return String(format: "%.5f, %.5f", latitude, longitude)
+            }))
+            let result = try await JournalDraftService.generate(
+                date: record.localDay,
+                photoCount: selectedPhotos.count,
+                imageSamples: images,
+                locationContext: locationContext
+            )
             record.aiDraftBody = result.body
             if !record.bodyWasEdited { record.bodyText = result.body }
             appendPost(text: result.body, kind: .automatic)
@@ -587,6 +599,219 @@ private struct ShareImagePayload: Identifiable {
     let id = UUID()
     let image: CGImage
     let url: URL
+}
+
+/// Resolves photo coordinates independently of the detail view lifecycle. Requests are
+/// grouped by effectively identical coordinates, serialized, cached locally, and retried
+/// when a lookup fails or the app is interrupted.
+@MainActor
+final class PhotoLocationResolver {
+    static let shared = PhotoLocationResolver()
+
+    private final class Request {
+        let key: String
+        let location: CLLocation
+        var photos: [JournalPhotoRecord]
+        var records: [JournalRecord]
+        let context: ModelContext
+    }
+
+    private static let groupingRadius: CLLocationDistance = 5_000
+
+    private static let cacheKey = "hetkia.reverseGeocoding.cache.v1"
+    private static let logger = Logger(
+        subsystem: Bundle.main.bundleIdentifier ?? "Hetkia",
+        category: "PhotoLocationResolver"
+    )
+
+    private var requests: [Request] = []
+    private var activeRequest: Request?
+    private var worker: Task<Void, Never>?
+
+    private init() { }
+
+    /// Re-queue unresolved photo locations after launch or when the app becomes active.
+    /// This recovers work interrupted by navigation, suspension, or process termination.
+    func resumePending(context: ModelContext) {
+        guard let journals = try? context.fetch(FetchDescriptor<JournalRecord>()) else { return }
+        for record in journals {
+            let unresolved = JournalPhotoSelection.selected(from: record.photos).filter { photo in
+                photo.latitude != nil && photo.longitude != nil
+                    && (photo.placeName?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true)
+            }
+            enqueue(photos: unresolved, record: record, context: context)
+        }
+    }
+
+    func enqueue(photos: [JournalPhotoRecord], record: JournalRecord, context: ModelContext) {
+        let eligible = photos.filter { photo in
+            photo.latitude != nil && photo.longitude != nil
+                && (photo.placeName?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true)
+        }
+
+        for photo in eligible {
+            guard let latitude = photo.latitude, let longitude = photo.longitude else { continue }
+            let location = CLLocation(latitude: latitude, longitude: longitude)
+
+            if let request = matchingRequest(for: location) {
+                add(photo, to: request, record: record)
+                continue
+            }
+            if let cached = cachedPlace(near: location) {
+                apply(cached, to: photo, record: record)
+                continue
+            }
+
+            let request = Request(
+                key: Self.key(latitude: latitude, longitude: longitude),
+                location: location,
+                photos: [photo],
+                records: [record],
+                context: context
+            )
+            photo.locationStatus = .geocodingPending
+            requests.append(request)
+        }
+
+        try? context.save()
+        guard worker == nil, !requests.isEmpty else { return }
+        worker = Task { [weak self] in
+            guard let self else { return }
+            await self.processQueue()
+        }
+    }
+
+    private func processQueue() async {
+        defer { worker = nil }
+        while !requests.isEmpty, !Task.isCancelled {
+            let request = requests.removeFirst()
+            activeRequest = request
+            if let cached = cachedPlace(near: request.location) {
+                finish(request, place: cached)
+            } else if let place = await reverseGeocode(request.location) {
+                var cache = Self.cache
+                cache[request.key] = place
+                Self.cache = cache
+                finish(request, place: place)
+            } else {
+                request.photos.forEach { $0.locationStatus = .geocodingFailed }
+                try? request.context.save()
+                NotificationCenter.default.post(name: .hetkiaJournalRecordsDidChange, object: nil)
+                Self.logger.error("Reverse geocoding returned no place name; retained photo coordinates for map display.")
+            }
+            activeRequest = nil
+            if !requests.isEmpty {
+                try? await Task.sleep(for: .seconds(1.5))
+            }
+        }
+    }
+
+    private func finish(_ request: Request, place: String) {
+        request.photos.forEach { $0.placeName = place; $0.locationStatus = .available }
+        request.records.forEach { record in
+            if record.locationText?.isEmpty != false { record.locationText = place }
+        }
+        try? request.context.save()
+        NotificationCenter.default.post(name: .hetkiaJournalRecordsDidChange, object: nil)
+    }
+
+    private func matchingRequest(for location: CLLocation) -> Request? {
+        if let activeRequest,
+           activeRequest.location.distance(from: location) <= Self.groupingRadius {
+            return activeRequest
+        }
+        return requests.first { $0.location.distance(from: location) <= Self.groupingRadius }
+    }
+
+    private func add(_ photo: JournalPhotoRecord, to request: Request, record: JournalRecord) {
+        if !request.photos.contains(where: { $0.id == photo.id }) {
+            request.photos.append(photo)
+            photo.locationStatus = .geocodingPending
+        }
+        if !request.records.contains(where: { $0.persistentModelID == record.persistentModelID }) {
+            request.records.append(record)
+        }
+    }
+
+    private func apply(_ place: String, to photo: JournalPhotoRecord, record: JournalRecord) {
+        photo.placeName = place
+        photo.locationStatus = .available
+        if record.locationText?.isEmpty != false { record.locationText = place }
+    }
+
+    private func cachedPlace(near location: CLLocation) -> String? {
+        var nearest: (distance: CLLocationDistance, place: String)?
+        for (coordinate, place) in Self.cache {
+            let components = coordinate.split(separator: ",", omittingEmptySubsequences: false)
+            guard components.count == 2,
+                  let latitude = Double(components[0]),
+                  let longitude = Double(components[1]) else { continue }
+            let cachedLocation = CLLocation(latitude: latitude, longitude: longitude)
+            let distance = cachedLocation.distance(from: location)
+            guard distance <= Self.groupingRadius else { continue }
+            if let current = nearest, distance < current.distance {
+                nearest = (distance, place)
+            } else if nearest == nil {
+                nearest = (distance, place)
+            }
+        }
+        return nearest?.place
+    }
+
+    private func reverseGeocode(_ location: CLLocation) async -> String? {
+        if #available(iOS 26, macOS 26, *) {
+            if let request = MKReverseGeocodingRequest(location: location) {
+                request.preferredLocale = Locale(identifier: HetkiaSystemLanguage.identifier)
+                do {
+                    if let item = try await request.mapItems.first {
+                        let representations = item.addressRepresentations
+                        if let address = representations?.cityWithContext(.full)
+                            ?? representations?.cityName
+                            ?? representations?.fullAddress(includingRegion: true, singleLine: true)
+                            ?? item.name
+                            ?? item.placemark.title,
+                           !address.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                            return address
+                        }
+                    }
+                } catch {
+                    Self.logger.error("MapKit reverse-geocoding request failed: \(error.localizedDescription, privacy: .public)")
+                }
+            }
+        }
+
+        do {
+            let geocoder = CLGeocoder()
+            let placemarks = try await geocoder.reverseGeocodeLocation(
+                location,
+                preferredLocale: Locale(identifier: HetkiaSystemLanguage.identifier)
+            )
+            guard let placemark = placemarks.first else { return nil }
+            let values = [placemark.name, placemark.subLocality, placemark.locality,
+                          placemark.administrativeArea, placemark.country]
+                .compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
+                .filter { !$0.isEmpty }
+            var unique: [String] = []
+            for value in values where !unique.contains(where: { $0.caseInsensitiveCompare(value) == .orderedSame }) {
+                unique.append(value)
+            }
+            return unique.isEmpty ? nil : unique.joined(separator: " · ")
+        } catch {
+            Self.logger.error("Core Location reverse-geocoding request failed: \(error.localizedDescription, privacy: .public)")
+            return nil
+        }
+    }
+
+    private static var cache: [String: String] {
+        get { UserDefaults.standard.dictionary(forKey: cacheKey) as? [String: String] ?? [:] }
+        set { UserDefaults.standard.set(newValue, forKey: cacheKey) }
+    }
+
+    private static func key(latitude: Double, longitude: Double) -> String {
+        // Cache the representative coordinate. Nearby locations reuse its city label
+        // only when they fall within the explicit five-kilometre radius.
+        String(format: "%.5f,%.5f", latitude, longitude)
+    }
 }
 
 private struct JournalShareCard: View {

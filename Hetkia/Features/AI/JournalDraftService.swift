@@ -36,7 +36,7 @@ enum JournalDraftService {
     }
 
     @available(iOS 26, macOS 26, *)
-    static func generate(date: Date, photoCount: Int, imageSamples: [CGImage]) async throws -> JournalDraftResult {
+    static func generate(date: Date, photoCount: Int, imageSamples: [CGImage], locationContext: [String] = []) async throws -> JournalDraftResult {
         let model = SystemLanguageModel.default
         guard case .available = model.availability else {
             throw JournalDraftError.unavailable(availabilityDescription)
@@ -45,15 +45,19 @@ enum JournalDraftService {
         let dateText = date.formatted(date: .complete, time: .omitted)
         let outputLanguage = HetkiaSystemLanguage.displayName
         let session = LanguageModelSession(instructions: """
-        You write private journal drafts. Write naturally and concisely in \(outputLanguage).
-        State only what the photos or supplied metadata support. Never guess identities, relationships, exact locations, context, or the user's emotions.
-        Do not mention a place or mood unless reliable information was provided. Do not invent details.
+        You write private journal entries. Write naturally and concisely in \(outputLanguage), as a personal memory rather than a photo caption.
+        Describe what is visible. Use supplied location metadata and visible clues to help recall where the user went, what they may have bought or eaten, and who may have been around, but include these details only when the evidence supports them. Refer to people generically; never guess names or relationships.
+        Do not invent events, objects, meals, places, or emotions. Do not mention the time of day or any clock time. Do not repeat the date in the entry.
         Return only the journal body, without a title, explanation, or list.
         """)
 
         if #available(iOS 27, macOS 27, *), !imageSamples.isEmpty {
             let prompt = Prompt {
-                "Write a short private journal entry for \(dateText) based on these photos and reliable information. The user selected \(photoCount) photos for this day."
+                "Write a short private journal entry for \(dateText), based on these photos and reliable information. The user selected \(photoCount) photos for this day."
+                if !locationContext.isEmpty {
+                    "Photo location metadata: \(locationContext.joined(separator: "; ")). Use it only when relevant and supported."
+                }
+                "Do not include a time in the journal text."
                 for (index, image) in imageSamples.enumerated() {
                     "照片 \(index + 1)："
                     Attachment(image).label("photo-\(index + 1)")
@@ -67,7 +71,8 @@ enum JournalDraftService {
 
         let textOnlyPrompt = """
         Write a short private journal entry for \(dateText). Reliable information: the user selected \(photoCount) photos for this day.
-        You have not seen the photos. Do not describe their content, locations, people, or emotions. Keep the entry brief and do not infer details.
+        Photo location metadata: \(locationContext.isEmpty ? "none" : locationContext.joined(separator: "; ")).
+        You have not seen the photos. Do not describe their content or infer purchases, meals, people, relationships, or emotions. You may refer to the supplied location only when present. Do not include the time of day or any clock time, and do not repeat the date. Keep the entry brief.
         """
         let response = try await session.respond(to: textOnlyPrompt)
         let body = response.content.trimmingCharacters(in: .whitespacesAndNewlines)

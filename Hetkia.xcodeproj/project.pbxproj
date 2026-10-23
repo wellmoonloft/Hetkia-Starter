@@ -31,6 +31,7 @@
 		A10000000000000000000016 /* PhotoImportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000001B /* PhotoImportView.swift */; };
 		A10000000000000000000017 /* JournalDraftService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000001C /* JournalDraftService.swift */; };
 		A10000000000000000000018 /* JournalAutomationCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000001D /* JournalAutomationCoordinator.swift */; };
+		A10000000000000000000019 /* FilteredPhotoPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000001E /* FilteredPhotoPicker.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -63,6 +64,7 @@
 		A2000000000000000000001B /* PhotoImportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoImportView.swift; sourceTree = "<group>"; };
 		A2000000000000000000001C /* JournalDraftService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JournalDraftService.swift; sourceTree = "<group>"; };
 		A2000000000000000000001D /* JournalAutomationCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JournalAutomationCoordinator.swift; sourceTree = "<group>"; };
+		A2000000000000000000001E /* FilteredPhotoPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilteredPhotoPicker.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -199,6 +201,7 @@
 				A20000000000000000000019 /* PhotoLibraryService.swift */,
 				A2000000000000000000001A /* PhotoAssetResolver.swift */,
 				A2000000000000000000001B /* PhotoImportView.swift */,
+				A2000000000000000000001E /* FilteredPhotoPicker.swift */,
 			);
 			path = Photos;
 			sourceTree = "<group>";
@@ -306,6 +309,7 @@
 				A10000000000000000000016 /* PhotoImportView.swift in Sources */,
 				A10000000000000000000017 /* JournalDraftService.swift in Sources */,
 				A10000000000000000000018 /* JournalAutomationCoordinator.swift in Sources */,
+				A10000000000000000000019 /* FilteredPhotoPicker.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

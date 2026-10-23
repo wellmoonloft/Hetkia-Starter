@@ -1,7 +1,6 @@
 import Foundation
 import SwiftUI
 import Photos
-import PhotosUI
 import ImageIO
 import UniformTypeIdentifiers
 import CoreLocation
@@ -42,10 +41,13 @@ final class PhotoLibraryService: ObservableObject {
         return status
     }
 
-    func importSelections(_ items: [PhotosPickerItem], into context: ModelContext) async throws -> ImportedPhotoSummary {
+    func importAssets(_ assets: [PHAsset], into context: ModelContext) async throws -> ImportedPhotoSummary {
         var summary = ImportedPhotoSummary()
         var dirtyJournals: [String: JournalRecord] = [:]
         var tasksInsertedForDays = Set<String>()
+        let completedDayKeys = Set(((try? context.fetch(FetchDescriptor<JournalRecord>())) ?? [])
+            .filter { $0.generationStatus == .completed }
+            .map(\.dayKey))
         var createdThumbnailPaths: [String] = []
         var committed = false
         defer {
@@ -59,17 +61,21 @@ final class PhotoLibraryService: ObservableObject {
             }
         }
 
-        for (index, item) in items.enumerated() {
-            guard let identifier = item.itemIdentifier,
-                  let asset = PHAsset.fetchAssets(withLocalIdentifiers: [identifier], options: nil).firstObject,
-                  PhotoAssetEligibility.allows(asset) else {
+        for (index, asset) in assets.enumerated() {
+            let identifier = asset.localIdentifier
+            guard PhotoAssetEligibility.allows(asset) else {
+                summary.excludedCount += 1
+                continue
+            }
+            if let captureDate = asset.creationDate,
+               completedDayKeys.contains(PhotoDayGrouping.key(for: captureDate)) {
                 summary.excludedCount += 1
                 continue
             }
             if try fetchPhoto(identifier: identifier, context: context) != nil {
                 continue
             }
-            let imported = try await prepare(item: item, asset: asset)
+            let imported = try await prepare(asset: asset)
             createdThumbnailPaths.append(imported.relativePath)
             let addedDate: Date?
             if #available(iOS 26, macOS 26, *) { addedDate = asset.addedDate }
@@ -134,8 +140,8 @@ final class PhotoLibraryService: ObservableObject {
         return summary
     }
 
-    private func prepare(item: PhotosPickerItem, asset: PHAsset?) async throws -> PreparedPhoto {
-        if let asset, let data = await imageData(for: asset), let prepared = try? persistThumbnail(
+    private func prepare(asset: PHAsset) async throws -> PreparedPhoto {
+        if let data = await imageData(for: asset), let prepared = try? persistThumbnail(
             data: data,
             preferredDate: asset.creationDate,
             latitude: asset.location?.coordinate.latitude,
@@ -152,10 +158,7 @@ final class PhotoLibraryService: ObservableObject {
                 metadataComplete: asset.creationDate != nil
             )
         }
-        guard let data = try await item.loadTransferable(type: Data.self) else {
-            throw PhotoImportError.unreadableAsset
-        }
-        return try persistThumbnail(data: data, preferredDate: nil, latitude: nil, longitude: nil)
+        throw PhotoImportError.unreadableAsset
     }
 
     private func imageData(for asset: PHAsset) async -> Data? {

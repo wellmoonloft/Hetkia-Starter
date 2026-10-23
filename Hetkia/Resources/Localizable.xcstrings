@@ -1,6 +1,9 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "(%lld)" : {
+
+    },
     "%lld" : {
 
     },
@@ -5884,6 +5887,7 @@
       }
     },
     "photos.access.denied" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -5918,6 +5922,7 @@
       }
     },
     "photos.access.denied.detail" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -5952,6 +5957,7 @@
       }
     },
     "photos.access.full" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -5986,6 +5992,7 @@
       }
     },
     "photos.access.full.detail" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -6020,6 +6027,7 @@
       }
     },
     "photos.access.limited" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -6054,6 +6062,7 @@
       }
     },
     "photos.access.limited.detail" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -6088,6 +6097,7 @@
       }
     },
     "photos.access.not-determined" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -6122,6 +6132,7 @@
       }
     },
     "photos.access.request" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -6156,6 +6167,7 @@
       }
     },
     "photos.access.request.detail" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -6190,6 +6202,7 @@
       }
     },
     "photos.access.restricted" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -6224,6 +6237,7 @@
       }
     },
     "photos.access.restricted.detail" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -6258,6 +6272,7 @@
       }
     },
     "photos.access.title" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -6497,6 +6512,7 @@
     },
     "photos.choose.count" : {
       "comment" : "Selected photo count",
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -7216,6 +7232,7 @@
       }
     },
     "photos.library.settings.action" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -7250,6 +7267,7 @@
       }
     },
     "photos.library.settings.detail" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -7416,6 +7434,142 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "照片搜尋依據已儲存的日期與中繼資料；目前不支援畫面辨識。"
+          }
+        }
+      }
+    },
+    "photos.selection.confirm" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Use selected"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Usar selección"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ใช้รูปที่เลือก"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "使用所选照片"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "使用所選照片"
+          }
+        }
+      }
+    },
+    "photos.selection.empty" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No eligible photos. Photos from dates with completed journals are hidden."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No hay fotos disponibles. Se ocultan las fotos de fechas con diarios completados."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ไม่มีรูปภาพที่เลือกได้ ระบบซ่อนรูปภาพในวันที่มีบันทึกที่สร้างเสร็จแล้ว"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "没有可选照片。已完成日记日期中的照片不会显示。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "沒有可選照片。已完成手札日期中的照片不會顯示。"
+          }
+        }
+      }
+    },
+    "photos.selection.permission-required" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Allow photo access in Settings to browse your library."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Permite el acceso a Fotos en Ajustes para explorar tu biblioteca."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "อนุญาตการเข้าถึงรูปภาพในการตั้งค่าเพื่อเรียกดูคลังรูปภาพ"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请先在设置的权限区域允许访问照片图库。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "請先在設定的權限區域允許存取照片圖庫。"
+          }
+        }
+      }
+    },
+    "photos.selection.title" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose photos"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Elegir fotos"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เลือกรูปภาพ"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "选择照片"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "選擇照片"
           }
         }
       }
@@ -7761,7 +7915,7 @@
       }
     },
     "photos.undated.title" : {
-      "comment" : "Undated photo count",
+      "comment" : "Undated photo\nUndated photo count",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -8583,36 +8737,240 @@
         }
       }
     },
-    "settings.generation.note" : {
+    "settings.generation.all-photos" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "This is a preferred time only. iOS may run background work later, and automatic generation is not connected in this prototype."
+            "value" : "Generate all photos"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Esta hora es solo una preferencia. El sistema puede ejecutar las tareas en segundo plano más tarde; la generación automática aún no está conectada."
+            "value" : "Generar todas las fotos"
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "เวลานี้เป็นเพียงเวลาที่ต้องการ ระบบอาจทำงานเบื้องหลังช้ากว่านี้ และต้นแบบยังไม่เชื่อมต่อการสร้างอัตโนมัติ"
+            "value" : "สร้างบันทึกจากรูปภาพทั้งหมด"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "此时间仅为偏好时间。iOS 可能延后后台任务；本原型尚未接入自动生成。"
+            "value" : "全部生成"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "此時間僅為偏好時間。iOS 可能延後背景工作；本原型尚未接入自動生成。"
+            "value" : "全部生成"
+          }
+        }
+      }
+    },
+    "settings.generation.index-complete" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Photo history organized"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Historial de fotos organizado"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "จัดระเบียบประวัติรูปภาพแล้ว"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "照片历史整理完成"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "照片歷史整理完成"
+          }
+        }
+      }
+    },
+    "settings.generation.index-detail" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Indexes photo dates and metadata without generating AI text. Progress is saved and resumes when the app becomes active."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Organiza fechas y metadatos sin generar texto con IA. El progreso se guarda y continúa cuando la app vuelve a estar activa."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "จัดทำดัชนีวันที่และข้อมูลรูปภาพโดยไม่สร้างข้อความ AI ระบบบันทึกความคืบหน้าและทำต่อเมื่อแอปกลับมาทำงาน"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "只整理照片日期和元数据，不生成 AI 文字。进度会保存，并在应用恢复活动时继续。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "只整理照片日期與中繼資料，不生成 AI 文字。進度會儲存，並在 App 恢復使用時繼續。"
+          }
+        }
+      }
+    },
+    "settings.generation.index-paused" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Index paused · will resume when the app is active"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Índice en pausa · continuará al abrir la app"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "หยุดจัดทำดัชนีชั่วคราว · จะทำต่อเมื่อเปิดแอป"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "整理已暂停 · 应用重新打开后会继续"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "整理已暫停 · App 重新開啟後會繼續"
+          }
+        }
+      }
+    },
+    "settings.generation.index-running" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Organizing photo history…"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Organizando el historial de fotos…"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "กำลังจัดระเบียบประวัติรูปภาพ…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在整理照片历史…"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在整理照片歷史…"
+          }
+        }
+      }
+    },
+    "settings.generation.note" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This is a preferred time only. Background work may be delayed by the system."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Esta hora es solo una preferencia. El sistema puede retrasar las tareas en segundo plano."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เวลานี้เป็นเพียงเวลาที่ต้องการ ระบบอาจเลื่อนการทำงานเบื้องหลัง"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此时间仅为偏好；后台任务可能会被系统延迟。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此時間僅為偏好；背景工作可能會被系統延遲。"
+          }
+        }
+      }
+    },
+    "settings.generation.select-photos" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose photos to generate"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Elegir fotos para generar"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เลือกรูปภาพเพื่อสร้างบันทึก"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "选择照片生成"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "選擇照片生成"
           }
         }
       }
@@ -10132,6 +10490,7 @@
       }
     },
     "timeline.show-list" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -10166,6 +10525,7 @@
       }
     },
     "timeline.show-wall" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -10471,6 +10831,42 @@
             "value" : "上一年"
           }
         }
+      }
+    },
+    "settings.photo-generation" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Photo journal generation" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Generación de diarios con fotos" } },
+        "th" : { "stringUnit" : { "state" : "translated", "value" : "สร้างบันทึกจากรูปภาพ" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "照片生成日记" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "照片生成手札" } }
+      }
+    },
+    "journal.delete.action" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Delete journal" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Eliminar diario" } },
+        "th" : { "stringUnit" : { "state" : "translated", "value" : "ลบบันทึก" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "删除日记" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "刪除手札" } }
+      }
+    },
+    "journal.delete.confirm-title" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Delete this journal?" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "¿Eliminar este diario?" } },
+        "th" : { "stringUnit" : { "state" : "translated", "value" : "ลบบันทึกนี้หรือไม่" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "删除这篇日记？" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "要刪除這篇手札嗎？" } }
+      }
+    },
+    "journal.delete.confirm-detail" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Its journal photos and generation tasks will also be removed." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "También se eliminarán sus fotos y tareas de generación." } },
+        "th" : { "stringUnit" : { "state" : "translated", "value" : "รูปภาพและงานสร้างบันทึกที่เกี่ยวข้องจะถูกลบด้วย" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "这篇日记关联的照片记录和生成任务也会一并删除。" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "這篇手札關聯的照片資料與生成工作也會一併刪除。" } }
       }
     }
   },

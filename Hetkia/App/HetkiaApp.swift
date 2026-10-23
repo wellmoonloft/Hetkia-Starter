@@ -89,6 +89,7 @@ private struct PersistentAppRootView: View {
             try? modelContext.save()
         }
         automation.resumeHistoricalLibraryIndexIfNeeded(context: modelContext)
+        PhotoLocationResolver.shared.resumePending(context: modelContext)
         guard onboarding.isOnboardingComplete else { return }
         await automation.catchUp(context: modelContext)
     }

@@ -1,6 +1,6 @@
 import SwiftUI
 import SwiftData
-import PhotosUI
+import Photos
 
 struct PhotoImportView: View {
     @Environment(\.modelContext) private var modelContext
@@ -8,7 +8,7 @@ struct PhotoImportView: View {
     @Query(sort: \JournalRecord.localDay, order: .reverse) private var journals: [JournalRecord]
     @Query(sort: \JournalPhotoRecord.firstDiscoveredAt, order: .reverse) private var allPhotos: [JournalPhotoRecord]
     @StateObject private var library = PhotoLibraryService()
-    @State private var selections: [PhotosPickerItem] = []
+    @State private var showAssetPicker = false
     @State private var isImporting = false
     @State private var isGeneratingJournals = false
     @State private var statusMessage: String?
@@ -19,7 +19,6 @@ struct PhotoImportView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
-                    accessCard
                     selectionCard
                     if let statusMessage {
                         Label(statusMessage, systemImage: "checkmark.circle")
@@ -39,39 +38,17 @@ struct PhotoImportView: View {
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) { Button("common.done") { dismiss() } }
             }
-            .onAppear { library.refreshAuthorization() }
-            .onChange(of: selections) { _, selectedItems in
-                guard !selectedItems.isEmpty, !isImporting else { return }
-                Task { await importSelections(selectedItems) }
+            .sheet(isPresented: $showAssetPicker) {
+                FilteredPhotoPicker(excludedDayKeys: generatedDayKeys) { assets in
+                    showAssetPicker = false
+                    Task { await importAssets(assets) }
+                }
             }
             .alert("photos.import.error", isPresented: Binding(get: { errorMessage != nil }, set: { if !$0 { errorMessage = nil } })) {
                 Button("common.ok", role: .cancel) { errorMessage = nil }
             } message: { Text(errorMessage ?? "") }
         }
         .tint(HetkiaPalette.amber)
-    }
-
-    private var accessCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Label("photos.access.title", systemImage: "hand.raised")
-                .font(.system(size: 15, weight: .semibold, design: .serif)).foregroundStyle(HetkiaPalette.ink)
-            Text(accessDescription)
-                .font(.system(size: 12)).lineSpacing(3).foregroundStyle(HetkiaPalette.secondaryInk)
-                .fixedSize(horizontal: false, vertical: true)
-            HStack {
-                Text(accessStatus).font(.system(size: 11, weight: .medium)).foregroundStyle(HetkiaPalette.secondaryInk)
-                Spacer()
-                if !library.canReadLibrary {
-                    Button("photos.access.request") {
-                        Task { _ = await library.requestAuthorization() }
-                    }
-                    .font(.system(size: 12, weight: .medium)).foregroundStyle(HetkiaPalette.amber)
-                }
-            }
-        }
-        .padding(16)
-        .background(.white.opacity(0.78), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 18).strokeBorder(HetkiaPalette.line.opacity(0.65), lineWidth: 0.7))
     }
 
     private var selectionCard: some View {
@@ -81,12 +58,10 @@ struct PhotoImportView: View {
             Text("photos.choose.detail")
                 .font(.system(size: 12)).lineSpacing(3).foregroundStyle(HetkiaPalette.secondaryInk)
                 .fixedSize(horizontal: false, vertical: true)
-            PhotosPicker(
-                selection: $selections,
-                maxSelectionCount: 100,
-                matching: .all(of: [.images, .not(.screenshots), .not(.screenRecordings)])
-            ) {
-                Label(String(format: NSLocalizedString("photos.choose.count", comment: "Selected photo count"), selections.count), systemImage: "plus")
+            Button {
+                showAssetPicker = true
+            } label: {
+                Label("settings.generation.select-photos", systemImage: "plus")
                     .font(.system(size: 13, weight: .medium)).foregroundStyle(HetkiaPalette.amber)
                     .frame(maxWidth: .infinity).padding(.vertical, 13)
                     .background(HetkiaPalette.paper, in: Capsule())
@@ -150,35 +125,16 @@ struct PhotoImportView: View {
         .padding(15).background(.white.opacity(0.78), in: RoundedRectangle(cornerRadius: 16))
     }
 
-    private var accessDescription: LocalizedStringKey {
-        switch library.authorizationStatus {
-        case .authorized: "photos.access.full.detail"
-        case .limited: "photos.access.limited.detail"
-        case .denied: "photos.access.denied.detail"
-        case .restricted: "photos.access.restricted.detail"
-        case .notDetermined: "photos.access.request.detail"
-        @unknown default: "photos.access.request.detail"
-        }
+    private var generatedDayKeys: Set<String> {
+        Set(journals.filter { $0.generationStatus == .completed }.map(\.dayKey))
     }
 
-    private var accessStatus: LocalizedStringKey {
-        switch library.authorizationStatus {
-        case .authorized: "photos.access.full"
-        case .limited: "photos.access.limited"
-        case .denied: "photos.access.denied"
-        case .restricted: "photos.access.restricted"
-        case .notDetermined: "photos.access.not-determined"
-        @unknown default: "photos.access.not-determined"
-        }
-    }
-
-    private func importSelections(_ items: [PhotosPickerItem]) async {
+    private func importAssets(_ assets: [PHAsset]) async {
         isImporting = true
         defer { isImporting = false; isGeneratingJournals = false }
         do {
-            let summary = try await library.importSelections(items, into: modelContext)
+            let summary = try await library.importAssets(assets, into: modelContext)
             statusMessage = String(format: NSLocalizedString("photos.import.summary", comment: "Photo import summary"), summary.photoCount, summary.journalCount, summary.undatedCount, summary.excludedCount)
-            selections = []
             isImporting = false
             isGeneratingJournals = true
             await JournalAutomationCoordinator.shared.catchUp(context: modelContext)

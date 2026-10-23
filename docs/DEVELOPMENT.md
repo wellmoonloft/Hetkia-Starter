@@ -73,7 +73,7 @@ Hetkia-Starter/
 ### 照片导入与回退
 
 - `Hetkia/Features/Photos/PhotoImportView.swift`：照片选择器确认选择后自动导入并启动队列处理、导入状态、未注明日期的手动归组及已有日记列表。
-- `Hetkia/Features/Photos/PhotoLibraryService.swift`：请求 PhotoKit read/write 授权；导入所选 `PhotosPickerItem`，读取可用 PHAsset/EXIF 元数据，按日期创建或更新日记，防止重复资产，生成压缩 JPEG 预览并持久化。导入校验会剔除隐藏、最近删除/不可再取回、截图、荧幕录影及无法验证的资源。
+- `Hetkia/Features/Photos/PhotoLibraryService.swift`：请求 PhotoKit read/write 授权；导入自定义筛选器交付的 `PHAsset`，读取可用 PHAsset/EXIF 元数据，按日期创建或更新日记，防止重复资产，生成压缩 JPEG 预览并持久化。导入校验会剔除隐藏、最近删除/不可再取回、截图、荧幕录影及无法验证的资源。
 - `Hetkia/Features/Photos/PhotoAssetResolver.swift`：按 PhotoKit 原件、应用 JPEG、占位图顺序解析预览。
 - 每日/“历史上的今天”AI 自动化仅在 `.authorized` 或 `.limited` 状态下按单日范围查询今天及往年同月同日。首次启动的 30 日索引和用户同意后的全历史索引会遍历可访问资产的元数据，但不读取图像内容、不调用 AI、不批量生成 JPEG。所有路径排除隐藏、删除/不可访问、截图、荧幕录影和非图片媒体。照片 GPS 使用 PHAsset/EXIF 元数据，不代表已实现 Core Location 当前位置服务。
 - 当前导入图像压缩参数：最长边 1200 px，JPEG quality 0.78。路径在应用私有缩略图目录内，以相对路径持久化。
@@ -86,12 +86,13 @@ Hetkia-Starter/
   - `JournalGenerationTask`：按具体完整日期关联任务，类型含每日自动、历史上的今天和手动；保存状态、尝试次数及错误信息。
 - `Hetkia/Features/Journal/JournalAutomationCoordinator.swift`：维护最近 30 天索引、可选全历史元数据索引，以及每日/“历史上的今天”前台 AI catch-up。元数据索引按日幂等保存、持久化进度；iOS 请求有限时长 UIKit 后台执行机会，恢复时继续。文字队列每次 catch-up 最多串行处理一项任务，失败可重试。未注册 `BGTaskScheduler`。
 - `Hetkia/Features/Journal/PersistentJournalViews.swift`：真实 SwiftData 手札详情、固定页面、照片选择、内嵌留言编辑/追加、手动 AI 生成和模型状态。
+- 同文件的 `PhotoLocationResolver`：按实际 GPS 距离将照片加入代表坐标 5 公里半径的查询组；每组只提交一次 MapKit 反向地理编码请求，失败时回退 Core Location。结果按代表坐标缓存并写回照片记录；队列串行执行，详情页关闭不主动取消。启动/激活时扫描已选手札照片并恢复未解析地点。失败时记录错误并保留照片 GPS 地图入口，后续激活时可重试。
 - `JournalRecord.messagePostsData` 保存留言流；`JournalMessagePost` 保存文字、类型与创建时间。首次打开旧记录时，将原正文迁移为一条留言并保留记录更新时间；新生成内容和用户追加留言均写入独立时间戳。
 - 留言输入位于详情页纵向滚动内容中，编辑时就地显示 `TextEditor`；键盘使用交互式滑动收起，焦点变化会滚动到当前编辑区域。
 - `JournalPhotoSelection.selected(from:)` 是共用的选图入口，按 `sortOrder` 及 1/3/5/7/9 张规则为生成、详情和主时间轴缩略图提供同一组照片。
 - 详情页照片可点开放大的全屏分页浏览；1 张铺满、3 张为主图加双辅图、5 张为主图加 2×2、7 张为主图加 3×2、9 张为 3×3。
 - 页面正文/留言使用 `ScaledMetric` 随系统动态字体放大；页面高度从 3:4 基准按内容增长，避免大字体下截断。
-- 详情打开时用照片 GPS 坐标反向地理编码；地点按城市去重，同城保留排序后首张照片坐标。每个地点点击后以该照片的精确纬度/经度显示地图。macOS 14–25 使用 `CLGeocoder` 兼容路径，不读取设备当前位置。
+- 详情打开或应用启动/激活时，用照片 GPS 坐标异步反向地理编码。5 公里内照片共用一次代表坐标查询和城市名称；距离用 `CLLocation.distance(from:)` 计算，不按经纬度网格划分。成功结果保存在本地缓存，后续复用最近且不超过 5 公里的缓存项；点击地点仍以代表照片的精确纬度/经度显示地图。MapKit 无结果/失败时回退 `CLGeocoder`，不读取设备当前位置。
 - 手札分享时用与详情相同的照片选择和布局组件渲染 3:4 日记图片，交给原生系统分享流程；合成图只在操作时创建。
 - `Hetkia/Features/Journal/JournalPageComponents.swift`：统一暖色调调色板、页面与网格组件；部分早期样例组件仍保留，主应用持久化时间轴路由到 `PersistentJournalDetailView`。
 - 当前持久化详情页已支持 1/3/5/7/9 张目标布局、全屏照片翻页、系统动态字体和基于照片坐标的地点名称解析。
@@ -100,7 +101,7 @@ Hetkia-Starter/
 
 - `Hetkia/Features/AI/JournalDraftService.swift`
   - 用 `SystemLanguageModel.default.availability` 检查设备端模型状态。
-  - 生成文字时只提供日期、选用照片数量和可用的图像输入；指令要求不臆测细节。
+  - 生成文字时提供日期、选用照片数量、可用图像和反向地理编码位置上下文；提示词要求基于可见证据、可结合位置回忆活动但不得臆测人物关系/事件/餐食，也不在正文重复日期或写时间。
   - iOS/macOS 27 及以上在可用时附带图片；不支持图片输入时改用不描述画面的纯文本草稿。
   - 当前没有调用模型的 `supportsLocale`/语言能力检查；生成语言按系统语言指定，五种语言的模型输出质量仍待实机验证。
   - 不调用第三方 AI 服务，不上传照片。
@@ -108,14 +109,18 @@ Hetkia-Starter/
 
 ### 时间轴、搜索与设置
 
-- `Hetkia/Features/Timeline/TimelineHomeView.swift`：SwiftData 查询驱动的主界面、年份/月份/全部筛选、“历史上的今天”区块、手动创建今日手札、照片墙开关、空状态、导航、搜索和设置入口。
+- `Hetkia/Features/Timeline/TimelineHomeView.swift`：SwiftData 查询驱动的主界面、年份/月份/全部筛选、“历史上的今天”区块、手动创建今日手札、空状态、导航、搜索和设置入口；首页标题栏只保留新建日记。
 - `Hetkia/Features/Timeline/TimelineComponents.swift`：时间轴卡片、状态卡片和底部栏。
-- `Hetkia/Features/Timeline/YearOverviewView.swift`、`MonthCalendarView.swift`：年/月组件；部分组件仍属独立视图，具体路由以 `TimelineHomeView` 为准。
-- iOS/iPadOS 底栏用滚动几何状态控制：顶部隐藏、向上滚动显示、到达内容末尾隐藏；macOS 常驻。滚动检测不通过覆盖卡片区域的手势识别器实现，以免影响导航点按。
-- `Hetkia/Features/Timeline/TimelineHomeView.swift` 中持久化搜索按文字或记录/照片元数据过滤；不做图像内容识别。照片墙/列表切换按钮在主页面标题栏，不在底部栏。
+- `Hetkia/Features/Timeline/YearOverviewView.swift`、`MonthCalendarView.swift`：年/月组件；部分组件仍属独立视图，具体路由以 `TimelineHomeView` 为准。`PhotoWallView.swift` 仍在工程中，但当前没有主流程入口，不应计作可达功能。
+- 首页“历史上的今天”和正式时间轴统一使用照片、日期/照片数量两行日记卡片，每篇只显示一张代表照片；仅正式时间轴使用年月分组标题。
+- iOS/iPadOS 底栏用滚动几何状态控制：长内容滚动时显示、顶部/末尾隐藏；短年/月内容无法滚动时直接显示；macOS 常驻。滚动检测不通过覆盖卡片区域的手势识别器实现，以免影响导航点按。
+- 时间轴在首次出现、批量索引写入通知、从详情返回、设置/照片页关闭以及应用重新激活时重新 fetch SwiftData 记录，确保新日记及时显示。
+- `Hetkia/Features/Timeline/TimelineHomeView.swift` 中持久化搜索按文字或记录/照片元数据过滤；不做图像内容识别。照片墙/列表切换不在首页标题栏。
 - `Hetkia/Features/Settings/SettingsView.swift`：照片图库入口、每日时间、本地/iCloud 选项、Foundation Models 状态和当前系统语言。
-- 设置页仍存在 Core Location 授权请求，但手札地点只由照片 EXIF/PhotoKit GPS 反向地理编码，不读取当前位置；此权限入口不参与当前地点功能，后续应清理或等附近地点功能启用后再用。
-- 分享按钮按现有手札版式即时渲染 3:4 图片并交给系统分享面板；不保存长期合成副本。各地点按城市去重，点击地点以相应首张照片的原始坐标打开地图。
+- 设置页把“每日手札”目标时间与独立“照片生成”面板分开；后者提供选择照片导入与全部照片元数据索引，显示持久化进度、完成或暂停状态。重新进入时刷新状态，并在前台恢复时续做尚未完成索引。
+- `Hetkia/Features/Photos/FilteredPhotoPicker.swift` 排除隐藏、已删除/不可访问、截图和荧幕录影；选择已完成日记日期的照片也会被排除。导入和历史扫描遵循相同的媒体资格筛选。
+- 设置页仍存在 Core Location 授权请求，但手札地点只由照片 EXIF/PhotoKit GPS 反向地理编码，不读取当前位置；此权限入口不参与当前地点功能，属于遗留入口。
+- 分享按钮按现有手札版式即时渲染 3:4 图片并交给系统分享面板；不保存长期合成副本。每个 5 公里查询组使用代表照片的原始坐标打开地图。
 - iCloud 选项不可用，目前没有 CloudKit/iCloud 同步实现。
 
 ## 4. 技术决策记录（合并自旧技术决策文档）
@@ -136,7 +141,7 @@ Hetkia-Starter/
 | --- | --- | --- |
 | 0：可构建骨架 | 原生 SwiftUI 工程、名称与 Bundle ID 占位、部署目标、图标资源、可构建启动 | 已完成；Bundle ID 仍是占位值 |
 | 1：日记模板 | 纵向手札、1/3/5/7/9 布局、动态字体，并验证不同尺寸 | 目标布局与动态字体已接通；真机尺寸和大字体视觉验证待做 |
-| 2：持久化 | SwiftData 日记/照片数据、压缩文件管理与清理、显示回退 | 主数据和显示路径已实现；删除清理与孤儿文件策略仍需补全 |
+| 2：持久化 | SwiftData 日记/照片数据、压缩文件管理与清理、显示回退 | 主数据和显示路径、日记/关联任务删除及缩略图清理已实现；重复引用与孤儿文件策略仍需验证 |
 | 3：照片集成 | 权限说明、照片访问、有限/撤销授权处理、压缩预览生成 | 用户选择式导入、最近 30 天索引和用户同意后的全历史元数据索引已实现；扫描不生成 AI 文字或批量预览 |
 | 4：草稿生成 | 模型可用性、证据约束、可编辑草稿、手动生成与降级 | 引导与首页前台 catch-up、单条队列、失败状态已接通；设备端生成验证仍待完成 |
 | 5：后台与导出 | 后台机会、启动 catch-up、按需渲染及系统分享 | UIKit 有限时长后台执行机会、前台续做和 3:4 图片系统分享已实现；尚未注册 BGTaskScheduler，运行持续性/目标时间不保证 |
@@ -288,7 +293,7 @@ xcodebuild -project Hetkia.xcodeproj -scheme Hetkia -sdk macosx -configuration D
 
 - 先读取当前 Xcode 和 simulator runtime 状态；编译与模拟器运行是不同验证结果。
 - 仅在实际命令返回成功后报告构建通过。
-- README 记录此前 Xcode 27.1 iOS Simulator SDK 与 macOS SDK Debug 构建可用。本次核对读取到 Xcode 27.1；`xcrun simctl list runtimes` 因 CoreSimulatorService 连接失败而无法发现设备集/运行时，因此不能确认 runtime 是否已安装；本次没有运行构建。
+- 本轮地点聚类及队列恢复改动完成后，Xcode 27.1 macOS Debug 构建实际成功（`xcodebuild ... -destination 'generic/platform=macOS' ... build`，退出码 0），`git diff --check` 通过。iOS Simulator 构建此前通过，本轮未重跑；模拟器启动、权限弹窗、地图查询结果和 Foundation Models 真机行为不由本轮 macOS 构建覆盖。
 - Apple Intelligence 必须在支持该功能的实际设备/系统上验证；普通编译不代表模型可用或文本质量通过验收。
 
 ## 10. 当前完成情况与待办
@@ -299,10 +304,14 @@ xcodebuild -project Hetkia.xcodeproj -scheme Hetkia -sdk macosx -configuration D
 - iPhone/iPad 竖屏设置和 macOS 纵向布局。
 - SwiftData 日记、照片和生成任务模型。
 - 用户主动挑选照片、元数据读取、日级分组、未注明日期照片手动归组、压缩 JPEG 预览及原图/预览/占位回退。
-- 真实 SwiftData 时间轴、年/月/全部浏览入口、照片墙入口、文字/元数据搜索和持久化手札详情。
+- 真实 SwiftData 时间轴、年/月/全部浏览入口、文字/元数据搜索和持久化手札详情；照片墙视图代码存在但当前未从主流程开放。
+- 首页历史回顾与正式时间轴统一采用单张照片加日期/数量两行卡片；首页标题栏只保留新建日记，正式时间轴按年月分段。短内容的 iOS/iPadOS 年/月视图中底栏可直接显示；返回首页、批量索引变化和应用重新激活时刷新记录。
 - 内嵌留言流：生成文字带生成时间，用户可就地编辑或追加带时间的新留言；旧正文在打开详情时迁移到留言流。
+- 详情页右上角提供删除日记操作，删除数据库记录及关联生成任务并尝试清理缩略图文件；原件仍由 Photos 管理。
 - 仍保留独立 AI 草稿、模型状态显示和手动生成入口。
 - 每日目标时间、本地/iCloud 状态展示、照片和 AI 状态设置。
+- 独立照片生成面板，提供选择照片与全部照片元数据索引；进度/状态持久化，离开设置页不主动取消任务，应用启动或激活时续做。
+- 照片地点异步反向地理编码：5 公里内照片共用代表坐标的一次城市查询并复用成功缓存；MapKit 查询失败回退 Core Location，失败仍保留照片精确 GPS 地图入口。
 - 本地化系统语言选择与系统权限说明。
 
 ### 尚未实现或需修正
@@ -311,16 +320,16 @@ xcodebuild -project Hetkia.xcodeproj -scheme Hetkia -sdk macosx -configuration D
 2. 为每次 App 激活补足超过一项的历史任务处理策略；当前每次 catch-up 最多处理一项，未完成项留到下一次前台机会。
 3. 评估为历史照片整理及每日目标时间注册 `BGTaskScheduler` 最佳努力调度；目前只有 UIKit 有限时长后台执行机会与前台续做，系统不保证准点执行或不中断。
 4. 验证真实旧 SwiftData store 的 schema rename 和启动键规范化，确保用户现有日记与照片关系完整。
-5. 设置页当前定位授权行及 Info.plist 定位声明尚未与实际功能一致，按产品决定清理；如果将来做附近地点，再实现后按需授权。
+5. 设置页定位授权行及 Info.plist 定位声明不参与照片 GPS 反向地理编码，属于遗留项；后续应移除，或等真实当前位置功能实现后再使用。
 6. 更新 `settings.permission.note` 的五种语言过期文案。
 7. iCloud 同步尚未实现；界面继续标记不可用，不能将本地 SwiftData 误称为已同步。
-8. 明确删除日记时 JPEG 预览、原件引用与数据库记录的清理生命周期；完善临时文件清理、导入失败回滚和孤儿文件清理验证。
+8. 删除日记时已删除数据库记录及关联生成任务，并尝试移除 JPEG 预览；仍需验证重复引用文件、删除失败回滚、临时文件及孤儿文件清理生命周期。
 9. 测试有限照片权限、撤销权限、iCloud-only 原件、原件删除、缺失预览、缺失拍摄日期、重复导入、空日、模型不可用/错误等情况。
 10. 在支持 Apple Intelligence 的实机验证图像输入、语言质量、模型不可用/下载中状态与实际生成结果。
 11. 增加正规 XCTest target，并为照片数规则、日期分组、文件回退、SwiftData 生命周期和多语言覆盖添加自动化测试。
 12. 确认并修正旧样例视图/搜索组件是否仍需要保留，避免被接回主用户流程。
 13. 在用户同意产品功能后再开发真正的图像语义搜索或 OCR；当前均未实现。
-14. 在真机验证 5/7 张主图加辅图的视觉比例，以及全屏照片翻页和大字体排版。
+14. 在真机验证 5/7 张主图加辅图的视觉比例、全屏照片翻页、大字体排版、5 公里位置合并/跨城市地点及首页底栏/刷新行为。
 15. 持续检查手札分享图在不同照片数量、长文本与系统分享目标下的版式和兼容性；3:4 合成及系统分享入口已实现。
 
 ## 11. 迭代建议
