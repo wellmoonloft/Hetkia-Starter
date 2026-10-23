@@ -123,7 +123,7 @@ final class OnboardingFlowModel: ObservableObject {
             stage: .welcome,
             isOnboardingComplete: false,
             photoAccess: .full,
-            preferredGenerationMinute: 21 * 60,
+            preferredGenerationMinute: defaults.object(forKey: "hetkia.dailyGenerationMinute") as? Int ?? 4 * 60 + 30,
             todayStatus: .idle,
             todayProgress: 0,
             todayOutcome: .samplePhotos,
@@ -136,10 +136,13 @@ final class OnboardingFlowModel: ObservableObject {
             isQueuePaused: true
         )
         let restored = defaults.data(forKey: storageKey).flatMap { try? JSONDecoder().decode(Snapshot.self, from: $0) } ?? initial
-        stage = restored.stage
+        // Migrate snapshots from the retired schedule-selection step.
+        stage = restored.stage == .generationTime ? .todayJournal : restored.stage
         isOnboardingComplete = restored.isOnboardingComplete
         photoAccess = restored.photoAccess
-        preferredGenerationMinute = restored.preferredGenerationMinute
+        let preferredMinute = defaults.object(forKey: "hetkia.dailyGenerationMinute") as? Int ?? (restored.preferredGenerationMinute == 21 * 60 ? 4 * 60 + 30 : restored.preferredGenerationMinute)
+        preferredGenerationMinute = preferredMinute
+        defaults.set(preferredMinute, forKey: "hetkia.dailyGenerationMinute")
         todayStatus = restored.todayStatus
         todayProgress = restored.todayProgress
         todayOutcome = restored.todayOutcome
@@ -174,13 +177,17 @@ final class OnboardingFlowModel: ObservableObject {
     }
 
     func continueFromPhotoAccess() {
-        stage = .generationTime
+        // The daily target is configured in Settings and defaults to 04:30.
+        stage = .todayJournal
+        todayStatus = .scanning
+        todayProgress = 0
         persist()
     }
 
     func setPreferredTime(_ date: Date) {
         let parts = Calendar.current.dateComponents([.hour, .minute], from: date)
-        preferredGenerationMinute = (parts.hour ?? 21) * 60 + (parts.minute ?? 0)
+        preferredGenerationMinute = (parts.hour ?? 4) * 60 + (parts.minute ?? 30)
+        defaults.set(preferredGenerationMinute, forKey: "hetkia.dailyGenerationMinute")
         persist()
     }
 
@@ -195,6 +202,24 @@ final class OnboardingFlowModel: ObservableObject {
             todayStatus = .idle
             todayProgress = 0
         }
+        persist()
+    }
+
+    func updateInitialIndexProgress(_ progress: Double) {
+        todayStatus = .scanning
+        todayProgress = min(max(progress, 0), 1)
+        persist()
+    }
+
+    func initialIndexFailed() {
+        todayStatus = .failed
+        persist()
+    }
+
+    func initialIndexCompleted() {
+        todayStatus = .ready
+        todayProgress = 1
+        stage = .historyInvitation
         persist()
     }
 

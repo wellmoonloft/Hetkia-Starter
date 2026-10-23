@@ -30,6 +30,7 @@
 		A10000000000000000000015 /* PhotoAssetResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000001A /* PhotoAssetResolver.swift */; };
 		A10000000000000000000016 /* PhotoImportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000001B /* PhotoImportView.swift */; };
 		A10000000000000000000017 /* JournalDraftService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000001C /* JournalDraftService.swift */; };
+		A10000000000000000000018 /* JournalAutomationCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000001D /* JournalAutomationCoordinator.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -61,6 +62,7 @@
 		A2000000000000000000001A /* PhotoAssetResolver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoAssetResolver.swift; sourceTree = "<group>"; };
 		A2000000000000000000001B /* PhotoImportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoImportView.swift; sourceTree = "<group>"; };
 		A2000000000000000000001C /* JournalDraftService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JournalDraftService.swift; sourceTree = "<group>"; };
+		A2000000000000000000001D /* JournalAutomationCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JournalAutomationCoordinator.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -140,6 +142,7 @@
 				A20000000000000000000010 /* JournalDetailView.swift */,
 				A20000000000000000000017 /* JournalModels.swift */,
 				A20000000000000000000018 /* PersistentJournalViews.swift */,
+				A2000000000000000000001D /* JournalAutomationCoordinator.swift */,
 			);
 			path = Journal;
 			sourceTree = "<group>";
@@ -302,6 +305,7 @@
 				A10000000000000000000015 /* PhotoAssetResolver.swift in Sources */,
 				A10000000000000000000016 /* PhotoImportView.swift in Sources */,
 				A10000000000000000000017 /* JournalDraftService.swift in Sources */,
+				A10000000000000000000018 /* JournalAutomationCoordinator.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -417,14 +421,15 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEAD_CODE_STRIPPING = YES;
+				DEVELOPMENT_TEAM = VCUZHQSHRQ;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = Hetkia;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.lifestyle";
 				INFOPLIST_KEY_NSLocationUsageDescription = "Location is used only to add a nearby place to a journal when you choose to allow it.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Location is used only to add a nearby place to a journal when you choose to allow it.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Photo access is used to organize selected images into a personal journal page.";
-				INFOPLIST_KEY_UIRequiresFullScreen = YES;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = UIInterfaceOrientationPortrait;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = UIInterfaceOrientationPortrait;
 				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
@@ -448,14 +453,15 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEAD_CODE_STRIPPING = YES;
+				DEVELOPMENT_TEAM = VCUZHQSHRQ;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = Hetkia;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.lifestyle";
 				INFOPLIST_KEY_NSLocationUsageDescription = "Location is used only to add a nearby place to a journal when you choose to allow it.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Location is used only to add a nearby place to a journal when you choose to allow it.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Photo access is used to organize selected images into a personal journal page.";
-				INFOPLIST_KEY_UIRequiresFullScreen = YES;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = UIInterfaceOrientationPortrait;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = UIInterfaceOrientationPortrait;
 				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
 				MACOSX_DEPLOYMENT_TARGET = 14.0;

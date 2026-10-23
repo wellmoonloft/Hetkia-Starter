@@ -4,6 +4,16 @@
     "%lld" : {
 
     },
+    "%lld / %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld / %2$lld"
+          }
+        }
+      }
+    },
     "%lld%%" : {
 
     },
@@ -555,7 +565,6 @@
       }
     },
     "common.cancel" : {
-      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -622,9 +631,6 @@
           }
         }
       }
-    },
-    "common.continue" : {
-
     },
     "common.done" : {
       "localizations" : {
@@ -1171,6 +1177,41 @@
         }
       }
     },
+    "detail.share.failed" : {
+      "comment" : "Could not create share image",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The journal image could not be created."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No se pudo crear la imagen del diario."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "สร้างภาพบันทึกไม่สำเร็จ"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法生成手札图片。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "無法產生手札圖片。"
+          }
+        }
+      }
+    },
     "detail.share.preview" : {
       "localizations" : {
         "en" : {
@@ -1201,6 +1242,483 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "分享文字預覽"
+          }
+        }
+      }
+    },
+    "journal.create-today" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Create today’s journal"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Crear el diario de hoy"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "สร้างบันทึกของวันนี้"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "创建今日手札"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "建立今日手札"
+          }
+        }
+      }
+    },
+    "journal.message.add" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add a note"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Añadir una nota"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เพิ่มข้อความ"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "添加留言"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新增留言"
+          }
+        }
+      }
+    },
+    "journal.message.board" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Messages"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mensajes"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ข้อความ"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "留言"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "留言"
+          }
+        }
+      }
+    },
+    "journal.message.cancel" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cancel"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cancelar"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ยกเลิก"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "取消"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "取消"
+          }
+        }
+      }
+    },
+    "journal.message.edit" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Edit"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Editar"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "แก้ไข"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "编辑"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "編輯"
+          }
+        }
+      }
+    },
+    "journal.message.empty" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your memories and notes will appear here."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tus recuerdos y notas aparecerán aquí."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ความทรงจำและข้อความของคุณจะแสดงที่นี่"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "回忆和留言会显示在这里。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "回憶和留言會顯示在這裡。"
+          }
+        }
+      }
+    },
+    "journal.message.generated" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Generated journal"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diario generado"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "บันทึกที่สร้างอัตโนมัติ"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自动生成的手札"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自動生成的手札"
+          }
+        }
+      }
+    },
+    "journal.message.new-note" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Write a new message"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Escribe un mensaje"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เขียนข้อความใหม่"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "写一条新留言"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "寫一則新留言"
+          }
+        }
+      }
+    },
+    "journal.message.note" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Personal note"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nota personal"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "บันทึกส่วนตัว"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "个人留言"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "個人留言"
+          }
+        }
+      }
+    },
+    "journal.message.placeholder" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "What would you like to remember?"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "¿Qué te gustaría recordar?"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "คุณอยากจดจำอะไรไว้?"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此刻还想记下什么？"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此刻還想記下什麼？"
+          }
+        }
+      }
+    },
+    "journal.message.post" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Post"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Publicar"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เผยแพร่"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "发布"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "發佈"
+          }
+        }
+      }
+    },
+    "journal.message.save" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Save"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Guardar"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "บันทึก"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "保存"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "儲存"
+          }
+        }
+      }
+    },
+    "journal.source.automatic" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Automatic"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Automático"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "อัตโนมัติ"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自动生成"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自動生成"
+          }
+        }
+      }
+    },
+    "journal.source.manual" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Manual"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Manual"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เขียนเอง"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "手动创建"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "手動建立"
           }
         }
       }
@@ -2807,41 +3325,144 @@
         }
       }
     },
-    "onboarding.history.detail" : {
+    "onboarding.history.background.no" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Choose a date range, review days with photos, then add selected dates to a simulated queue. Existing journals are left untouched."
+            "value" : "No, I’ll do this later"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Elige un periodo, revisa los días con fotos y añade fechas a una cola simulada. Los diarios existentes se conservan."
+            "value" : "No, lo haré más tarde"
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "เลือกช่วงวันที่ ตรวจดูวันที่มีรูป แล้วเพิ่มวันที่เลือกลงในคิวจำลอง โดยเก็บบันทึกเดิมไว้"
+            "value" : "ไม่ ฉันจะทำภายหลัง"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "选择日期范围，确认有照片的日期，再将所选日期加入模拟队列。已有手札会保留。"
+            "value" : "暂不处理，以后再说"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "選擇日期範圍，確認有照片的日期，再將所選日期加入模擬佇列。已有手札會保留。"
+            "value" : "暫不處理，以後再說"
+          }
+        }
+      }
+    },
+    "onboarding.history.background.yes" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yes, organize all accessible photos in the background"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sí, organiza en segundo plano todas las fotos disponibles"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ใช่ จัดระเบียบรูปภาพที่เข้าถึงได้ทั้งหมดในเบื้องหลัง"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "是，在后台整理所有可访问的照片"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "是，在背景整理所有可存取的照片"
+          }
+        }
+      }
+    },
+    "onboarding.history.detail" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "When you open Hetkia, it looks for photos taken on this date in past years. It won’t process your entire library at once."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Al abrir Hetkia, busca fotos tomadas en esta fecha en años anteriores. No procesa toda la biblioteca de una vez."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เมื่อเปิด Hetkia แอปจะค้นหารูปที่ถ่ายในวันนี้ของปีก่อน ๆ โดยจะไม่ประมวลผลคลังรูปทั้งหมดพร้อมกัน"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "打开时光时，应用会查找往年在今天拍摄的照片，不会一次性处理整个照片图库。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "開啟時光時，App 會尋找往年今天拍攝的照片，不會一次處理整個照片圖庫。"
+          }
+        }
+      }
+    },
+    "onboarding.history.enter-home" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Finish and open Hetkia"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Terminar y abrir Hetkia"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เสร็จสิ้นและเปิด Hetkia"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "完成并进入时光"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "完成並進入時光"
           }
         }
       }
     },
     "onboarding.history.skip" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2915,31 +3536,31 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Would you like to fill in earlier days?"
+            "value" : "Memories return one day at a time"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "¿Quieres completar días anteriores?"
+            "value" : "Los recuerdos vuelven día a día"
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ต้องการเติมบันทึกของวันก่อนหน้าหรือไม่"
+            "value" : "ความทรงจำจะค่อย ๆ กลับมาทีละวัน"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "要补上过去的日子吗？"
+            "value" : "旧日记忆，每天重逢"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "要補上過去的日子嗎？"
+            "value" : "舊日記憶，每天重逢"
           }
         }
       }
@@ -3665,41 +4286,247 @@
         }
       }
     },
-    "onboarding.schedule.detail" : {
+    "onboarding.recent.detail" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Choose when you would like your daily journal to be prepared."
+            "value" : "Hetkia is organizing photos from the past 30 days into dated journals. This step reads photo details and prepares previews; it does not generate AI text."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Elige cuándo quieres que se prepare tu diario."
+            "value" : "Hetkia organizará las fotos de los últimos 30 días en diarios por fecha. Leerá sus datos y preparará vistas previas, sin generar texto con IA."
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "เลือกเวลาที่ต้องการให้เตรียมบันทึกประจำวัน"
+            "value" : "Hetkia จะจัดรูปภาพในช่วง 30 วันที่ผ่านมาเป็นบันทึกตามวันที่ โดยอ่านข้อมูลรูปและเตรียมภาพตัวอย่างโดยไม่สร้างข้อความด้วย AI"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "选择你希望每日手札准备完成的时间。"
+            "value" : "时光正在把过去30天的照片整理成按日期归档的手札。此步骤读取照片信息并准备预览，不会生成 AI 文字。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "選擇你希望每日手札準備完成的時間。"
+            "value" : "時光正在把過去30天的照片整理成按日期歸檔的手札。此步驟讀取照片資訊並準備預覽，不會生成 AI 文字。"
+          }
+        }
+      }
+    },
+    "onboarding.recent.preparing" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ready to organize recent photos"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Listo para organizar las fotos recientes"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "พร้อมจัดระเบียบรูปภาพล่าสุด"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "准备整理近期照片"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "準備整理近期照片"
+          }
+        }
+      }
+    },
+    "onboarding.recent.processing" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Organizing the past 30 days"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Organizando los últimos 30 días"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "กำลังจัดระเบียบ 30 วันที่ผ่านมา"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在整理过去30天"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在整理過去30天"
+          }
+        }
+      }
+    },
+    "onboarding.recent.progress" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Preparing dated photo journals"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Preparando diarios con fecha"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "กำลังเตรียมบันทึกภาพตามวันที่"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在建立按日期归档的照片手札"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在建立按日期歸檔的照片手札"
+          }
+        }
+      }
+    },
+    "onboarding.recent.retry" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Try again"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Intentar de nuevo"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ลองอีกครั้ง"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重试"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重試"
+          }
+        }
+      }
+    },
+    "onboarding.recent.title" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your last 30 days, gathered"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tus últimos 30 días, reunidos"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "รวบรวม 30 วันที่ผ่านมาไว้ด้วยกัน"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "先整理过去30天的手札"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "先整理過去30天的手札"
+          }
+        }
+      }
+    },
+    "onboarding.schedule.detail" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your journal is prepared at 4:30 AM by default. You can change this time in Settings."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tu diario se prepara a las 4:30. Puedes cambiar la hora en Ajustes."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ระบบจะเตรียมบันทึกเวลา 4:30 น. คุณเปลี่ยนเวลาได้ในการตั้งค่า"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "手札默认于凌晨 4:30 准备完成，你可以在设置中修改时间。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "手札預設於凌晨 4:30 準備完成，你可以在設定中修改時間。"
           }
         }
       }
     },
     "onboarding.schedule.note" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -3734,6 +4561,7 @@
       }
     },
     "onboarding.schedule.time" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -3768,35 +4596,36 @@
       }
     },
     "onboarding.schedule.title" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Choose a gentle reminder time"
+            "value" : "Your daily journal"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Elige la hora diaria"
+            "value" : "Tu diario de cada día"
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "เลือกเวลาประจำวัน"
+            "value" : "บันทึกประจำวันของคุณ"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "选择每日生成时间"
+            "value" : "每日手札"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "選擇每日生成時間"
+            "value" : "每日手札"
           }
         }
       }
@@ -3904,6 +4733,7 @@
       }
     },
     "onboarding.step.schedule" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4007,40 +4837,42 @@
       }
     },
     "onboarding.today.detail" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Here is how a daily journal can look. The progress and page below use sample data."
+            "value" : "Hetkia checks for today’s photos and an existing journal. If there are photos, it prepares a private on-device draft when Foundation Models is available."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Así puede verse el diario diario. El progreso y la página son datos de ejemplo."
+            "value" : "Hetkia comprueba si hay fotos y un diario de hoy. Si hay fotos, prepara un borrador privado en el dispositivo cuando Foundation Models está disponible."
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ตัวอย่างหน้าบันทึกประจำวันและความคืบหน้าใช้ข้อมูลจำลอง"
+            "value" : "Hetkia ตรวจดูรูปภาพและบันทึกของวันนี้ หากมีรูปภาพ แอปจะเตรียมร่างส่วนตัวบนอุปกรณ์เมื่อ Foundation Models พร้อมใช้งาน"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "这里展示每日手札的样子。进度和页面内容均为静态示例。"
+            "value" : "时光会检查今天的照片和已有手札。有照片时，设备端 Foundation Models 可用的话便会生成私人草稿。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "這裡展示每日手札的樣子。進度和頁面內容均為靜態範例。"
+            "value" : "時光會檢查今天的照片和既有手札。有照片時，裝置端 Foundation Models 可用的話便會產生私人草稿。"
           }
         }
       }
     },
     "onboarding.today.detail.existing" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4075,6 +4907,7 @@
       }
     },
     "onboarding.today.detail.failed" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4109,6 +4942,7 @@
       }
     },
     "onboarding.today.detail.model-unavailable" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4143,40 +4977,42 @@
       }
     },
     "onboarding.today.detail.no-photos" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Choose photos or continue with a blank page."
+            "value" : "No photos dated today were found. You can add photos from the timeline later."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Elige fotos o continúa con una página vacía."
+            "value" : "No se encontraron fotos de hoy. Puedes añadirlas desde la cronología más tarde."
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "เลือกรูปภาพหรือดำเนินการต่อด้วยหน้าเปล่า"
+            "value" : "ไม่พบรูปภาพที่ถ่ายวันนี้ คุณสามารถเพิ่มรูปจากไทม์ไลน์ได้ภายหลัง"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "选择照片，或继续使用空白页面。"
+            "value" : "没有找到今天拍摄的照片。之后可以在时间轴中添加照片。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "選擇照片，或繼續使用空白頁面。"
+            "value" : "找不到今天拍攝的照片。之後可以在時間軸中新增照片。"
           }
         }
       }
     },
     "onboarding.today.manual" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4386,6 +5222,7 @@
       }
     },
     "onboarding.today.retry" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4420,6 +5257,7 @@
       }
     },
     "onboarding.today.status.existing" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4454,6 +5292,7 @@
       }
     },
     "onboarding.today.status.failed" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4488,6 +5327,7 @@
       }
     },
     "onboarding.today.status.idle" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4522,6 +5362,7 @@
       }
     },
     "onboarding.today.status.model-unavailable" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4556,6 +5397,7 @@
       }
     },
     "onboarding.today.status.no-photos" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4590,6 +5432,7 @@
       }
     },
     "onboarding.today.status.preparing" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4624,6 +5467,7 @@
       }
     },
     "onboarding.today.status.ready" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4658,6 +5502,7 @@
       }
     },
     "onboarding.today.status.scanning" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4692,6 +5537,7 @@
       }
     },
     "onboarding.today.status.writing" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4726,6 +5572,7 @@
       }
     },
     "onboarding.today.title" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -5888,6 +6735,7 @@
       }
     },
     "photos.generate.metadata-only" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -5990,6 +6838,7 @@
       }
     },
     "photos.generate.visual-ready" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -6131,31 +6980,31 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Saved %d photos in %d dated journals. %d photos need a date confirmation."
+            "value" : "Saved %d photos in %d dated journals. %d photos need a date confirmation. %d hidden, deleted, screenshot, or screen recording items were skipped."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Se guardaron %d fotos en %d diarios con fecha. %d fotos necesitan confirmar la fecha."
+            "value" : "Se guardaron %d fotos en %d diarios con fecha. %d fotos necesitan confirmar la fecha. Se omitieron %d elementos ocultos, eliminados, capturas de pantalla o grabaciones de pantalla."
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "บันทึก %d ภาพในบันทึกที่มีวันที่ %d รายการ มี %d ภาพที่ต้องยืนยันวันที่"
+            "value" : "บันทึก %d ภาพในบันทึกที่มีวันที่ %d รายการ มี %d ภาพที่ต้องยืนยันวันที่ ข้ามรายการที่ซ่อน ลบแล้ว ภาพหน้าจอ หรือการบันทึกหน้าจอ %d รายการ"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "已将 %d 张照片保存到 %d 篇有日期的手札。%d 张照片需要确认日期。"
+            "value" : "已将 %d 张照片保存到 %d 篇有日期的手札。%d 张照片需要确认日期。已跳过 %d 项隐藏、已删除、截屏或屏幕录制媒体。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "已將 %d 張照片儲存至 %d 篇有日期的手札。%d 張照片需要確認日期。"
+            "value" : "已將 %d 張照片儲存至 %d 篇有日期的手札。%d 張照片需要確認日期。已略過 %d 項隱藏、已刪除、截圖或螢幕錄影媒體。"
           }
         }
       }
@@ -6469,6 +7318,7 @@
       }
     },
     "photos.location.metadata-present" : {
+      "comment" : "Photo location",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -6498,6 +7348,40 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "照片包含 GPS 中繼資料；尚未查詢地點名稱。"
+          }
+        }
+      }
+    },
+    "photos.open.fullscreen" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open photo"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abrir foto"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เปิดรูปภาพ"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "放大照片"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "放大照片"
           }
         }
       }
@@ -9174,6 +10058,40 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%d 篇手札"
+          }
+        }
+      }
+    },
+    "timeline.on-this-day" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "On This Day"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Un día como hoy"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "วันนี้ในอดีต"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "历史上的今天"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "歷史上的今天"
           }
         }
       }

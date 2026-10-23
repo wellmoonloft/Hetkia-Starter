@@ -1,8 +1,8 @@
 # 时光 · Hetkia 开发文档
 
-版本：1.0（现状汇总）  
-整理日期：2026-10-22  
-目标读者：后续维护该 Xcode 工程的开发者。  
+版本：1.0（现状汇总）
+整理日期：2026-10-23
+目标读者：后续维护该 Xcode 工程的开发者。
 产品范围和优先级以 [`PRODUCT_REQUIREMENTS.md`](PRODUCT_REQUIREMENTS.md) 为准。
 
 ## 1. 工程概况
@@ -16,7 +16,7 @@
 - macOS Deployment Target：14.0。
 - 支持平台：`iphoneos`、`iphonesimulator`、`macosx`；不使用 Mac Catalyst。
 - Swift 语言版本设置为 Swift 5。
-- iPhone/iPad 的 Info.plist 设置为仅竖屏，iPad 全屏运行。macOS 页面采用纵向滚动结构。
+- iPhone Info.plist 仅声明竖屏；iPad Info.plist 声明全部方向以满足 iPadOS 27 检查，`HetkiaApplicationDelegate` 为 app 请求竖屏。Xcode 生成静态 Launch Screen 配置；macOS 页面采用纵向滚动结构。
 
 ## 2. 目录结构
 
@@ -26,7 +26,7 @@ Hetkia-Starter/
 ├── Hetkia/
 │   ├── App/                          # App 入口、SwiftData 容器、语言选择
 │   ├── Features/
-│   │   ├── Onboarding/               # 首次启动与补录原型状态流
+│   │   ├── Onboarding/               # 首次启动、30日索引与历史索引选择
 │   │   ├── Timeline/                 # SwiftData 时间轴、年/月/全部、照片墙
 │   │   ├── Journal/                  # 持久化手札、详情、页面排版与模型
 │   │   ├── Photos/                   # 用户选图导入、PhotoKit 解析及预览回退
@@ -55,36 +55,46 @@ Hetkia-Starter/
 - `Hetkia/App/HetkiaApp.swift`
   - 创建 SwiftData ModelContainer，注册 `JournalRecord`、`JournalPhotoRecord`、`JournalGenerationTask`。
   - 根据 onboarding 完成状态选择引导页或时间轴。
-  - 启动时将持久化队列中残留的 `processing` 任务改成失败状态。
+  - 启动/恢复时把持久化队列中残留的 `processing` 任务恢复为 `pending`，修复旧日期键后运行前台 catch-up。
   - `HetkiaSystemLanguage` 将系统首选语言映射到五种支持语言，其余默认 `en`。
 - `Hetkia/Resources/Localizable.xcstrings`：界面 String Catalog。
 - 各 `*.lproj/InfoPlist.strings`：应用显示名及系统权限弹窗本地化。
 
 ### 首次启动
 
-- `Hetkia/Features/Onboarding/OnboardingFlowView.swift`：欢迎、照片授权、每日时间、今日状态、历史邀请，以及补录范围/确认/队列/完成页。
-- `Hetkia/Features/Onboarding/OnboardingFlowModel.swift`：UserDefaults 序列化快照，键名 `hetkia.onboarding.flow.v1`；当前今日处理与补录队列是模拟状态流。
-- 引导页目标时间保存在该快照中；设置页另用 `@AppStorage("hetkia.dailyGenerationMinute")`。两处未共享同一个设置值，引导页选择的时间不会自动同步到设置页，需统一存储。
+- `Hetkia/Features/Onboarding/OnboardingFlowView.swift`：欢迎、照片授权后自动前进、最近 30 日无 AI 元数据归档进度、历史整理选择及自动进入首页。旧静态批量补录状态页保留源码以兼容旧状态，但已从引导路由移除。
+- `Hetkia/Features/Onboarding/OnboardingFlowModel.swift`：UserDefaults 序列化快照，键名 `hetkia.onboarding.flow.v1`；旧今日/批量补录模拟状态模型仍留存，不再驱动当前引导。
+- 引导不再展示每日目标时间页；设置页使用 `hetkia.dailyGenerationMinute`，默认凌晨 4:30。
 - `OnboardingFlowView` 的照片权限由 `PhotoLibraryService` 在用户点按钮时实际请求。
-- 注意：历史邀请页面当前只有跳过入口。`beginBackfillScan()` 使用静态日期组和延迟进度；这不是 PhotoKit 历史扫描，也不是真实生成队列。模型中虽有生成演示方法，但不应将未连通流程描述为实际生成。
+- 最近 30 日由 `JournalAutomationCoordinator.indexRecentJournals` 建立照片日记，跳过 AI 生成并逐批保存进度；完成后自动进入历史整理选择页。
+- 历史整理选择默认启用；用户确认后，`startHistoricalLibraryIndex` 枚举 PhotoKit 元数据、逐日幂等保存 30 日之前的照片日记，并申请有限时长的 UIKit 后台执行机会；中断后下次前台启动/恢复续做。它不是系统保证运行的 `BGTaskScheduler`。
+- 旧 `beginBackfillScan()` 仍是模拟方法，但不再能从引导界面进入。
 
 ### 照片导入与回退
 
-- `Hetkia/Features/Photos/PhotoImportView.swift`：照片选择器、导入状态、未注明日期的手动归组及已有日记列表。
-- `Hetkia/Features/Photos/PhotoLibraryService.swift`：请求 PhotoKit read/write 授权；导入所选 `PhotosPickerItem`，读取可用 PHAsset/EXIF 元数据，按日期创建或更新日记，防止重复资产，生成压缩 JPEG 预览并持久化。
+- `Hetkia/Features/Photos/PhotoImportView.swift`：照片选择器确认选择后自动导入并启动队列处理、导入状态、未注明日期的手动归组及已有日记列表。
+- `Hetkia/Features/Photos/PhotoLibraryService.swift`：请求 PhotoKit read/write 授权；导入所选 `PhotosPickerItem`，读取可用 PHAsset/EXIF 元数据，按日期创建或更新日记，防止重复资产，生成压缩 JPEG 预览并持久化。导入校验会剔除隐藏、最近删除/不可再取回、截图、荧幕录影及无法验证的资源。
 - `Hetkia/Features/Photos/PhotoAssetResolver.swift`：按 PhotoKit 原件、应用 JPEG、占位图顺序解析预览。
-- 不遍历全图库；照片 GPS 使用 PHAsset/EXIF 元数据，不代表已实现 Core Location 当前位置服务。
+- 每日/“历史上的今天”AI 自动化仅在 `.authorized` 或 `.limited` 状态下按单日范围查询今天及往年同月同日。首次启动的 30 日索引和用户同意后的全历史索引会遍历可访问资产的元数据，但不读取图像内容、不调用 AI、不批量生成 JPEG。所有路径排除隐藏、删除/不可访问、截图、荧幕录影和非图片媒体。照片 GPS 使用 PHAsset/EXIF 元数据，不代表已实现 Core Location 当前位置服务。
 - 当前导入图像压缩参数：最长边 1200 px，JPEG quality 0.78。路径在应用私有缩略图目录内，以相对路径持久化。
 
 ### 持久化模型与手札
 
 - `Hetkia/Features/Journal/JournalModels.swift`
-  - `JournalRecord`：按 `dayKey` 唯一识别日记；含标题、正文、独立 AI 草稿、编辑标记、地点、心情、生成状态、时间戳和照片关系。
+  - `JournalRecord`：来源为 `automatic` / `manual`；`storageKey` 保留原唯一列并使用 `日期|来源`，保证同日每种来源最多一篇。启动时将旧日期键升级为 `日期|manual`；`dayKey` 是从存储键解析的日期。
   - `JournalPhotoRecord`：PhotoKit ID、日期、GPS、媒体尺寸/方向、压缩预览相对路径、元数据/原件状态及排序。
-  - `JournalGenerationTask`：按日关联的生成任务状态、尝试次数和错误信息。当前该模型持久化任务状态，但不等于已接入后台执行器。
-- `Hetkia/Features/Journal/PersistentJournalViews.swift`：真实 SwiftData 手札详情，照片选择规则、固定页面、编辑、手动 AI 生成、错误/模型状态和单独草稿显示。
+  - `JournalGenerationTask`：按具体完整日期关联任务，类型含每日自动、历史上的今天和手动；保存状态、尝试次数及错误信息。
+- `Hetkia/Features/Journal/JournalAutomationCoordinator.swift`：维护最近 30 天索引、可选全历史元数据索引，以及每日/“历史上的今天”前台 AI catch-up。元数据索引按日幂等保存、持久化进度；iOS 请求有限时长 UIKit 后台执行机会，恢复时继续。文字队列每次 catch-up 最多串行处理一项任务，失败可重试。未注册 `BGTaskScheduler`。
+- `Hetkia/Features/Journal/PersistentJournalViews.swift`：真实 SwiftData 手札详情、固定页面、照片选择、内嵌留言编辑/追加、手动 AI 生成和模型状态。
+- `JournalRecord.messagePostsData` 保存留言流；`JournalMessagePost` 保存文字、类型与创建时间。首次打开旧记录时，将原正文迁移为一条留言并保留记录更新时间；新生成内容和用户追加留言均写入独立时间戳。
+- 留言输入位于详情页纵向滚动内容中，编辑时就地显示 `TextEditor`；键盘使用交互式滑动收起，焦点变化会滚动到当前编辑区域。
+- `JournalPhotoSelection.selected(from:)` 是共用的选图入口，按 `sortOrder` 及 1/3/5/7/9 张规则为生成、详情和主时间轴缩略图提供同一组照片。
+- 详情页照片可点开放大的全屏分页浏览；1 张铺满、3 张为主图加双辅图、5 张为主图加 2×2、7 张为主图加 3×2、9 张为 3×3。
+- 页面正文/留言使用 `ScaledMetric` 随系统动态字体放大；页面高度从 3:4 基准按内容增长，避免大字体下截断。
+- 详情打开时用照片 GPS 坐标反向地理编码；地点按城市去重，同城保留排序后首张照片坐标。每个地点点击后以该照片的精确纬度/经度显示地图。macOS 14–25 使用 `CLGeocoder` 兼容路径，不读取设备当前位置。
+- 手札分享时用与详情相同的照片选择和布局组件渲染 3:4 日记图片，交给原生系统分享流程；合成图只在操作时创建。
 - `Hetkia/Features/Journal/JournalPageComponents.swift`：统一暖色调调色板、页面与网格组件；部分早期样例组件仍保留，主应用持久化时间轴路由到 `PersistentJournalDetailView`。
-- 当前持久化详情页对 1 张采用单图，对 3 张采用主图加两张辅助图，对 5 张使用两列网格，对 7/9 张使用三列网格。产品目标中的 5 张主图加四辅图、7 张主图加六辅图布局还需实现。
+- 当前持久化详情页已支持 1/3/5/7/9 张目标布局、全屏照片翻页、系统动态字体和基于照片坐标的地点名称解析。
 
 ### AI
 
@@ -98,14 +108,14 @@ Hetkia-Starter/
 
 ### 时间轴、搜索与设置
 
-- `Hetkia/Features/Timeline/TimelineHomeView.swift`：SwiftData 查询驱动的主界面、年份/月份/全部筛选、照片墙开关、空状态、导航、搜索和设置入口。
+- `Hetkia/Features/Timeline/TimelineHomeView.swift`：SwiftData 查询驱动的主界面、年份/月份/全部筛选、“历史上的今天”区块、手动创建今日手札、照片墙开关、空状态、导航、搜索和设置入口。
 - `Hetkia/Features/Timeline/TimelineComponents.swift`：时间轴卡片、状态卡片和底部栏。
 - `Hetkia/Features/Timeline/YearOverviewView.swift`、`MonthCalendarView.swift`：年/月组件；部分组件仍属独立视图，具体路由以 `TimelineHomeView` 为准。
-- iOS/iPadOS 底栏初始隐藏并响应纵向手势；macOS 初始常驻。
+- iOS/iPadOS 底栏用滚动几何状态控制：顶部隐藏、向上滚动显示、到达内容末尾隐藏；macOS 常驻。滚动检测不通过覆盖卡片区域的手势识别器实现，以免影响导航点按。
 - `Hetkia/Features/Timeline/TimelineHomeView.swift` 中持久化搜索按文字或记录/照片元数据过滤；不做图像内容识别。照片墙/列表切换按钮在主页面标题栏，不在底部栏。
 - `Hetkia/Features/Settings/SettingsView.swift`：照片图库入口、每日时间、本地/iCloud 选项、Foundation Models 状态和当前系统语言。
-- 设置页目前存在 Core Location 授权请求，但没有相应当前位置采集功能；在启用附近地点功能前应移除/禁用该入口及不再需要的权限声明，避免误导。
-- String Catalog 的 `settings.permission.note` 仍称“本原型尚未读取照片或收集定位”，与已实现的照片导入不符；需更新五种语言的文案。定位用途说明也应在移除定位入口或实现附近地点后同步调整。
+- 设置页仍存在 Core Location 授权请求，但手札地点只由照片 EXIF/PhotoKit GPS 反向地理编码，不读取当前位置；此权限入口不参与当前地点功能，后续应清理或等附近地点功能启用后再用。
+- 分享按钮按现有手札版式即时渲染 3:4 图片并交给系统分享面板；不保存长期合成副本。各地点按城市去重，点击地点以相应首张照片的原始坐标打开地图。
 - iCloud 选项不可用，目前没有 CloudKit/iCloud 同步实现。
 
 ## 4. 技术决策记录（合并自旧技术决策文档）
@@ -125,11 +135,11 @@ Hetkia-Starter/
 | 阶段 | 目标 | 当前状态 |
 | --- | --- | --- |
 | 0：可构建骨架 | 原生 SwiftUI 工程、名称与 Bundle ID 占位、部署目标、图标资源、可构建启动 | 已完成；Bundle ID 仍是占位值 |
-| 1：日记模板 | 固定 3:4 画布、1/3/5/7/9 布局、非照片区域固定，并验证不同尺寸 | 部分完成；持久化页面已存在，5/7 张布局还需对齐目标，设备尺寸实测待做 |
+| 1：日记模板 | 纵向手札、1/3/5/7/9 布局、动态字体，并验证不同尺寸 | 目标布局与动态字体已接通；真机尺寸和大字体视觉验证待做 |
 | 2：持久化 | SwiftData 日记/照片数据、压缩文件管理与清理、显示回退 | 主数据和显示路径已实现；删除清理与孤儿文件策略仍需补全 |
-| 3：照片集成 | 权限说明、照片访问、有限/撤销授权处理、压缩预览生成 | 用户选择式导入与主要状态已实现；全库查询和真实历史扫描未实现 |
-| 4：草稿生成 | 模型可用性、证据约束、可编辑草稿、手动生成与降级 | 详情页手动生成及状态已实现；引导中的真实日生成、实机验证仍待完成 |
-| 5：后台与导出 | BackgroundTasks、启动 catch-up、按需渲染及系统分享 | 未完成；每日目标时间仅保存，未注册后台任务；持久化详情导出未完成 |
+| 3：照片集成 | 权限说明、照片访问、有限/撤销授权处理、压缩预览生成 | 用户选择式导入、最近 30 天索引和用户同意后的全历史元数据索引已实现；扫描不生成 AI 文字或批量预览 |
+| 4：草稿生成 | 模型可用性、证据约束、可编辑草稿、手动生成与降级 | 引导与首页前台 catch-up、单条队列、失败状态已接通；设备端生成验证仍待完成 |
+| 5：后台与导出 | 后台机会、启动 catch-up、按需渲染及系统分享 | UIKit 有限时长后台执行机会、前台续做和 3:4 图片系统分享已实现；尚未注册 BGTaskScheduler，运行持续性/目标时间不保证 |
 | 6：QA | 覆盖资源缺失、权限、空照片日、重复导入、AI 失败、后台延迟与导出 | 部分状态流 smoke test 存在；完整 XCTest/设备验证待做 |
 
 ## 6. 数据与处理规则
@@ -137,32 +147,32 @@ Hetkia-Starter/
 ### 日记分组
 
 - 导入照片使用拍摄日期转换为设备本地 `yyyy-MM-dd` day key。
-- `JournalRecord.dayKey` 唯一；同一天后续导入照片归入现有记录。
+- `JournalRecord.storageKey` 唯一，按 `dayKey|source` 编码；同一天可有一篇自动与一篇手动记录。旧版日期键在启动时规范化为手动来源。
 - `localDay` 保存导入日的代表日期；代码注释明确 day key 不随未来时区变化重算。
 - 没有拍摄日期的照片先保存为未归组，再由用户选日期建立关联。
 
 ### 选图规则
 
-持久化详情页当前通过 `selectedPhotos` 计算：照片数大于 9 取 9；否则偶数减 1、奇数保持。排序使用 `sortOrder`。修改该规则时应同步主时间轴缩略图、详情页布局及传给 AI 的样本集合，并添加可执行验证。
+共享选图逻辑按 `sortOrder` 排序：照片数大于 9 取 9；否则偶数减 1、奇数保持。主时间轴卡片、详情版式和传给 AI 的样本集合共用该结果，避免首页展示未入选照片。
 
 ### 任务恢复
 
-- App 根 `.task` 将持久化中断的 `processing` 生成任务改为 `failed`，并保存中断错误。
+- App 启动/恢复时将持久化中断的 `processing` 生成任务改为 `pending`，保留中断说明供 UI 显示。
 - onboarding 模型在恢复时将模拟的处理中状态重置/暂停并持久化。
-- 尚未实现完整可靠后台调度、取消令牌/重试退避、应用终止恢复和重复队列去重的端到端行为。
+- 尚未注册 `BGTaskScheduler`；任务退避/取消、旧版 SwiftData 数据库升级验证和队列端到端测试仍待完成。全历史元数据索引已通过 UIKit 有限时长后台执行机会尽力续跑。
 
 
 ## 6A. 新确认的日记自动化规则：每日生成 + 历史上的今天
 
-本节记录产品方最新确认的目标行为。**这些是待实现要求，不应误写成已完成能力。** 相关实现目前仍属于待办，除非后续测试报告明确证明已经接通。
+本节记录产品方最新确认的目标行为及当前实现进度。前台 catch-up、PhotoKit 单日查询、首页区块、来源区分和持久化队列已接通；最近 30 天与用户同意后的全历史元数据索引亦已实现。`BGTaskScheduler`、旧库升级运行验证和设备端 Foundation Models 验证仍待完成。
 
 ### 6A.1 当前代码与目标行为的差距
 
-- 当前 `JournalRecord` 已按 `dayKey` 唯一识别日记，包含正文、独立 AI 草稿、编辑标记、生成状态等字段；请先检查是否已有来源字段，不要直接增加重复字段。
-- 当前 `JournalGenerationTask` 是按日持久化的任务状态模型，但还没有可靠的每日后台调度、完整历史扫描和端到端去重保障。
-- 当前照片集成以用户选择式导入为主，不遍历整个图库；每日自动生成与「历史上的今天」尚未连接真实流程。
-- 当前 onboarding 的历史补录 UI、分组与进度仍是模拟状态。新目标不要求首次启动时批量生成所有历史日期，应调整为按“历史上的今天”渐进补录。
-- 当前每日目标时间仅保存偏好；不能将其描述为已经每天自动生成。
+- `JournalRecord.storageKey` 通过 `@Attribute(.unique, originalName: "dayKey")` 保留既有唯一列；自动/手动来源编码进存储键。旧键会在启动时规范化为手动来源。真实旧库迁移还未运行验证。
+- `JournalGenerationTask` 已区分 `dailyAutomatic`、`onThisDayBackfill`、`manual`；启动后残留 `processing` 恢复为 `pending`。
+- 引导先整理最近 30 个日历日；用户默认同意并确认后，再以可恢复任务整理其余可访问历史照片的元数据。此全历史索引只建照片日记、不生成文字；受限 PhotoKit 授权只返回用户允许访问的资源。
+- onboarding 最近 30 日归档与首页使用同一 SwiftData 数据；旧批量补录演示页不能从引导路由进入。首页 catch-up 每次最多执行一项待处理 AI 任务。
+- 每日目标时间仍只保存偏好；历史索引使用 UIKit 有限时长后台执行机会，尚未注册系统 `BGTaskScheduler`。
 
 ### 6A.2 每日自动生成目标流程
 
@@ -185,12 +195,12 @@ Hetkia-Starter/
   - 没有照片：跳过。
   - AI 不可用或生成失败：仍展示可用照片，并保留待重试/失败状态。
 - 不需要用户逐篇点击才处理，但生成队列要小批次串行或有限并发，不阻塞首页，也不能在扫描全库时对所有照片调用 AI。
-- 不在首次启动时默认批量生成过去所有日期；按日历逐步补齐。用户仍可手动创建或按需生成其他日期。
+- 不在首次启动时默认对过去所有日期批量生成 AI 文字；用户明确同意后可索引全部可访问历史照片的元数据（见 §4.2）。每日/周年 AI 草稿仍按日历在前台逐步补齐，用户也可手动创建其他日期。
 - 2 月 29 日只在闰年存在；非闰年不生成对应历史日期，不得自动映射到其他日期。
 
 ### 6A.4 数据模型、唯一性与任务状态
 
-- 先检查 `JournalRecord` 的 `dayKey` 唯一性实现与 SwiftData 查询行为。当前按 `dayKey` 唯一的描述与“同一天允许一篇自动 + 一篇手动”的新规则可能冲突，必须设计迁移/索引方案，不能简单沿用单条记录约束。
+- `JournalRecord.storageKey` 已按“完整日期 + 来源”设置唯一值，解决同日一篇自动 + 一篇手动的冲突；启动时把旧的日期键规范化为手动来源。仍需用旧版真实 store 验证 SwiftData rename migration。
 - 建议明确分离：
   - `source`: `automatic` / `manual`
   - `isUserEdited` 或现有等价编辑标记
@@ -213,14 +223,12 @@ Hetkia-Starter/
 
 ### 6A.6 实现顺序建议
 
-1. 检查并报告当前 `JournalRecord`、`JournalPhotoRecord`、`JournalGenerationTask` 的实际字段和唯一性约束；先给出简短计划。
-2. 设计支持同日一篇自动日记 + 一篇手动日记的数据模型与迁移策略。
-3. 实现可测试的日期查询/去重服务，覆盖本地日期、闰年和跨时区规则。
-4. 实现每日自动生成的前台 catch-up；确认逻辑正确后再接入 BackgroundTasks 最佳努力调度。
-5. 实现「历史上的今天」照片查询和首页区块。
-6. 接入有限队列、持久化状态、失败重试和启动恢复。
-7. 完成 UI/数据层测试后，在真实支持 Foundation Models 的设备上验证图像输入和日记生成。
-8. 每次报告都区分“代码已写”“构建通过”“模拟器验证”“真实设备验证”，不得混为一谈。
+1. 已检查并改造模型；需在包含旧数据的安装上验证 `originalName` 迁移和日期键规范化。
+2. 已实现同日来源唯一键、日期查询、2 月 29 日精确日期校验和启动恢复。
+3. 已实现当日/“历史上的今天”前台 catch-up、首页入口、串行待办与手动重试。
+4. 后续实现 BackgroundTasks 最佳努力调度，并处理每日时间偏好的目标窗口。
+5. 建立 SwiftData/日期规则可执行测试；在真机验证 PhotoKit 有限访问、Foundation Models 可用性及图片输入。
+6. 报告中分别标注代码、构建、模拟器和真机验证状态。
 
 ## 7. 隐私权限与系统能力
 
@@ -292,33 +300,34 @@ xcodebuild -project Hetkia.xcodeproj -scheme Hetkia -sdk macosx -configuration D
 - SwiftData 日记、照片和生成任务模型。
 - 用户主动挑选照片、元数据读取、日级分组、未注明日期照片手动归组、压缩 JPEG 预览及原图/预览/占位回退。
 - 真实 SwiftData 时间轴、年/月/全部浏览入口、照片墙入口、文字/元数据搜索和持久化手札详情。
-- 手札正文编辑、独立 AI 草稿、模型状态显示和手动生成入口。
+- 内嵌留言流：生成文字带生成时间，用户可就地编辑或追加带时间的新留言；旧正文在打开详情时迁移到留言流。
+- 仍保留独立 AI 草稿、模型状态显示和手动生成入口。
 - 每日目标时间、本地/iCloud 状态展示、照片和 AI 状态设置。
 - 本地化系统语言选择与系统权限说明。
 
 ### 尚未实现或需修正
 
-1. 把 onboarding 的历史补录邀请连接到真实 PhotoKit 查询；当前补录分组、进度和队列是模拟数据，且邀请 UI 没有开始按钮。
-2. 今日手札状态接入真实照片/现有日记/AI 状态；实现每日自动生成去重规则（当天已有自动或手动日记即跳过）。
-3. 实现首页「历史上的今天」查询与按年份生成；不在首次启动时默认批量生成全部历史日记。必要时重新评估原历史补录 UI，保留为用户手动按需补录的未来扩展。
-4. 设计并实现可靠的最佳努力后台调度、前台 catch-up、手动重试；用户时间仅作为目标。
+1. 旧日期范围批量补录的演示视图/模型仍在代码中；引导路由已移除，需决定是否删除这段未使用代码。
+2. 为每次 App 激活补足超过一项的历史任务处理策略；当前每次 catch-up 最多处理一项，未完成项留到下一次前台机会。
+3. 评估为历史照片整理及每日目标时间注册 `BGTaskScheduler` 最佳努力调度；目前只有 UIKit 有限时长后台执行机会与前台续做，系统不保证准点执行或不中断。
+4. 验证真实旧 SwiftData store 的 schema rename 和启动键规范化，确保用户现有日记与照片关系完整。
 5. 设置页当前定位授权行及 Info.plist 定位声明尚未与实际功能一致，按产品决定清理；如果将来做附近地点，再实现后按需授权。
-6. 更新 `settings.permission.note` 的五种语言过期文案；统一引导页和设置页的每日目标时间存储。
+6. 更新 `settings.permission.note` 的五种语言过期文案。
 7. iCloud 同步尚未实现；界面继续标记不可用，不能将本地 SwiftData 误称为已同步。
 8. 明确删除日记时 JPEG 预览、原件引用与数据库记录的清理生命周期；完善临时文件清理、导入失败回滚和孤儿文件清理验证。
 9. 测试有限照片权限、撤销权限、iCloud-only 原件、原件删除、缺失预览、缺失拍摄日期、重复导入、空日、模型不可用/错误等情况。
 10. 在支持 Apple Intelligence 的实机验证图像输入、语言质量、模型不可用/下载中状态与实际生成结果。
 11. 增加正规 XCTest target，并为照片数规则、日期分组、文件回退、SwiftData 生命周期和多语言覆盖添加自动化测试。
 12. 确认并修正旧样例视图/搜索组件是否仍需要保留，避免被接回主用户流程。
-13. 在用户同意产品功能后再开发真正的图像语义搜索、OCR 或地点反向地理编码；当前均未实现。
-14. 对齐 5 张和 7 张照片版式的“主图 + 辅图”设计，当前持久化详情页这两档使用等宽网格。
-15. 实现用户主动预览/分享时的 3:4 页面图合成与系统分享入口，默认不永久保存合成图。
+13. 在用户同意产品功能后再开发真正的图像语义搜索或 OCR；当前均未实现。
+14. 在真机验证 5/7 张主图加辅图的视觉比例，以及全屏照片翻页和大字体排版。
+15. 持续检查手札分享图在不同照片数量、长文本与系统分享目标下的版式和兼容性；3:4 合成及系统分享入口已实现。
 
 ## 11. 迭代建议
 
-1. **先修真实流程状态**：接入每日自动生成的前台 catch-up 与去重，新增「历史上的今天」真实照片查询；移除不可达/模拟的批量队列入口或将其明确限制在开发预览。
-2. **完善数据可靠性**：导入与删除生命周期、权限撤销、原件缺失和持久化队列恢复。
-3. **完成生成闭环**：背景最佳努力调度、前台补偿、用户手动生成与重试状态。
+1. **验证并稳固自动流程**：测试已有 SwiftData 数据升级、PhotoKit 有限授权和同日双来源唯一性。
+2. **完善调度闭环**：评估 `BGTaskScheduler` 最佳努力调度和目标时间窗口，保留现有 UIKit 有限时长执行、前台补偿与用户手动重试。
+3. **完善数据可靠性**：导入与删除生命周期、权限撤销、原件缺失和持久化队列恢复。
 4. **验证体验**：建立 XCTest target，覆盖布局/语言/照片状态，并在 iPhone、iPad、Mac 真机或模拟器检查版面。
 5. **再评估扩展项**：仅在需求确认后加入 iCloud、当前位置标签、OCR 或语义照片搜索。
 

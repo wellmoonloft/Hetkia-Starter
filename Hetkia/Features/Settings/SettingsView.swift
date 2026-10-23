@@ -51,7 +51,7 @@ private enum JournalStorageChoice: String {
 struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var permissions = PermissionSettingsModel()
-    @AppStorage("hetkia.dailyGenerationMinute") private var dailyGenerationMinute = 21 * 60
+    @AppStorage("hetkia.dailyGenerationMinute") private var dailyGenerationMinute = 4 * 60 + 30
     @AppStorage("hetkia.storageChoice") private var storageChoice = JournalStorageChoice.local.rawValue
     @State private var showICloudNotice = false
     @State private var showPhotoLibrary = false
@@ -63,7 +63,7 @@ struct SettingsView: View {
             },
             set: { date in
                 let components = Calendar.current.dateComponents([.hour, .minute], from: date)
-                dailyGenerationMinute = (components.hour ?? 21) * 60 + (components.minute ?? 0)
+                dailyGenerationMinute = (components.hour ?? 4) * 60 + (components.minute ?? 30)
             }
         )
     }

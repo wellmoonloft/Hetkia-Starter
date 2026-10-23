@@ -10,6 +10,7 @@ struct PhotoImportView: View {
     @StateObject private var library = PhotoLibraryService()
     @State private var selections: [PhotosPickerItem] = []
     @State private var isImporting = false
+    @State private var isGeneratingJournals = false
     @State private var statusMessage: String?
     @State private var errorMessage: String?
     @State private var dateForUndatedPhotos = Date.now
@@ -39,6 +40,10 @@ struct PhotoImportView: View {
                 ToolbarItem(placement: .confirmationAction) { Button("common.done") { dismiss() } }
             }
             .onAppear { library.refreshAuthorization() }
+            .onChange(of: selections) { _, selectedItems in
+                guard !selectedItems.isEmpty, !isImporting else { return }
+                Task { await importSelections(selectedItems) }
+            }
             .alert("photos.import.error", isPresented: Binding(get: { errorMessage != nil }, set: { if !$0 { errorMessage = nil } })) {
                 Button("common.ok", role: .cancel) { errorMessage = nil }
             } message: { Text(errorMessage ?? "") }
@@ -76,25 +81,24 @@ struct PhotoImportView: View {
             Text("photos.choose.detail")
                 .font(.system(size: 12)).lineSpacing(3).foregroundStyle(HetkiaPalette.secondaryInk)
                 .fixedSize(horizontal: false, vertical: true)
-            PhotosPicker(selection: $selections, maxSelectionCount: 100, matching: .images) {
+            PhotosPicker(
+                selection: $selections,
+                maxSelectionCount: 100,
+                matching: .all(of: [.images, .not(.screenshots), .not(.screenRecordings)])
+            ) {
                 Label(String(format: NSLocalizedString("photos.choose.count", comment: "Selected photo count"), selections.count), systemImage: "plus")
                     .font(.system(size: 13, weight: .medium)).foregroundStyle(HetkiaPalette.amber)
                     .frame(maxWidth: .infinity).padding(.vertical, 13)
                     .background(HetkiaPalette.paper, in: Capsule())
             }
-            .buttonStyle(.plain)
-            Button {
-                Task { await importSelections() }
-            } label: {
-                HStack {
-                    if isImporting { ProgressView().tint(.white) }
-                    Text(isImporting ? "photos.importing" : "photos.import.action")
-                }
-                .font(.system(size: 14, weight: .medium)).foregroundStyle(.white)
-                .frame(maxWidth: .infinity).padding(.vertical, 14)
-                .background(HetkiaPalette.amber.opacity(selections.isEmpty ? 0.55 : 1), in: Capsule())
+            .buttonStyle(.plain).disabled(isImporting || isGeneratingJournals)
+            if isImporting || isGeneratingJournals {
+                HStack(spacing: 10) {
+                    ProgressView().tint(HetkiaPalette.amber)
+                    Text(isImporting ? "photos.importing" : "photos.generating").font(.system(size: 12, weight: .medium)).foregroundStyle(HetkiaPalette.secondaryInk)
+                    Spacer()
+                }.padding(.horizontal, 4)
             }
-            .buttonStyle(.plain).disabled(selections.isEmpty || isImporting)
         }
         .padding(16)
         .background(.white.opacity(0.78), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
@@ -168,13 +172,16 @@ struct PhotoImportView: View {
         }
     }
 
-    private func importSelections() async {
+    private func importSelections(_ items: [PhotosPickerItem]) async {
         isImporting = true
-        defer { isImporting = false }
+        defer { isImporting = false; isGeneratingJournals = false }
         do {
-            let summary = try await library.importSelections(selections, into: modelContext)
-            statusMessage = String(format: NSLocalizedString("photos.import.summary", comment: "Photo import summary"), summary.photoCount, summary.journalCount, summary.undatedCount)
+            let summary = try await library.importSelections(items, into: modelContext)
+            statusMessage = String(format: NSLocalizedString("photos.import.summary", comment: "Photo import summary"), summary.photoCount, summary.journalCount, summary.undatedCount, summary.excludedCount)
             selections = []
+            isImporting = false
+            isGeneratingJournals = true
+            await JournalAutomationCoordinator.shared.catchUp(context: modelContext)
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -184,13 +191,18 @@ struct PhotoImportView: View {
         let day = PhotoDayGrouping.representativeDate(for: dateForUndatedPhotos)
         let key = PhotoDayGrouping.key(for: day)
         let journal: JournalRecord
-        let descriptor = FetchDescriptor<JournalRecord>(predicate: #Predicate { $0.dayKey == key })
-        if let existing = try? modelContext.fetch(descriptor).first {
+        let automaticKey = "\(key)|automatic"
+        let manualKey = "\(key)|manual"
+        let legacyKey = key
+        let descriptor = FetchDescriptor<JournalRecord>(predicate: #Predicate {
+            $0.storageKey == automaticKey || $0.storageKey == manualKey || $0.storageKey == legacyKey
+        })
+        if let existing = (try? modelContext.fetch(descriptor))?.first {
             journal = existing
         } else {
-            journal = JournalRecord(dayKey: key, localDay: day)
+            journal = JournalRecord(dayKey: key, localDay: day, source: .manual)
             modelContext.insert(journal)
-            modelContext.insert(JournalGenerationTask(dayKey: key, journal: journal))
+            modelContext.insert(JournalGenerationTask(dayKey: key, journal: journal, type: .manual))
         }
         for (index, photo) in undatedPhotos.enumerated() {
             photo.capturedAt = day
@@ -221,9 +233,28 @@ struct PhotoFallbackThumbnail: View {
     let photo: JournalPhotoRecord
     let width: CGFloat
     let height: CGFloat
+    var onTap: (() -> Void)? = nil
     @State private var image: CGImage?
 
+    init(photo: JournalPhotoRecord, width: CGFloat, height: CGFloat, onTap: (() -> Void)? = nil) {
+        self.photo = photo
+        self.width = width
+        self.height = height
+        self.onTap = onTap
+    }
+
+    @ViewBuilder
     var body: some View {
+        if let onTap {
+            Button(action: onTap) { thumbnailContent }
+                .buttonStyle(.plain)
+                .accessibilityLabel(Text("photos.open.fullscreen"))
+        } else {
+            thumbnailContent
+        }
+    }
+
+    private var thumbnailContent: some View {
         Group {
             if let image {
                 Image(decorative: image, scale: 1).resizable().scaledToFill()
@@ -233,6 +264,11 @@ struct PhotoFallbackThumbnail: View {
             }
         }
         .frame(width: width, height: height).clipShape(RoundedRectangle(cornerRadius: 9))
-        .task(id: photo.id) { image = await PhotoAssetResolver.displayImage(for: photo, targetSize: CGSize(width: width * 2, height: height * 2)) }
+        .task(id: "\(photo.id.uuidString)-\(Int(width.rounded()))x\(Int(height.rounded()))") {
+            guard width > 0, height > 0 else { return }
+            let size = CGSize(width: width * 2, height: height * 2)
+            image = await PhotoAssetResolver.thumbnailImage(relativePath: photo.thumbnailRelativePath, targetSize: size)
+            if image == nil { image = await PhotoAssetResolver.displayImage(for: photo, targetSize: size) }
+        }
     }
 }

@@ -1,19 +1,25 @@
 import SwiftUI
+import SwiftData
 
 struct OnboardingFlowView: View {
     @ObservedObject var model: OnboardingFlowModel
     @StateObject private var photoLibrary = PhotoLibraryService()
+    @Environment(\.modelContext) private var modelContext
+    @State private var isIndexingRecentPhotos = false
+    @State private var didStartRecentIndex = false
+    @State private var shouldIndexOlderPhotos = true
 
     var body: some View {
         Group {
             switch model.stage {
             case .welcome: welcome
             case .photoAccess: photoAccess
-            case .generationTime: generationTime
+            case .generationTime: todayJournal
             case .todayJournal: todayJournal
             case .historyInvitation: historyInvitation
             case .backfillRange, .backfillScanning, .backfillConfirmation, .backfillQueue, .backfillComplete:
-                BackfillFlowView(model: model, isOnboarding: true)
+                // Old onboarding snapshots may point at the retired simulated bulk scan.
+                historyInvitation
             case .finished: TimelineHomeView()
             }
         }
@@ -37,10 +43,7 @@ struct OnboardingFlowView: View {
                     .foregroundStyle(HetkiaPalette.secondaryInk).fixedSize(horizontal: false, vertical: true)
                 if photoLibrary.authorizationStatus == .notDetermined || photoLibrary.authorizationStatus == .denied || photoLibrary.authorizationStatus == .restricted {
                     Button("onboarding.photos.request") {
-                        Task {
-                            let status = await photoLibrary.requestAuthorization()
-                            model.choosePhotoAccess(status == .authorized ? .full : status == .limited ? .limited : .denied)
-                        }
+                        Task { await requestPhotoAccessAndAdvance() }
                     }
                     .font(.system(size: 13, weight: .medium)).foregroundStyle(HetkiaPalette.amber)
                 }
@@ -48,73 +51,103 @@ struct OnboardingFlowView: View {
             .padding(15).background(.white.opacity(0.74), in: RoundedRectangle(cornerRadius: 15))
             .padding(.vertical, 10)
             footnote("onboarding.photos.permission-note")
-            action("common.continue") {
-                let status = photoLibrary.authorizationStatus
-                model.choosePhotoAccess(status == .authorized ? .full : status == .limited ? .limited : .denied)
-                model.continueFromPhotoAccess()
-            }
         }
-        .onAppear { photoLibrary.refreshAuthorization() }
-    }
-
-    private var generationTime: some View {
-        page(symbol: "clock", eyebrow: "onboarding.step.schedule", title: "onboarding.schedule.title", detail: "onboarding.schedule.detail") {
-            DatePicker("onboarding.schedule.time", selection: Binding(get: { model.preferredTime }, set: model.setPreferredTime), displayedComponents: .hourAndMinute)
-                #if os(macOS)
-                .datePickerStyle(.field)
-                #else
-                .datePickerStyle(.wheel)
-                #endif
-                .frame(maxHeight: 150)
-                .padding(.vertical, 10)
-            footnote("onboarding.schedule.note")
-            action("common.continue") { model.continueToToday() }
+        .onAppear {
+            photoLibrary.refreshAuthorization()
+            if photoLibrary.canReadLibrary { advancePastPhotoAccess() }
         }
     }
 
     private var todayJournal: some View {
-        page(symbol: "sun.horizon", eyebrow: "onboarding.step.today", title: "onboarding.today.title", detail: "onboarding.today.detail") {
+        page(symbol: "sun.horizon", eyebrow: "onboarding.step.today", title: "onboarding.recent.title", detail: "onboarding.recent.detail") {
             VStack(alignment: .leading, spacing: 14) {
                 HStack(spacing: 9) {
-                    ProgressView(value: model.todayProgress)
-                        .tint(HetkiaPalette.amber)
-                    Text(statusTitle(model.todayStatus))
+                    if isIndexingRecentPhotos {
+                        ProgressView().tint(HetkiaPalette.amber)
+                    } else {
+                        Image(systemName: "photo.stack")
+                            .foregroundStyle(HetkiaPalette.amber)
+                    }
+                    Text(isIndexingRecentPhotos ? "onboarding.recent.processing" : "onboarding.recent.preparing")
                         .font(.system(size: 12, weight: .medium))
                         .foregroundStyle(HetkiaPalette.secondaryInk)
                 }
-                if [.noPhotos, .modelUnavailable, .failed, .existing].contains(model.todayStatus) {
-                    Label(statusDetail(model.todayStatus), systemImage: statusSymbol(model.todayStatus))
-                        .font(.system(size: 13))
-                        .foregroundStyle(HetkiaPalette.secondaryInk)
-                        .padding(16)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(.white.opacity(0.7), in: RoundedRectangle(cornerRadius: 16))
+                VStack(alignment: .leading, spacing: 9) {
+                    ProgressView(value: model.todayProgress)
+                        .tint(HetkiaPalette.amber)
+                    HStack {
+                        Text("onboarding.recent.progress")
+                        Spacer()
+                        Text("\(Int(model.todayProgress * 100))%")
+                            .font(.system(size: 12, weight: .medium, design: .rounded))
+                    }
+                    .font(.system(size: 12))
+                    .foregroundStyle(HetkiaPalette.secondaryInk)
                 }
+                .padding(16)
+                .background(.white.opacity(0.74), in: RoundedRectangle(cornerRadius: 16))
             }
             .padding(.vertical, 12)
-            HStack(spacing: 12) {
-                if model.todayStatus == .failed || model.todayStatus == .modelUnavailable || model.todayStatus == .noPhotos {
-                    Button("onboarding.today.manual") { model.continueManuallyWithoutAI() }
-                        .buttonStyle(.bordered)
+            if model.todayStatus == .failed {
+                action("onboarding.recent.retry") { startRecentIndex() }
+            }
+        }
+        .task {
+            guard !didStartRecentIndex else { return }
+            startRecentIndex()
+        }
+    }
+
+    private func startRecentIndex() {
+        guard !isIndexingRecentPhotos else { return }
+        didStartRecentIndex = true
+        isIndexingRecentPhotos = true
+        Task {
+            do {
+                try await JournalAutomationCoordinator.shared.indexRecentJournals(context: modelContext) { progress in
+                    model.updateInitialIndexProgress(progress)
                 }
-                if model.todayStatus == .failed || model.todayStatus == .modelUnavailable {
-                    Button("onboarding.today.retry") { model.retryToday() }
-                        .buttonStyle(.bordered)
-                }
-                action("common.continue") { model.continueFromToday() }
+                isIndexingRecentPhotos = false
+                model.initialIndexCompleted()
+            } catch {
+                isIndexingRecentPhotos = false
+                didStartRecentIndex = false
+                model.initialIndexFailed()
             }
         }
     }
 
     private var historyInvitation: some View {
         page(symbol: "calendar.badge.clock", eyebrow: "onboarding.step.history", title: "onboarding.history.title", detail: "onboarding.history.detail") {
-            Spacer()
-            Button("onboarding.history.skip") { model.skipHistory() }
-                .font(.system(size: 13, weight: .medium))
-                .foregroundStyle(HetkiaPalette.secondaryInk)
-                .frame(maxWidth: .infinity)
-                .padding(.top, 10)
+            VStack(alignment: .leading, spacing: 16) {
+                Button { shouldIndexOlderPhotos = true } label: {
+                    choiceRow("onboarding.history.background.yes", selected: shouldIndexOlderPhotos)
+                }.buttonStyle(.plain)
+                Button { shouldIndexOlderPhotos = false } label: {
+                    choiceRow("onboarding.history.background.no", selected: !shouldIndexOlderPhotos)
+                }.buttonStyle(.plain)
+                action("onboarding.history.enter-home") {
+                    if shouldIndexOlderPhotos {
+                        JournalAutomationCoordinator.shared.startHistoricalLibraryIndex(context: modelContext)
+                    }
+                    model.skipHistory()
+                }
+            }
+            .padding(.top, 12)
         }
+    }
+
+    private func choiceRow(_ title: LocalizedStringKey, selected: Bool) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: selected ? "checkmark.circle.fill" : "circle")
+                .font(.system(size: 19)).foregroundStyle(selected ? HetkiaPalette.amber : HetkiaPalette.line)
+            Text(title).font(.system(size: 14)).foregroundStyle(HetkiaPalette.ink)
+            Spacer(minLength: 4)
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(.white.opacity(0.74), in: RoundedRectangle(cornerRadius: 15))
+        .contentShape(RoundedRectangle(cornerRadius: 15))
     }
 
     private func page<Content: View>(symbol: String, eyebrow: LocalizedStringKey, title: LocalizedStringKey, detail: LocalizedStringKey, @ViewBuilder content: () -> Content) -> some View {
@@ -143,33 +176,6 @@ struct OnboardingFlowView: View {
 
     private func footnote(_ key: LocalizedStringKey) -> some View {
         Text(key).font(.system(size: 11)).foregroundStyle(HetkiaPalette.secondaryInk).lineSpacing(3).fixedSize(horizontal: false, vertical: true)
-    }
-
-    private func statusTitle(_ status: TodayJournalStatus) -> LocalizedStringKey {
-        switch status {
-        case .idle: return "onboarding.today.status.idle"
-        case .existing: return "onboarding.today.status.existing"
-        case .scanning: return "onboarding.today.status.scanning"
-        case .preparing: return "onboarding.today.status.preparing"
-        case .writing: return "onboarding.today.status.writing"
-        case .ready: return "onboarding.today.status.ready"
-        case .noPhotos: return "onboarding.today.status.no-photos"
-        case .modelUnavailable: return "onboarding.today.status.model-unavailable"
-        case .failed: return "onboarding.today.status.failed"
-        }
-    }
-
-    private func statusDetail(_ status: TodayJournalStatus) -> LocalizedStringKey {
-        switch status {
-        case .existing: return "onboarding.today.detail.existing"
-        case .noPhotos: return "onboarding.today.detail.no-photos"
-        case .modelUnavailable: return "onboarding.today.detail.model-unavailable"
-        default: return "onboarding.today.detail.failed"
-        }
-    }
-
-    private func statusSymbol(_ status: TodayJournalStatus) -> String {
-        switch status { case .existing: "checkmark.circle"; case .noPhotos: "photo"; case .modelUnavailable: "cpu"; default: "exclamationmark.circle" }
     }
 
     private var photoAccessTitle: LocalizedStringKey {
@@ -201,6 +207,18 @@ struct OnboardingFlowView: View {
         case .notDetermined: "circle.dashed"
         @unknown default: "circle.dashed"
         }
+    }
+
+    private func requestPhotoAccessAndAdvance() async {
+        let status = await photoLibrary.requestAuthorization()
+        model.choosePhotoAccess(status == .authorized ? .full : status == .limited ? .limited : .denied)
+        model.continueFromPhotoAccess()
+    }
+
+    private func advancePastPhotoAccess() {
+        let status = photoLibrary.authorizationStatus
+        model.choosePhotoAccess(status == .authorized ? .full : status == .limited ? .limited : .denied)
+        model.continueFromPhotoAccess()
     }
 
 }

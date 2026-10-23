@@ -1,13 +1,5 @@
 import SwiftUI
 
-struct ScrollContentFrameKey: PreferenceKey {
-    static var defaultValue: CGRect = .zero
-
-    static func reduce(value: inout CGRect, nextValue: () -> CGRect) {
-        value = nextValue()
-    }
-}
-
 struct TimelineDateLabel: View {
     let date: Date
     @Environment(\.locale) private var locale

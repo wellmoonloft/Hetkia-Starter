@@ -8,6 +8,7 @@ enum TimelineBrowseMode: Equatable {
 }
 
 struct TimelineHomeView: View {
+    @Environment(\.modelContext) private var modelContext
     @Query(sort: \JournalRecord.localDay, order: .reverse) private var records: [JournalRecord]
     @State private var path: [String] = []
     @State private var browseMode: TimelineBrowseMode = .all
@@ -22,8 +23,6 @@ struct TimelineHomeView: View {
     #else
     @State private var isBottomBarVisible = false
     #endif
-    @State private var lastOffset: CGFloat = 0
-    @State private var atEnd = false
 
     private var years: [Int] {
         Array(Set(records.map { Calendar.current.component(.year, from: $0.localDay) })).sorted(by: >)
@@ -41,7 +40,7 @@ struct TimelineHomeView: View {
 
     var body: some View {
         NavigationStack(path: $path) {
-            GeometryReader { geometry in
+            GeometryReader { _ in
                 ZStack(alignment: .bottom) {
                     HetkiaPalette.paper.ignoresSafeArea()
                     ScrollView {
@@ -51,6 +50,7 @@ struct TimelineHomeView: View {
                             case .year: yearGrid
                             case .month: monthGrid
                             case .all:
+                                onThisDay
                                 if isPhotoWall { photoWall }
                                 else { journalList }
                             }
@@ -58,18 +58,17 @@ struct TimelineHomeView: View {
                         }
                         .padding(.horizontal, 18).padding(.top, 12).padding(.bottom, 128)
                         .frame(maxWidth: 560).frame(maxWidth: .infinity)
-                        .background(GeometryReader { proxy in
-                            Color.clear.preference(key: ScrollContentFrameKey.self, value: proxy.frame(in: .named("timeline-scroll")))
-                        })
                     }
-                    .coordinateSpace(name: "timeline-scroll")
-                    #if !os(macOS)
-                    .simultaneousGesture(DragGesture(minimumDistance: 8).onChanged { value in
-                        if value.translation.height < -22 && !atEnd { isBottomBarVisible = true }
-                        else if value.translation.height > 22 { isBottomBarVisible = false }
-                    })
-                    #endif
-                    .onPreferenceChange(ScrollContentFrameKey.self) { frame in updateScroll(frame, viewport: geometry.size.height) }
+#if os(iOS)
+                    .onScrollGeometryChange(for: Bool.self) { geometry in
+                        let offset = max(0, geometry.visibleRect.minY)
+                        let reachesEnd = geometry.contentSize.height > geometry.containerSize.height + 80
+                            && geometry.visibleRect.maxY >= geometry.contentSize.height - 18
+                        return offset >= 12 && !reachesEnd
+                    } action: { _, shouldShow in
+                        isBottomBarVisible = shouldShow
+                    }
+#endif
 
                     if isBottomBarVisible {
                         BottomNavigationBar(
@@ -85,8 +84,8 @@ struct TimelineHomeView: View {
                 }
                 .animation(.easeInOut(duration: 0.22), value: isBottomBarVisible)
             }
-            .navigationDestination(for: String.self) { dayKey in
-                if let record = records.first(where: { $0.dayKey == dayKey }) {
+            .navigationDestination(for: String.self) { routeKey in
+                if let record = records.first(where: { $0.routeKey == routeKey }) {
                     PersistentJournalDetailView(record: record)
                 } else {
                     ContentUnavailableView("browse.no-entry-month", systemImage: "book.closed")
@@ -96,9 +95,11 @@ struct TimelineHomeView: View {
             .toolbar(.hidden, for: .navigationBar)
             #endif
             .sheet(isPresented: $showSettings) { SettingsView() }
-            .sheet(isPresented: $showPhotoImport) { PhotoImportView() }
+            .sheet(isPresented: $showPhotoImport, onDismiss: {
+                Task { await JournalAutomationCoordinator.shared.catchUp(context: modelContext) }
+            }) { PhotoImportView() }
             .sheet(isPresented: $showSearch) {
-                NavigationStack { PersistedJournalSearchView(records: records) { record in showSearch = false; path.append(record.dayKey) } }
+                NavigationStack { PersistedJournalSearchView(records: records) { record in showSearch = false; path.append(record.routeKey) } }
             }
         }
         .tint(HetkiaPalette.amber)
@@ -111,11 +112,69 @@ struct TimelineHomeView: View {
                 Text("timeline.tagline").font(.system(size: 12)).foregroundStyle(HetkiaPalette.secondaryInk)
             }
             Spacer()
+            Button(action: createManualToday) {
+                Image(systemName: "square.and.pencil")
+                    .font(.system(size: 15)).foregroundStyle(HetkiaPalette.ink).frame(width: 48, height: 48)
+                    .background(.white.opacity(0.65), in: Circle())
+            }.buttonStyle(.plain).contentShape(Rectangle()).zIndex(2).accessibilityLabel(Text("journal.create-today"))
             Button { isPhotoWall.toggle(); browseMode = .all } label: {
                 Image(systemName: isPhotoWall ? "list.bullet" : "square.grid.2x2")
-                    .font(.system(size: 16)).foregroundStyle(HetkiaPalette.ink).frame(width: 42, height: 42)
+                    .font(.system(size: 16)).foregroundStyle(HetkiaPalette.ink).frame(width: 48, height: 48)
                     .background(.white.opacity(0.65), in: Circle())
-            }.buttonStyle(.plain).accessibilityLabel(Text(isPhotoWall ? "timeline.show-list" : "timeline.show-wall"))
+            }.buttonStyle(.plain).contentShape(Rectangle()).zIndex(2).accessibilityLabel(Text(isPhotoWall ? "timeline.show-list" : "timeline.show-wall"))
+        }
+    }
+
+    private var onThisDay: some View {
+        let calendar = Calendar.autoupdatingCurrent
+        let todayParts = calendar.dateComponents([.month, .day], from: .now)
+        let memories = records.filter { record in
+            let parts = calendar.dateComponents([.year, .month, .day], from: record.localDay)
+            return parts.year != calendar.component(.year, from: .now)
+                && parts.month == todayParts.month && parts.day == todayParts.day
+        }
+        return Group {
+            if !memories.isEmpty {
+                VStack(alignment: .leading, spacing: 11) {
+                    Text("timeline.on-this-day")
+                        .font(.system(size: 19, weight: .medium, design: .serif)).foregroundStyle(HetkiaPalette.ink)
+                    ForEach(memories) { record in
+                        VStack(alignment: .leading, spacing: 6) {
+                            Button { path.append(record.routeKey) } label: { PersistedJournalCard(record: record) }
+                                .buttonStyle(.plain).contentShape(RoundedRectangle(cornerRadius: 19))
+                            if record.generationStatus == .pending {
+                                Button("common.cancel") {
+                                    JournalAutomationCoordinator.shared.cancelPendingTask(for: record, context: modelContext)
+                                }
+                                .font(.system(size: 10, weight: .medium)).foregroundStyle(HetkiaPalette.secondaryInk)
+                                .frame(maxWidth: .infinity, alignment: .trailing)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private func createManualToday() {
+        let today = Calendar.autoupdatingCurrent.startOfDay(for: .now)
+        let key = PhotoDayGrouping.key(for: today)
+        let manualKey = "\(key)|manual"
+        let legacyKey = key
+        let descriptor = FetchDescriptor<JournalRecord>(predicate: #Predicate {
+            $0.storageKey == manualKey || $0.storageKey == legacyKey
+        })
+        if let existing = (try? modelContext.fetch(descriptor))?.first(where: { $0.source == .manual }) {
+            path.append(existing.routeKey)
+            return
+        }
+        let record = JournalRecord(dayKey: key, localDay: today, source: .manual)
+        modelContext.insert(record)
+        do {
+            try modelContext.save()
+            path.append(record.routeKey)
+        } catch {
+            modelContext.rollback()
         }
     }
 
@@ -134,8 +193,8 @@ struct TimelineHomeView: View {
                 if let group = groups[key], let first = group.first {
                     TimelineSectionHeading(date: first.localDay)
                     ForEach(group) { record in
-                        Button { path.append(record.dayKey) } label: { PersistedJournalCard(record: record) }
-                            .buttonStyle(.plain)
+                        Button { path.append(record.routeKey) } label: { PersistedJournalCard(record: record) }
+                            .buttonStyle(.plain).contentShape(RoundedRectangle(cornerRadius: 19))
                     }
                 }
             }
@@ -149,13 +208,13 @@ struct TimelineHomeView: View {
             let columns = [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)]
             LazyVGrid(columns: columns, spacing: 14) {
                 ForEach(visibleRecords) { record in
-                    Button { path.append(record.dayKey) } label: {
+                    Button { path.append(record.routeKey) } label: {
                         VStack(alignment: .leading, spacing: 6) {
-                            if let photo = record.photos.sorted(by: { $0.sortOrder < $1.sortOrder }).first {
+                            if let photo = JournalPhotoSelection.selected(from: record.photos).first {
                                 AdaptiveJournalPhotoTile(photo: photo, height: 160)
                             } else { placeholder.frame(height: 160) }
                             Text(record.localDay.formatted(date: .abbreviated, time: .omitted)).font(.system(size: 12, weight: .medium))
-                            Text(String(format: NSLocalizedString("timeline.photo-count", comment: "Photo count"), record.photos.count)).font(.system(size: 10)).foregroundStyle(HetkiaPalette.secondaryInk)
+                            Text(String(format: NSLocalizedString("timeline.photo-count", comment: "Photo count"), JournalPhotoSelection.selected(from: record.photos).count)).font(.system(size: 10)).foregroundStyle(HetkiaPalette.secondaryInk)
                         }.padding(8).background(HetkiaPalette.page, in: RoundedRectangle(cornerRadius: 14))
                     }.buttonStyle(.plain)
                 }
@@ -171,7 +230,7 @@ struct TimelineHomeView: View {
                     ForEach(years, id: \.self) { year in
                         let yearly = records.filter { Calendar.current.component(.year, from: $0.localDay) == year }
                         Button { selectedYear = year; browseMode = .month } label: {
-                            yearTile(title: String(year), count: yearly.count, photo: yearly.first?.photos.sorted(by: { $0.sortOrder < $1.sortOrder }).first)
+                            yearTile(title: String(year), count: yearly.count, photo: yearly.first.flatMap { JournalPhotoSelection.selected(from: $0.photos).first })
                         }.buttonStyle(.plain)
                     }
                 }
@@ -193,7 +252,7 @@ struct TimelineHomeView: View {
                     ForEach(monthNumbers, id: \.self) { month in
                         let monthly = months.filter { Calendar.current.component(.month, from: $0.localDay) == month }
                         Button { selectedMonth = month; browseMode = .all } label: {
-                            yearTile(title: DateFormatter.monthName(month, year: selectedYear), count: monthly.count, photo: monthly.first?.photos.sorted(by: { $0.sortOrder < $1.sortOrder }).first)
+                            yearTile(title: DateFormatter.monthName(month, year: selectedYear), count: monthly.count, photo: monthly.first.flatMap { JournalPhotoSelection.selected(from: $0.photos).first })
                         }.buttonStyle(.plain)
                     }
                 }
@@ -219,30 +278,19 @@ struct TimelineHomeView: View {
         RoundedRectangle(cornerRadius: 10).fill(HetkiaPalette.paper).overlay(Image(systemName: "photo").foregroundStyle(HetkiaPalette.line))
     }
 
-    private func updateScroll(_ frame: CGRect, viewport: CGFloat) {
-        guard frame != .zero else { return }
-        let offset = max(0, -frame.minY)
-        atEnd = frame.maxY <= viewport + 18
-        #if os(macOS)
-        isBottomBarVisible = true
-        #else
-        if atEnd || offset < 12 { isBottomBarVisible = false }
-        else if offset - lastOffset > 2.5 { isBottomBarVisible = true }
-        else if lastOffset - offset > 2.5 { isBottomBarVisible = false }
-        #endif
-        lastOffset = offset
-    }
 }
 
 private struct PersistedJournalCard: View {
     let record: JournalRecord
-    private var ordered: [JournalPhotoRecord] { record.photos.sorted { $0.sortOrder < $1.sortOrder } }
+    private var ordered: [JournalPhotoRecord] { JournalPhotoSelection.selected(from: record.photos) }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
                 Text(record.localDay.formatted(date: .long, time: .omitted)).font(.system(size: 16, weight: .semibold, design: .serif))
                 Spacer()
+                Text(LocalizedStringKey(record.source == .automatic ? "journal.source.automatic" : "journal.source.manual"))
+                    .font(.system(size: 9, weight: .medium)).foregroundStyle(HetkiaPalette.secondaryInk)
                 Image(systemName: "arrow.up.right").font(.system(size: 10)).foregroundStyle(HetkiaPalette.secondaryInk)
             }.foregroundStyle(HetkiaPalette.ink)
             if ordered.isEmpty {
@@ -252,7 +300,7 @@ private struct PersistedJournalCard: View {
                 GeometryReader { geometry in
                     let photos = Array(ordered.prefix(3))
                     let gap: CGFloat = 8
-                    let tileWidth = max(0, (geometry.size.width - gap * CGFloat(max(photos.count - 1, 0))) / CGFloat(photos.count))
+                    let tileWidth = max(1, (geometry.size.width - gap * CGFloat(max(photos.count - 1, 0))) / CGFloat(photos.count))
                     HStack(spacing: gap) {
                         ForEach(photos) { photo in
                             PhotoFallbackThumbnail(photo: photo, width: tileWidth, height: 104)
@@ -271,6 +319,7 @@ private struct PersistedJournalCard: View {
             }.font(.system(size: 10)).foregroundStyle(HetkiaPalette.secondaryInk)
         }.padding(14).background(.white.opacity(0.76), in: RoundedRectangle(cornerRadius: 19))
             .overlay(RoundedRectangle(cornerRadius: 19).strokeBorder(HetkiaPalette.line.opacity(0.6), lineWidth: 0.7))
+            .contentShape(RoundedRectangle(cornerRadius: 19))
     }
 }
 
@@ -310,7 +359,7 @@ private struct PersistedJournalSearchView: View {
                     VStack(alignment: .leading, spacing: 5) {
                         Text(record.localDay.formatted(date: .long, time: .omitted)).font(.system(size: 15, weight: .medium, design: .serif))
                         Text(record.title.isEmpty ? record.bodyText : record.title).font(.system(size: 12)).lineLimit(2)
-                        Text(String(format: NSLocalizedString("timeline.photo-count", comment: "Photo count"), record.photos.count)).font(.system(size: 10)).foregroundStyle(HetkiaPalette.secondaryInk)
+                        Text(String(format: NSLocalizedString("timeline.photo-count", comment: "Photo count"), JournalPhotoSelection.selected(from: record.photos).count)).font(.system(size: 10)).foregroundStyle(HetkiaPalette.secondaryInk)
                     }.foregroundStyle(HetkiaPalette.ink)
                 }.buttonStyle(.plain).listRowBackground(HetkiaPalette.page)
             }

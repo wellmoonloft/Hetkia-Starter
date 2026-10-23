@@ -31,13 +31,20 @@ enum PhotoAssetResolver {
                 photo.originalAvailabilityRaw = PhotoOriginalAvailability.permissionUnavailable.rawValue
             }
         }
-        guard let fileURL = try? thumbnailURL(relativePath: photo.thumbnailRelativePath),
-              let source = CGImageSourceCreateWithURL(fileURL as CFURL, nil) else { return nil }
-        return CGImageSourceCreateThumbnailAtIndex(source, 0, [
-            kCGImageSourceCreateThumbnailFromImageAlways: true,
-            kCGImageSourceCreateThumbnailWithTransform: true,
-            kCGImageSourceThumbnailMaxPixelSize: Int(max(targetSize.width, targetSize.height))
-        ] as CFDictionary)
+        return await thumbnailImage(relativePath: photo.thumbnailRelativePath, targetSize: targetSize)
+    }
+
+    static func thumbnailImage(relativePath: String, targetSize: CGSize) async -> CGImage? {
+        guard !relativePath.isEmpty else { return nil }
+        return await Task.detached(priority: .utility) {
+            guard let fileURL = try? thumbnailURL(relativePath: relativePath),
+                  let source = CGImageSourceCreateWithURL(fileURL as CFURL, nil) else { return nil }
+            return CGImageSourceCreateThumbnailAtIndex(source, 0, [
+                kCGImageSourceCreateThumbnailFromImageAlways: true,
+                kCGImageSourceCreateThumbnailWithTransform: true,
+                kCGImageSourceThumbnailMaxPixelSize: Int(max(max(targetSize.width, targetSize.height), 100))
+            ] as CFDictionary)
+        }.value
     }
 
     static func aiImage(for photo: JournalPhotoRecord) async -> CGImage? {

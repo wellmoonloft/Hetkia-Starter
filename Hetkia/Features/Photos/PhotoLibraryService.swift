@@ -12,6 +12,16 @@ struct ImportedPhotoSummary {
     var photoCount = 0
     var journalCount = 0
     var undatedCount = 0
+    var excludedCount = 0
+}
+
+enum PhotoAssetEligibility {
+    static func allows(_ asset: PHAsset) -> Bool {
+        asset.mediaType == .image
+            && !asset.isHidden
+            && !asset.mediaSubtypes.contains(.photoScreenshot)
+            && !asset.mediaSubtypes.contains(.videoScreenRecording)
+    }
 }
 
 @MainActor
@@ -50,15 +60,19 @@ final class PhotoLibraryService: ObservableObject {
         }
 
         for (index, item) in items.enumerated() {
-            let identifier = item.itemIdentifier
-            if let identifier, try fetchPhoto(identifier: identifier, context: context) != nil {
+            guard let identifier = item.itemIdentifier,
+                  let asset = PHAsset.fetchAssets(withLocalIdentifiers: [identifier], options: nil).firstObject,
+                  PhotoAssetEligibility.allows(asset) else {
+                summary.excludedCount += 1
                 continue
             }
-            let asset = identifier.flatMap { PHAsset.fetchAssets(withLocalIdentifiers: [$0], options: nil).firstObject }
+            if try fetchPhoto(identifier: identifier, context: context) != nil {
+                continue
+            }
             let imported = try await prepare(item: item, asset: asset)
             createdThumbnailPaths.append(imported.relativePath)
             let addedDate: Date?
-            if #available(iOS 26, macOS 26, *) { addedDate = asset?.addedDate }
+            if #available(iOS 26, macOS 26, *) { addedDate = asset.addedDate }
             else { addedDate = nil }
             let journal: JournalRecord?
             if let captureDate = imported.creationDate {
@@ -67,9 +81,10 @@ final class PhotoLibraryService: ObservableObject {
                     journal = existing
                 } else {
                     let day = PhotoDayGrouping.representativeDate(for: captureDate)
-                    let record = JournalRecord(dayKey: key, localDay: day)
+                    let record = JournalRecord(dayKey: key, localDay: day, source: .automatic)
                     context.insert(record)
-                    context.insert(JournalGenerationTask(dayKey: key, journal: record))
+                    let type: JournalTaskType = key == PhotoDayGrouping.key(for: .now) ? .dailyAutomatic : .onThisDayBackfill
+                    context.insert(JournalGenerationTask(dayKey: key, journal: record, type: type))
                     tasksInsertedForDays.insert(key)
                     journal = record
                     summary.journalCount += 1
@@ -84,12 +99,12 @@ final class PhotoLibraryService: ObservableObject {
                 assetLocalIdentifier: identifier,
                 capturedAt: imported.creationDate,
                 addedAt: addedDate,
-                modificationDate: asset?.modificationDate,
-                latitude: asset?.location?.coordinate.latitude ?? imported.latitude,
-                longitude: asset?.location?.coordinate.longitude ?? imported.longitude,
-                locationStatus: (asset?.location != nil || imported.latitude != nil) ? .available : .unavailable,
-                pixelWidth: asset?.pixelWidth ?? imported.pixelWidth,
-                pixelHeight: asset?.pixelHeight ?? imported.pixelHeight,
+                modificationDate: asset.modificationDate,
+                latitude: asset.location?.coordinate.latitude ?? imported.latitude,
+                longitude: asset.location?.coordinate.longitude ?? imported.longitude,
+                locationStatus: (asset.location != nil || imported.latitude != nil) ? .available : .unavailable,
+                pixelWidth: asset.pixelWidth,
+                pixelHeight: asset.pixelHeight,
                 orientationRaw: imported.orientation,
                 thumbnailRelativePath: imported.relativePath,
                 metadataReadStatus: imported.metadataComplete ? .complete : .partial,
@@ -229,8 +244,13 @@ final class PhotoLibraryService: ObservableObject {
     }
 
     private func fetchJournal(dayKey: String, context: ModelContext) throws -> JournalRecord? {
-        let descriptor = FetchDescriptor<JournalRecord>(predicate: #Predicate { $0.dayKey == dayKey })
-        return try context.fetch(descriptor).first
+        let automaticKey = "\(dayKey)|automatic"
+        let manualKey = "\(dayKey)|manual"
+        let legacyKey = dayKey
+        let descriptor = FetchDescriptor<JournalRecord>(predicate: #Predicate {
+            $0.storageKey == automaticKey || $0.storageKey == manualKey || $0.storageKey == legacyKey
+        })
+        return try context.fetch(descriptor).sorted { $0.source == .manual && $1.source == .automatic }.first
     }
 
     private func fetchPhoto(identifier: String, context: ModelContext) throws -> JournalPhotoRecord? {

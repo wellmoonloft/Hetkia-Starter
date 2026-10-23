@@ -5,11 +5,16 @@ import SwiftData
 /// stable if the device later changes time zone; `capturedAt` on each photo remains absolute.
 @Model
 final class JournalRecord {
-    @Attribute(.unique) var dayKey: String
+    // Preserve the existing unique column as a renamed storage key. Values use
+    // date|source so a day can hold one automatic and one manual journal.
+    @Attribute(.unique, originalName: "dayKey") var storageKey: String
+    var sourceRaw: String = JournalSource.manual.rawValue
     var localDay: Date
     var title: String
     var bodyText: String
     var aiDraftBody: String?
+    /// Encoded message-board posts keep the original text and its timestamp together.
+    var messagePostsData: Data?
     var bodyWasEdited: Bool
     var locationText: String?
     var moodText: String?
@@ -21,12 +26,18 @@ final class JournalRecord {
     @Relationship(deleteRule: .cascade, inverse: \JournalPhotoRecord.journal)
     var photos: [JournalPhotoRecord] = []
 
-    init(dayKey: String, localDay: Date, title: String = "", bodyText: String = "", closingLine: String = "") {
-        self.dayKey = dayKey
+    var dayKey: String {
+        String(storageKey.split(separator: "|", maxSplits: 1).first ?? Substring(storageKey))
+    }
+
+    init(dayKey: String, localDay: Date, title: String = "", bodyText: String = "", closingLine: String = "", source: JournalSource = .manual) {
+        self.storageKey = "\(dayKey)|\(source.rawValue)"
+        self.sourceRaw = source.rawValue
         self.localDay = localDay
         self.title = title
         self.bodyText = bodyText
         self.aiDraftBody = nil
+        self.messagePostsData = nil
         self.bodyWasEdited = false
         self.locationText = nil
         self.moodText = nil
@@ -40,6 +51,51 @@ final class JournalRecord {
     var generationStatus: JournalGenerationStatus {
         get { JournalGenerationStatus(rawValue: generationStatusRaw) ?? .pending }
         set { generationStatusRaw = newValue.rawValue; updatedAt = .now }
+    }
+
+    var source: JournalSource {
+        get { JournalSource(rawValue: sourceRaw) ?? .manual }
+        set {
+            sourceRaw = newValue.rawValue
+            storageKey = "\(dayKey)|\(newValue.rawValue)"
+            updatedAt = .now
+        }
+    }
+
+    var routeKey: String { "\(dayKey)|\(sourceRaw)" }
+
+    var messagePosts: [JournalMessagePost] {
+        get {
+            guard let messagePostsData else { return [] }
+            return (try? JSONDecoder().decode([JournalMessagePost].self, from: messagePostsData)) ?? []
+        }
+        set { messagePostsData = try? JSONEncoder().encode(newValue) }
+    }
+}
+
+struct JournalMessagePost: Identifiable, Codable, Equatable {
+    enum Kind: String, Codable { case automatic, note }
+
+    var id: UUID
+    var text: String
+    var createdAt: Date
+    var kind: Kind
+
+    init(id: UUID = UUID(), text: String, createdAt: Date = .now, kind: Kind) {
+        self.id = id
+        self.text = text
+        self.createdAt = createdAt
+        self.kind = kind
+    }
+}
+
+enum JournalPhotoSelection {
+    /// Selects the same set for diary generation, detail pages, and timeline previews.
+    static func selected(from photos: [JournalPhotoRecord]) -> [JournalPhotoRecord] {
+        let ordered = photos.sorted { $0.sortOrder < $1.sortOrder }
+        let count = ordered.count
+        let selectedCount = count > 9 ? 9 : (count.isMultiple(of: 2) ? max(0, count - 1) : count)
+        return Array(ordered.prefix(selectedCount))
     }
 }
 
@@ -108,6 +164,7 @@ final class JournalPhotoRecord {
 final class JournalGenerationTask {
     @Attribute(.unique) var id: UUID
     var dayKey: String
+    var taskTypeRaw: String = JournalTaskType.manual.rawValue
     var statusRaw: String
     var attempts: Int
     var lastError: String?
@@ -115,9 +172,10 @@ final class JournalGenerationTask {
     var updatedAt: Date
     var journal: JournalRecord?
 
-    init(dayKey: String, journal: JournalRecord?) {
+    init(dayKey: String, journal: JournalRecord?, type: JournalTaskType = .manual) {
         self.id = UUID()
         self.dayKey = dayKey
+        self.taskTypeRaw = type.rawValue
         self.statusRaw = JournalGenerationStatus.pending.rawValue
         self.attempts = 0
         self.lastError = nil
@@ -130,7 +188,16 @@ final class JournalGenerationTask {
         get { JournalGenerationStatus(rawValue: statusRaw) ?? .pending }
         set { statusRaw = newValue.rawValue; updatedAt = .now }
     }
+
+    var taskType: JournalTaskType {
+        get { JournalTaskType(rawValue: taskTypeRaw) ?? .manual }
+        set { taskTypeRaw = newValue.rawValue; updatedAt = .now }
+    }
 }
+
+enum JournalSource: String, Codable { case automatic, manual }
+
+enum JournalTaskType: String, Codable { case dailyAutomatic, onThisDayBackfill, manual }
 
 enum JournalGenerationStatus: String, Codable {
     case pending, processing, completed, failed, skipped, cancelled
