@@ -1477,6 +1477,126 @@
         }
       }
     },
+    "journal.message.delete" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eliminar"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ลบ"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "删除"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "刪除"
+          }
+        }
+      }
+    },
+    "journal.message.delete.confirm-detail" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This message will be permanently removed."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Este comentario se eliminará permanentemente."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ข้อความนี้จะถูกลบอย่างถาวร"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "删除后无法恢复。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "刪除後無法復原。"
+          }
+        }
+      }
+    },
+    "journal.message.delete.confirm-title" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete this message?"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "¿Eliminar este comentario?"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ลบข้อความนี้หรือไม่"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "删除这条留言？"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "刪除這則留言？"
+          }
+        }
+      }
+    },
+    "journal.message.delete-journal.confirm-detail" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "No other messages or diary text remain. The saved journal and its linked photo previews will also be deleted." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "No quedan otros comentarios ni texto del diario. También se eliminarán el diario guardado y sus vistas previas de fotos." } },
+        "th" : { "stringUnit" : { "state" : "translated", "value" : "ไม่มีข้อความอื่นหรือเนื้อหาไดอารี่เหลืออยู่ ไดอารี่ที่บันทึกไว้และภาพตัวอย่างที่เชื่อมโยงจะถูกลบด้วย" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "没有其他留言或日记正文，已保存的日记及其关联照片预览也会一并删除。" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "沒有其他留言或日記正文，已儲存的日記及其關聯照片預覽也會一併刪除。" } }
+      }
+    },
+    "journal.message.delete-journal.confirm-title" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Delete this message and the empty journal?" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "¿Eliminar este comentario y el diario vacío?" } },
+        "th" : { "stringUnit" : { "state" : "translated", "value" : "ลบข้อความนี้และไดอารี่ที่ว่างเปล่าหรือไม่" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "删除这条留言和空日记？" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "刪除這則留言和空日記？" } }
+      }
+    },
     "journal.message.edit" : {
       "localizations" : {
         "en" : {

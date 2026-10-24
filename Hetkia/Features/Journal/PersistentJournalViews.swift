@@ -23,6 +23,7 @@ struct PersistentJournalDetailView: View {
     @State private var notice: String?
     @State private var isEditingDiary = false
     @State private var editingPostID: UUID?
+    @State private var deletingPostID: UUID?
     @State private var editDraft = ""
     @State private var newMessage = ""
     @State private var photoGallery: PhotoGallerySession?
@@ -499,10 +500,33 @@ struct PersistentJournalDetailView: View {
                     Button { editDraft = post.text; editingPostID = post.id; focusedInput = .edit(post.id) } label: {
                         Label("journal.message.edit", systemImage: "pencil").font(.system(size: 11, weight: .medium))
                     }.foregroundStyle(HetkiaPalette.secondaryInk)
+                    Button(role: .destructive) { deletingPostID = post.id } label: {
+                        Image(systemName: "trash")
+                            .font(.system(size: 11, weight: .medium))
+                    }
+                    .foregroundStyle(HetkiaPalette.secondaryInk)
+                    .accessibilityLabel(Text("journal.message.delete"))
                 }
             }
         }
         .padding(13).background(HetkiaPalette.paper.opacity(0.8), in: RoundedRectangle(cornerRadius: 13))
+        .confirmationDialog(
+            Text(willDeleteJournalAfterRemoving(post)
+                ? "journal.message.delete-journal.confirm-title"
+                : "journal.message.delete.confirm-title"),
+            isPresented: Binding(
+                get: { deletingPostID == post.id },
+                set: { if !$0 && deletingPostID == post.id { deletingPostID = nil } }
+            ),
+            titleVisibility: .visible
+        ) {
+            Button("journal.message.delete", role: .destructive) { deletePost(post) }
+            Button("common.cancel", role: .cancel) { deletingPostID = nil }
+        } message: {
+            Text(willDeleteJournalAfterRemoving(post)
+                ? "journal.message.delete-journal.confirm-detail"
+                : "journal.message.delete.confirm-detail")
+        }
     }
 
     private func generatedDraftCard(_ draft: String) -> some View {
@@ -675,6 +699,42 @@ struct PersistentJournalDetailView: View {
         editingPostID = nil
         focusedInput = nil
         }
+    }
+
+    private func deletePost(_ post: JournalMessagePost) {
+        var updated = record.messagePosts
+        guard let index = updated.firstIndex(where: { $0.id == post.id && $0.kind == .note }) else { return }
+        updated.remove(at: index)
+        if shouldDeleteJournal(afterRemoving: post, remainingPosts: updated) {
+            deleteJournal()
+            return
+        }
+        record.messagePosts = updated
+        record.updatedAt = .now
+        do {
+            try modelContext.save()
+            if editingPostID == post.id { cancelEditing() }
+            deletingPostID = nil
+        } catch {
+            modelContext.rollback()
+            notice = error.localizedDescription
+        }
+    }
+
+    private func willDeleteJournalAfterRemoving(_ post: JournalMessagePost) -> Bool {
+        let remainingPosts = record.messagePosts.filter { $0.id != post.id }
+        return shouldDeleteJournal(afterRemoving: post, remainingPosts: remainingPosts)
+    }
+
+    private func shouldDeleteJournal(afterRemoving post: JournalMessagePost, remainingPosts: [JournalMessagePost]) -> Bool {
+        guard post.kind == .note,
+              !remainingPosts.contains(where: { $0.kind == .note }) else { return false }
+        let hasDiaryBody = !record.bodyText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        let hasDraft = !(record.aiDraftBody?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true)
+        let hasGeneratedText = remainingPosts.contains {
+            $0.kind == .automatic && !$0.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        }
+        return !hasDiaryBody && !hasDraft && !hasGeneratedText
     }
 
     private func cancelEditing() { editingPostID = nil; focusedInput = nil; editDraft = "" }

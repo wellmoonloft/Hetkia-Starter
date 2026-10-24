@@ -196,7 +196,12 @@ struct TimelineHomeView: View {
     private func refresh(forceFullScan: Bool = false) async {
         guard !isRefreshing else { return }
         isRefreshing = true
-        defer { isRefreshing = false }
+        defer {
+            isRefreshing = false
+            // A cancelled SwiftUI refresh can otherwise leave the initial scan
+            // state (and its completed progress indicator) on screen forever.
+            isLoading = false
+        }
 
         guard PhotoLibraryService.hasFullReadAccess else {
             entries = []
@@ -215,7 +220,9 @@ struct TimelineHomeView: View {
             await Task.yield()
             if forceFullScan {
                 let result = await OnThisDayLibrary.fetch { progress = $0 }
-                guard !Task.isCancelled else { return }
+                // PhotoKit's scan and cache write are not cancellation-aware. If
+                // the refresh task is cancelled after the scan finishes, still
+                // publish its result so the visible page matches the new cache.
                 entries = result
             } else {
                 entries = OnThisDayLibrary.refreshCurrentYear(preserving: cachedEntries)
@@ -228,7 +235,6 @@ struct TimelineHomeView: View {
             hasResolvedInitialCache = true
             progress = 0
             let result = await OnThisDayLibrary.fetch { progress = $0 }
-            guard !Task.isCancelled else { return }
             entries = result
         }
         isLoading = false

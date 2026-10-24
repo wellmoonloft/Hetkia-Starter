@@ -54,11 +54,12 @@ private struct HetkiaWidgetProvider: TimelineProvider {
         }
 
         let groups = matchingPhotoGroups()
-        // The collage uses odd counts only. Walk from the oldest anniversary
-        // toward today, with a five-memory cap to keep the layout readable.
+        // Keep the collage readable with one or three memories. Groups are
+        // discovered newest-first, then reversed so the collage reads oldest
+        // anniversary to today.
         let availableCount = groups.count
-        let selectedCount = min(5, availableCount.isMultiple(of: 2) ? max(0, availableCount - 1) : availableCount)
-        let chosenGroups = Array(groups.reversed().prefix(selectedCount))
+        let selectedCount = min(3, availableCount.isMultiple(of: 2) ? max(0, availableCount - 1) : availableCount)
+        let chosenGroups = Array(groups.prefix(selectedCount).reversed())
         var memories: [WidgetMemory] = []
         for group in chosenGroups {
             guard let firstAsset = group.assets.first,
@@ -97,6 +98,9 @@ private struct HetkiaWidgetProvider: TimelineProvider {
             let count = assets.count
             let desired = count > 9 ? 9 : (count.isMultiple(of: 2) ? max(0, count - 1) : count)
             let selected = Array(assets.sorted {
+                let lhsHasLocation = $0.location != nil
+                let rhsHasLocation = $1.location != nil
+                if lhsHasLocation != rhsHasLocation { return lhsHasLocation && !rhsHasLocation }
                 let lhsEveryday = !($0.mediaSubtypes.contains(.photoScreenshot) || $0.mediaSubtypes.contains(.videoScreenRecording))
                 let rhsEveryday = !($1.mediaSubtypes.contains(.photoScreenshot) || $1.mediaSubtypes.contains(.videoScreenRecording))
                 if lhsEveryday != rhsEveryday { return lhsEveryday && !rhsEveryday }
