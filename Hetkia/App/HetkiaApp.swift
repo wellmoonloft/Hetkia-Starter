@@ -49,9 +49,7 @@ final class HetkiaApplicationDelegate: NSObject, UIApplicationDelegate {
             matching: DateComponents(hour: 0, minute: 0, second: 0),
             matchingPolicy: .nextTime
         )
-        Task {
-            try? await BGTaskScheduler.shared.submitTaskRequest(request)
-        }
+        try? BGTaskScheduler.shared.submit(request)
     }
 }
 #endif
@@ -81,16 +79,28 @@ struct HetkiaApp: App {
 
 private struct PersistentAppRootView: View {
     @ObservedObject var onboarding: OnboardingFlowModel
+    @Environment(\.scenePhase) private var scenePhase
+    @State private var hasRequiredPhotoAccess = PhotoLibraryService.hasFullReadAccess
 
     var body: some View {
         Group {
-            if onboarding.isOnboardingComplete {
+            if onboarding.isOnboardingComplete && hasRequiredPhotoAccess {
                 TimelineHomeView()
             } else {
                 OnboardingFlowView(model: onboarding)
             }
         }
         .environment(\.locale, HetkiaSystemLanguage.locale)
+        .task { refreshPhotoAuthorization() }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active { refreshPhotoAuthorization() }
+        }
+    }
+
+    private func refreshPhotoAuthorization() {
+        let isAuthorized = PhotoLibraryService.hasFullReadAccess
+        hasRequiredPhotoAccess = isAuthorized
+        if !isAuthorized { onboarding.requirePhotoAccess() }
     }
 }
 

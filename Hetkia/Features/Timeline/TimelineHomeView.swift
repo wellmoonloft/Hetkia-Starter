@@ -34,7 +34,7 @@ struct TimelineHomeView: View {
                     } else if isLoading {
                         loadingState
                     } else if entries.isEmpty {
-                        ContentUnavailableView("photos.selection.empty", systemImage: "calendar", description: Text("onboarding.photos.detail"))
+                        emptyOnThisDayState
                     } else {
                         LazyVStack(spacing: 16) {
                             ForEach(entries) { entry in
@@ -137,6 +137,43 @@ struct TimelineHomeView: View {
         .background(HetkiaPalette.page, in: RoundedRectangle(cornerRadius: 18))
     }
 
+    private var emptyOnThisDayState: some View {
+        VStack(spacing: 11) {
+            Spacer(minLength: 20)
+            Text("onthisday.empty.title")
+                .font(.system(size: 23, weight: .medium, design: .serif))
+                .foregroundStyle(HetkiaPalette.ink)
+                .multilineTextAlignment(.center)
+            Text("onthisday.empty.message")
+                .font(.system(size: 14))
+                .lineSpacing(4)
+                .foregroundStyle(HetkiaPalette.secondaryInk)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: 350)
+                .padding(.top, 4)
+            Image("OnThisDayEmptyIllustration")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 240, height: 360)
+                // The flower adds visual weight to the left; offset the canvas so
+                // the illustrated frame itself stays centered in the screen.
+                .offset(x: -13)
+                .accessibilityHidden(true)
+                .padding(.top, 3)
+            Text("onthisday.empty.invitation")
+                .font(.system(size: 13, weight: .regular, design: .serif))
+                .italic()
+                .foregroundStyle(HetkiaPalette.amber)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: 20)
+        }
+        .frame(maxWidth: .infinity)
+        .frame(minHeight: 570)
+        .padding(.horizontal, 12)
+    }
+
     private var permissionState: some View {
         VStack(alignment: .leading, spacing: 12) {
             Label("onboarding.photos.status.denied", systemImage: "hand.raised")
@@ -192,19 +229,25 @@ private struct OnThisDayCard: View {
     let entry: OnThisDayEntry
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text(entry.date.formatted(date: .long, time: .omitted))
-                .font(.system(size: 17, weight: .medium, design: .serif))
-                .foregroundStyle(HetkiaPalette.ink)
-                .frame(maxWidth: .infinity, alignment: .leading)
+        ZStack(alignment: .topLeading) {
             OnThisDayPhotoGrid(assets: entry.assets)
+
+            LinearGradient(
+                colors: [.black.opacity(0.52), .black.opacity(0.12), .clear],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .allowsHitTesting(false)
+
+            Text(entry.date.formatted(date: .long, time: .omitted))
+                .font(.system(size: 17, weight: .semibold, design: .serif))
+                .foregroundStyle(.white)
+                .shadow(color: .black.opacity(0.4), radius: 4, x: 0, y: 1)
+                .padding(16)
+                .allowsHitTesting(false)
         }
-        .padding(12)
-        .background(HetkiaPalette.page, in: RoundedRectangle(cornerRadius: 19, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 19, style: .continuous)
-                .strokeBorder(HetkiaPalette.line.opacity(0.55), lineWidth: 0.7)
-        }
+        .aspectRatio(1, contentMode: .fit)
+        .clipShape(RoundedRectangle(cornerRadius: 19, style: .continuous))
         .contentShape(RoundedRectangle(cornerRadius: 19, style: .continuous))
     }
 }
@@ -248,14 +291,13 @@ private struct OnThisDayPhotoGrid: View {
             .clipped()
         }
         .aspectRatio(1, contentMode: .fit)
-        .clipShape(RoundedRectangle(cornerRadius: 11, style: .continuous))
+        .background(HetkiaPalette.page)
     }
 
     private func assetTile(_ asset: PHAsset, width: CGFloat, height: CGFloat) -> some View {
         OnThisDayAssetThumbnail(asset: asset)
             .frame(width: width, height: height)
             .clipped()
-            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
     }
 }
 

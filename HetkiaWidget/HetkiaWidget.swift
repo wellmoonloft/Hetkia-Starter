@@ -171,29 +171,40 @@ private struct HetkiaWidgetView: View {
                     WidgetMemoryCollage(memories: entry.memories, rounded: false)
                 }
             } else {
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack(alignment: .firstTextBaseline) {
-                        Text("timeline.on-this-day")
-                            .font(.system(size: 20, weight: .semibold, design: .serif))
-                            .foregroundStyle(ink)
-                        Spacer(minLength: 4)
-                        Text("brand.footer")
-                            .font(.system(size: 12, weight: .regular, design: .serif))
-                            .foregroundStyle(mutedInk)
-                            .lineLimit(1)
-                    }
+                if entry.memories.isEmpty {
+                    emptyState
+                        .padding(16)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                        .background(Color(red: 0.99, green: 0.98, blue: 0.95))
+                } else {
+                    ZStack(alignment: .topLeading) {
+                        WidgetMemoryCollage(memories: entry.memories, rounded: false)
 
-                    if entry.memories.isEmpty {
-                        emptyState
-                    } else {
-                        WidgetMemoryCollage(memories: entry.memories, rounded: true)
+                        LinearGradient(
+                            colors: [.black.opacity(0.56), .black.opacity(0.12), .clear],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                        .allowsHitTesting(false)
+
+                        HStack(alignment: .firstTextBaseline) {
+                            Text("timeline.on-this-day")
+                                .font(.system(size: 20, weight: .semibold, design: .serif))
+                            Spacer(minLength: 4)
+                            Text("brand.footer")
+                                .font(.system(size: 12, weight: .regular, design: .serif))
+                                .lineLimit(1)
+                        }
+                        .foregroundStyle(.white)
+                        .shadow(color: .black.opacity(0.42), radius: 4, x: 0, y: 1)
+                        .padding(16)
+                        .allowsHitTesting(false)
                     }
                 }
-                .padding(16)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .containerBackground(Color(red: 0.99, green: 0.98, blue: 0.95), for: .widget)
+        .containerBackground(.clear, for: .widget)
     }
 
     private var emptyState: some View {

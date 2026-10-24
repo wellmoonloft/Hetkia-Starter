@@ -4,16 +4,6 @@
     "(%lld)" : {
 
     },
-    "%lld / %lld" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$lld / %2$lld"
-          }
-        }
-      }
-    },
     "%lld%%" : {
 
     },
@@ -4104,7 +4094,13 @@
       }
     },
     "onboarding.photos.open-settings" : {
-
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Open Settings to allow Photos access" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Abre Ajustes para permitir el acceso a Fotos" } },
+        "th" : { "stringUnit" : { "state" : "translated", "value" : "เปิดการตั้งค่าเพื่ออนุญาตให้เข้าถึงรูปภาพ" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "前往系统设置允许访问照片" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "前往系統設定允許存取照片" } }
+      }
     },
     "onboarding.photos.permission-note" : {
       "localizations" : {
@@ -5806,10 +5802,49 @@
       }
     },
     "onthisday.empty" : {
-
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "This journal could not be found." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "No se encontró este diario." } },
+        "th" : { "stringUnit" : { "state" : "translated", "value" : "ไม่พบบันทึกนี้" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "暂时没有找到这篇日记。" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "暫時沒有找到這篇手札。" } }
+      }
+    },
+    "onthisday.empty.invitation" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Leave a few memories for your future self, whenever it feels right." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Cuando quieras, guarda algún recuerdo para tu yo del futuro." } },
+        "th" : { "stringUnit" : { "state" : "translated", "value" : "เมื่อพร้อม ค่อยเก็บความทรงจำเล็ก ๆ ไว้ให้ตัวเองในวันข้างหน้า" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "从今天开始，为未来的自己留下一些回忆吧。" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "從今天開始，為未來的自己留下一些回憶吧。" } }
+      }
+    },
+    "onthisday.empty.message" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "A shared meal, a friend's smile, or a view along the way can become a lovely memory. There is no need to capture it all; ordinary days can shine when you look back." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Una comida compartida, la sonrisa de un amigo o un paisaje del camino pueden ser recuerdos entrañables. No hace falta guardarlo todo: al mirar atrás, también brillan los días sencillos." } },
+        "th" : { "stringUnit" : { "state" : "translated", "value" : "มื้ออาหารร่วมกัน รอยยิ้มของเพื่อน หรือวิวระหว่างทาง ล้วนเป็นความทรงจำที่น่ารัก ไม่ต้องบันทึกทุกอย่าง เพราะเมื่อมองย้อนกลับมา วันธรรมดาก็เปล่งประกายได้" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "生活里有许多值得记住的小事：一顿饭、朋友的笑脸，或偶然遇见的风景。不必刻意记录，平凡日子也会在多年后闪着光。" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "生活裡有許多值得記住的小事：一頓飯、朋友的笑臉，或偶然遇見的風景。不必刻意記錄，平凡日子也會在多年後閃著光。" } }
+      }
+    },
+    "onthisday.empty.title" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Today's story is still unwritten" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "La historia de hoy aún está por escribirse" } },
+        "th" : { "stringUnit" : { "state" : "translated", "value" : "เรื่องราวของวันนี้ยังรอการเขียน" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "今天的故事，还没有被写下" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "今天的故事，還沒有被寫下" } }
+      }
     },
     "onthisday.scanning" : {
-
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Looking for memories from this day" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Buscando recuerdos de este día" } },
+        "th" : { "stringUnit" : { "state" : "translated", "value" : "กำลังค้นหาความทรงจำของวันนี้" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "正在寻找这一天的回忆" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "正在尋找這一天的回憶" } }
+      }
     },
     "onthisday.tagline" : {
       "localizations" : {
@@ -7748,6 +7783,7 @@
       }
     },
     "photos.status.cancelled" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -7782,6 +7818,7 @@
       }
     },
     "photos.status.completed" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -7816,6 +7853,7 @@
       }
     },
     "photos.status.failed" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -7850,6 +7888,7 @@
       }
     },
     "photos.status.pending" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -7884,6 +7923,7 @@
       }
     },
     "photos.status.processing" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -7918,6 +7958,7 @@
       }
     },
     "photos.status.skipped" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -9328,6 +9369,7 @@
       }
     },
     "settings.permission.denied" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -9362,6 +9404,7 @@
       }
     },
     "settings.permission.granted" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -9396,6 +9439,7 @@
       }
     },
     "settings.permission.limited" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -9500,6 +9544,7 @@
       }
     },
     "settings.permission.manage" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -9534,6 +9579,7 @@
       }
     },
     "settings.permission.not-requested" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -9603,6 +9649,7 @@
       }
     },
     "settings.permission.photos" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -9637,6 +9684,7 @@
       }
     },
     "settings.permission.photos.detail" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -9671,6 +9719,7 @@
       }
     },
     "settings.permission.request" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -9705,6 +9754,7 @@
       }
     },
     "settings.permission.restricted" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -9739,6 +9789,7 @@
       }
     },
     "settings.permission.unknown" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -9837,6 +9888,108 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "照片生成手札"
+          }
+        }
+      }
+    },
+    "settings.saved-journals" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Saved journals"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diarios guardados"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "บันทึกย้อนหลัง"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "历史日记"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "歷史手札"
+          }
+        }
+      }
+    },
+    "settings.saved-journals.empty" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You haven't left a story here yet."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Todavía no has dejado ninguna historia."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "คุณยังไม่ได้ฝากเรื่องราวไว้ที่นี่"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你还没有留下故事"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你還沒有留下故事"
+          }
+        }
+      }
+    },
+    "settings.saved-journals.open" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "View historical journals"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ver diarios históricos"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ดูบันทึกย้อนหลัง"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "查看历史日记"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "查看歷史手札"
           }
         }
       }
@@ -10674,7 +10827,7 @@
       }
     },
     "timeline.photo-count" : {
-      "comment" : "Number of sample photos\nPhoto count",
+      "comment" : "Number of sample photos\nSaved journal photo count",
       "localizations" : {
         "en" : {
           "stringUnit" : {

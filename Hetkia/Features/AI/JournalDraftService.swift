@@ -22,6 +22,12 @@ enum JournalDraftError: LocalizedError {
 }
 
 enum JournalDraftService {
+    static var isAvailable: Bool {
+        guard #available(iOS 26, macOS 26, *) else { return false }
+        if case .available = SystemLanguageModel.default.availability { return true }
+        return false
+    }
+
     static var availabilityDescription: String {
         guard #available(iOS 26, macOS 26, *) else {
             return NSLocalizedString("photos.ai.os-unsupported", comment: "")

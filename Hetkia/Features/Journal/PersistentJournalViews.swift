@@ -16,6 +16,7 @@ struct PersistentJournalDetailView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
     @Bindable var record: JournalRecord
+    private let savedOnly: Bool
     @State private var displayPhotos: [JournalPhotoRecord]
     @State private var hasPersistedRecord: Bool
     @State private var isGenerating = false
@@ -77,8 +78,9 @@ struct PersistentJournalDetailView: View {
         selectedPhotos.first { $0.latitude != nil && $0.longitude != nil }
     }
 
-    init(record: JournalRecord, liveAssets: [PHAsset] = [], isTransient: Bool = false) {
+    init(record: JournalRecord, liveAssets: [PHAsset] = [], isTransient: Bool = false, savedOnly: Bool = false) {
         self.record = record
+        self.savedOnly = savedOnly
         self._hasPersistedRecord = State(initialValue: !isTransient)
         var photos = record.photos
         let knownIdentifiers = Set(photos.compactMap(\.assetLocalIdentifier))
@@ -138,12 +140,12 @@ struct PersistentJournalDetailView: View {
         }
 #if os(macOS)
         .sheet(item: $photoGallery) { session in
-            PhotoFullScreenGallery(photos: selectedPhotos, initialIndex: session.initialIndex)
+            PhotoFullScreenGallery(photos: selectedPhotos, initialIndex: session.initialIndex, savedOnly: savedOnly)
                 .frame(minWidth: 760, minHeight: 620)
         }
 #else
         .fullScreenCover(item: $photoGallery) { session in
-            PhotoFullScreenGallery(photos: selectedPhotos, initialIndex: session.initialIndex)
+            PhotoFullScreenGallery(photos: selectedPhotos, initialIndex: session.initialIndex, savedOnly: savedOnly)
         }
 #endif
         .sheet(item: $mapDestination) { destination in
@@ -183,6 +185,7 @@ struct PersistentJournalDetailView: View {
             HStack {
                 Text((mapPhoto?.capturedAt ?? record.localDay).formatted(.dateTime.year().month(.wide).day().hour().minute()))
                     .font(.system(size: headingFontSize, weight: .regular, design: .serif))
+                    .foregroundStyle(HetkiaPalette.secondaryInk)
                 Spacer()
             }
             persistentPhotoGrid(height: photoAreaHeight).padding(.vertical, 13)
@@ -269,8 +272,18 @@ struct PersistentJournalDetailView: View {
     }
 
     private func photoTile(_ photo: JournalPhotoRecord, index: Int, width: CGFloat, height: CGFloat) -> some View {
-        PhotoFallbackThumbnail(photo: photo, width: width, height: height) {
-            photoGallery = PhotoGallerySession(initialIndex: index)
+        Group {
+            if savedOnly {
+                Button { photoGallery = PhotoGallerySession(initialIndex: index) } label: {
+                    PersistedJournalThumbnail(photo: photo, width: width, height: height)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(Text("photos.open.fullscreen"))
+            } else {
+                PhotoFallbackThumbnail(photo: photo, width: width, height: height) {
+                    photoGallery = PhotoGallerySession(initialIndex: index)
+                }
+            }
         }
     }
 
@@ -290,18 +303,6 @@ struct PersistentJournalDetailView: View {
                 actionButton(isGenerating ? "photos.generating" : "photos.generate", symbol: "sparkles") { Task { await generateDraft() } }
                     .disabled(isGenerating || record.generationStatus == .processing)
             }
-            HStack {
-                Label(generationStatusKey, systemImage: generationSymbol).font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(record.generationStatus == .failed ? .red : HetkiaPalette.secondaryInk)
-                Spacer()
-                Text(String(format: NSLocalizedString("timeline.photo-count", comment: "Photo count"), selectedPhotos.count))
-                    .font(.system(size: 10)).foregroundStyle(HetkiaPalette.secondaryInk)
-            }
-            if let generationError = record.generationError, !generationError.isEmpty {
-                Text(verbatim: generationError).font(.system(size: 11)).foregroundStyle(.red).fixedSize(horizontal: false, vertical: true)
-            } else if record.bodyText.isEmpty {
-                Text(verbatim: JournalDraftService.availabilityDescription).font(.system(size: 10)).foregroundStyle(HetkiaPalette.secondaryInk).fixedSize(horizontal: false, vertical: true)
-            }
         }.frame(maxWidth: 520)
     }
 
@@ -316,10 +317,14 @@ struct PersistentJournalDetailView: View {
         }
         var images: [CGImage] = []
         for photo in selectedPhotos.prefix(9) {
-            if let image = await PhotoAssetResolver.displayImage(
-                for: photo,
-                targetSize: CGSize(width: 1200, height: 1200)
-            ) {
+            let targetSize = CGSize(width: 1200, height: 1200)
+            let image: CGImage?
+            if savedOnly {
+                image = await PhotoAssetResolver.thumbnailImage(relativePath: photo.thumbnailRelativePath, targetSize: targetSize)
+            } else {
+                image = await PhotoAssetResolver.displayImage(for: photo, targetSize: targetSize)
+            }
+            if let image {
                 images.append(image)
             }
         }
@@ -361,7 +366,6 @@ struct PersistentJournalDetailView: View {
             HStack {
                 Label("journal.message.board", systemImage: "text.bubble").font(.system(size: 15, weight: .semibold, design: .serif))
                 Spacer()
-                Text(record.localDay.formatted(date: .numeric, time: .omitted)).font(.system(size: 10)).foregroundStyle(HetkiaPalette.secondaryInk)
             }
             if posts.isEmpty {
                 Text("journal.message.empty").font(.system(size: 13)).foregroundStyle(HetkiaPalette.secondaryInk).padding(.vertical, 6)
@@ -449,27 +453,6 @@ struct PersistentJournalDetailView: View {
         }.padding(16).background(HetkiaPalette.page, in: RoundedRectangle(cornerRadius: 16))
     }
 
-    private var generationStatusKey: LocalizedStringKey {
-        switch record.generationStatus {
-        case .pending: "photos.status.pending"
-        case .processing: "photos.status.processing"
-        case .completed: "photos.status.completed"
-        case .failed: "photos.status.failed"
-        case .skipped: "photos.status.skipped"
-        case .cancelled: "photos.status.cancelled"
-        }
-    }
-
-    private var generationSymbol: String {
-        switch record.generationStatus {
-        case .pending: "clock"
-        case .processing: "arrow.trianglehead.2.clockwise"
-        case .completed: "checkmark.circle"
-        case .failed: "exclamationmark.circle"
-        case .skipped, .cancelled: "minus.circle"
-        }
-    }
-
     private func actionButton(_ title: LocalizedStringKey, symbol: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Label(title, systemImage: symbol).font(.system(size: 12, weight: .medium))
@@ -491,6 +474,11 @@ struct PersistentJournalDetailView: View {
         if !hasPersistedRecord {
             modelContext.insert(record)
             hasPersistedRecord = true
+        }
+        guard !savedOnly else {
+            record.updatedAt = .now
+            try? modelContext.save()
+            return
         }
         var existingByIdentifier = Dictionary(
             record.photos.compactMap { photo in photo.assetLocalIdentifier.map { ($0, photo) } },
@@ -583,16 +571,17 @@ struct PersistentJournalDetailView: View {
 
     private func generateDraft() async {
         guard !selectedPhotos.isEmpty else { notice = NSLocalizedString("photos.generate.needs-photos", comment: ""); return }
+        guard #available(iOS 26, macOS 26, *) else {
+            notice = JournalDraftService.availabilityDescription
+            return
+        }
+        guard JournalDraftService.isAvailable else {
+            notice = JournalDraftService.availabilityDescription
+            return
+        }
         await commitJournalForUserAction()
         if record.messagePosts.isEmpty, !posts.isEmpty { record.messagePosts = posts }
         if record.bodyText.isEmpty { record.source = .automatic }
-        guard #available(iOS 26, macOS 26, *) else {
-            notice = JournalDraftService.availabilityDescription
-            record.generationStatus = .failed
-            record.generationError = notice
-            try? modelContext.save()
-            return
-        }
         isGenerating = true
         let allTasks = (try? modelContext.fetch(FetchDescriptor<JournalGenerationTask>())) ?? []
         for pending in allTasks where pending.dayKey == record.dayKey && pending.status == .pending { pending.status = .skipped }
@@ -606,7 +595,18 @@ struct PersistentJournalDetailView: View {
         do {
             var images: [CGImage] = []
             if #available(iOS 27, macOS 27, *) {
-                for photo in selectedPhotos { if let image = await PhotoAssetResolver.aiImage(for: photo) { images.append(image) } }
+                for photo in selectedPhotos {
+                    let image: CGImage?
+                    if savedOnly {
+                        image = await PhotoAssetResolver.thumbnailImage(
+                            relativePath: photo.thumbnailRelativePath,
+                            targetSize: CGSize(width: 1100, height: 1100)
+                        )
+                    } else {
+                        image = await PhotoAssetResolver.aiImage(for: photo)
+                    }
+                    if let image { images.append(image) }
+                }
             }
             let locationContext = Array(Set(selectedPhotos.compactMap { photo -> String? in
                 if let place = photo.placeName?.trimmingCharacters(in: .whitespacesAndNewlines), !place.isEmpty { return place }
@@ -832,7 +832,8 @@ final class PhotoLocationResolver {
         return await legacyMacReverseGeocode(location)
         #else
         if let address = await detailedIOSReverseGeocode(location) { return address }
-        return await mapKitReverseGeocode(location)
+        if #available(iOS 26, *) { return await mapKitReverseGeocode(location) }
+        return nil
         #endif
     }
 
@@ -1067,10 +1068,12 @@ private struct PhotoLocationMapView: View {
 private struct PhotoFullScreenGallery: View {
     @Environment(\.dismiss) private var dismiss
     let photos: [JournalPhotoRecord]
+    let savedOnly: Bool
     @State private var selection: Int
 
-    init(photos: [JournalPhotoRecord], initialIndex: Int) {
+    init(photos: [JournalPhotoRecord], initialIndex: Int, savedOnly: Bool = false) {
         self.photos = photos
+        self.savedOnly = savedOnly
         _selection = State(initialValue: initialIndex)
     }
 
@@ -1079,7 +1082,7 @@ private struct PhotoFullScreenGallery: View {
             Color.black.ignoresSafeArea()
             TabView(selection: $selection) {
                 ForEach(Array(photos.enumerated()), id: \.element.id) { index, photo in
-                    PhotoGalleryPage(photo: photo).tag(index)
+                    PhotoGalleryPage(photo: photo, savedOnly: savedOnly).tag(index)
                 }
             }
 #if os(macOS)
@@ -1109,9 +1112,7 @@ private struct PhotoFullScreenGallery: View {
                     .font(.system(size: 13, weight: .medium, design: .rounded))
                     .buttonStyle(.plain).foregroundStyle(.white.opacity(0.9)).padding(.bottom, 12)
 #else
-                    Text("\(selection + 1) / \(photos.count)")
-                        .font(.system(size: 13, weight: .medium, design: .rounded))
-                        .foregroundStyle(.white.opacity(0.85)).padding(.bottom, 12)
+                    // The native page dots are the only page indicator on iOS.
 #endif
                 }
             }
@@ -1126,6 +1127,8 @@ private struct PhotoFullScreenGallery: View {
 
 private struct PhotoGalleryPage: View {
     let photo: JournalPhotoRecord
+    let savedOnly: Bool
+    @Environment(\.dismiss) private var dismiss
     @State private var image: CGImage?
 
     var body: some View {
@@ -1144,10 +1147,12 @@ private struct PhotoGalleryPage: View {
                     height: max(geometry.size.height * 2, 1800)
                 )
                 image = await PhotoAssetResolver.thumbnailImage(relativePath: photo.thumbnailRelativePath, targetSize: targetSize)
-                if let highResolution = await PhotoAssetResolver.displayImage(for: photo, targetSize: targetSize) {
+                if !savedOnly, let highResolution = await PhotoAssetResolver.displayImage(for: photo, targetSize: targetSize) {
                     image = highResolution
                 }
             }
+            .contentShape(Rectangle())
+            .simultaneousGesture(TapGesture().onEnded { dismiss() })
         }
     }
 }

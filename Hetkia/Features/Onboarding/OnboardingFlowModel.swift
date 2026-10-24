@@ -166,6 +166,14 @@ final class OnboardingFlowModel: ObservableObject {
         persist()
     }
 
+    func requirePhotoAccess() {
+        isOnboardingComplete = false
+        stage = .photoAccess
+        todayStatus = .idle
+        todayProgress = 0
+        persist()
+    }
+
     func choosePhotoAccess(_ access: DemoPhotoAccess) {
         photoAccess = access
         persist()
