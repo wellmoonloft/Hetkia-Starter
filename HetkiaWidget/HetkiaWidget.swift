@@ -224,7 +224,7 @@ private struct HetkiaWidgetView: View {
 private struct WidgetMemoryCollage: View {
     let memories: [WidgetMemory]
     let rounded: Bool
-    private var gap: CGFloat { 5 }
+    private var gap: CGFloat { 0 }
 
     var body: some View {
         GeometryReader { geometry in
@@ -238,28 +238,33 @@ private struct WidgetMemoryCollage: View {
                 }
             } else if memories.count == 3 {
                 VStack(spacing: gap) {
+                    let availableHeight = max(1, geometry.size.height - gap)
                     if let hero = memories.first {
-                        linkedPhoto(hero, width: geometry.size.width, height: geometry.size.height * 0.62)
+                        linkedPhoto(hero, width: geometry.size.width, height: availableHeight * 0.62)
                     }
                     HStack(spacing: gap) {
                         ForEach(Array(memories.dropFirst()), id: \.id) { memory in
-                            linkedPhoto(memory, width: (geometry.size.width - gap) / 2, height: geometry.size.height * 0.36)
+                            linkedPhoto(memory, width: (geometry.size.width - gap) / 2, height: availableHeight * 0.38)
                         }
                     }
                 }
             } else {
                 VStack(spacing: gap) {
+                    let photoHeight = max(1, geometry.size.height - gap * 2)
+                    let heroHeight = photoHeight * 0.48
+                    let tileHeight = (photoHeight - heroHeight) / 2
                     if let hero = memories.first {
-                        linkedPhoto(hero, width: geometry.size.width, height: geometry.size.height * 0.48)
+                        linkedPhoto(hero, width: geometry.size.width, height: heroHeight)
                     }
                     LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: gap), count: 2), spacing: gap) {
                         ForEach(Array(memories.dropFirst()), id: \.id) { memory in
-                            linkedPhoto(memory, width: (geometry.size.width - gap) / 2, height: max(24, (geometry.size.height * 0.50 - gap) / 2))
+                            linkedPhoto(memory, width: (geometry.size.width - gap) / 2, height: tileHeight)
                         }
                     }
                 }
             }
         }
+        .background(Color.clear)
         .clipShape(rounded ? AnyShape(RoundedRectangle(cornerRadius: 12, style: .continuous)) : AnyShape(Rectangle()))
     }
 
@@ -273,6 +278,7 @@ private struct WidgetMemoryCollage: View {
                 .clipped()
         }
         .buttonStyle(.plain)
+        .background(Color.clear)
     }
 
     private func photo(for data: Data) -> Image {

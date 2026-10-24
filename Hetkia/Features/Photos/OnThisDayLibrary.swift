@@ -164,6 +164,42 @@ enum OnThisDayLibrary {
         return entries
     }
 
+    /// A same-day refresh only needs to discover photos captured in the current
+    /// year. Older anniversary groups stay in the metadata cache unless the user
+    /// explicitly requests a full refresh.
+    static func refreshCurrentYear(
+        preserving entries: [OnThisDayEntry],
+        today: Date = .now
+    ) -> [OnThisDayEntry] {
+        guard PhotoLibraryService.hasFullReadAccess else { return entries }
+        let calendar = Calendar.autoupdatingCurrent
+        let parts = calendar.dateComponents([.year, .month, .day], from: today)
+        guard let year = parts.year, let month = parts.month, let day = parts.day,
+              let start = calendar.date(from: DateComponents(year: year, month: month, day: day)),
+              let end = calendar.date(byAdding: .day, value: 1, to: start) else { return entries }
+
+        let currentEntry = fetchEntry(start: start, end: end)
+        var merged = entries.filter { calendar.component(.year, from: $0.date) != year }
+        if let currentEntry { merged.append(currentEntry) }
+        merged.sort { $0.date > $1.date }
+        OnThisDayCacheStore.save(merged, today: today)
+        return merged
+    }
+
+    private static func fetchEntry(start: Date, end: Date) -> OnThisDayEntry? {
+        let options = PHFetchOptions()
+        options.includeHiddenAssets = false
+        options.predicate = NSPredicate(format: "creationDate >= %@ AND creationDate < %@", start as NSDate, end as NSDate)
+        options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: true)]
+        let result = PHAsset.fetchAssets(with: options)
+        var assets: [PHAsset] = []
+        result.enumerateObjects { asset, _, _ in
+            if PhotoAssetEligibility.allows(asset) { assets.append(asset) }
+        }
+        guard !assets.isEmpty else { return nil }
+        return OnThisDayEntry(date: start, assets: JournalPhotoSelection.selectedAssets(from: assets))
+    }
+
     static func transientPhotoRecords(for assets: [PHAsset]) -> [JournalPhotoRecord] {
         JournalPhotoSelection.selectedAssets(from: assets).enumerated().map { index, asset in
             let addedDate: Date?

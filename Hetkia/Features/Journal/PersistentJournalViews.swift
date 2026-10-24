@@ -21,6 +21,7 @@ struct PersistentJournalDetailView: View {
     @State private var hasPersistedRecord: Bool
     @State private var isGenerating = false
     @State private var notice: String?
+    @State private var isEditingDiary = false
     @State private var editingPostID: UUID?
     @State private var editDraft = ""
     @State private var newMessage = ""
@@ -28,24 +29,31 @@ struct PersistentJournalDetailView: View {
     @State private var mapDestination: PhotoMapDestination?
     @State private var sharePayload: ShareImagePayload?
     @State private var isPreparingShare = false
+    @State private var showDraftReplacementConfirmation = false
     @State private var showDeleteConfirmation = false
     @FocusState private var focusedInput: InputTarget?
     @ScaledMetric(relativeTo: .body) private var bodyFontSize: CGFloat = 16
     @ScaledMetric(relativeTo: .headline) private var headingFontSize: CGFloat = 18
     @ScaledMetric(relativeTo: .caption) private var captionFontSize: CGFloat = 12
 
-    private enum InputTarget: Hashable { case edit(UUID), compose }
+    private enum InputTarget: Hashable { case diary, edit(UUID), compose }
     private var selectedPhotos: [JournalPhotoRecord] { JournalPhotoSelection.selected(from: displayPhotos) }
     private var posts: [JournalMessagePost] {
-        let stored = record.messagePosts.sorted { $0.createdAt < $1.createdAt }
-        if !stored.isEmpty { return stored }
-        let existingText = record.bodyText.isEmpty ? (record.aiDraftBody ?? "") : record.bodyText
-        guard !existingText.isEmpty else { return [] }
-        return [JournalMessagePost(id: legacyPostID, text: existingText, createdAt: record.updatedAt, kind: record.aiDraftBody == nil ? .note : .automatic)]
+        record.messagePosts
+            .filter { $0.kind == .note }
+            .sorted { $0.createdAt < $1.createdAt }
     }
-    @State private var legacyPostID = UUID()
     private var shareBody: String {
-        posts.last?.text ?? (record.bodyText.isEmpty ? (record.aiDraftBody ?? "") : record.bodyText)
+        diaryText ?? ""
+    }
+    private var diaryText: String? {
+        if !record.bodyText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return record.bodyText
+        }
+        if let draft = record.aiDraftBody?.trimmingCharacters(in: .whitespacesAndNewlines), !draft.isEmpty {
+            return draft
+        }
+        return record.messagePosts.last(where: { $0.kind == .automatic })?.text
     }
     private var locationCities: [JournalLocationItem] {
         var seen = Set<String>()
@@ -77,6 +85,9 @@ struct PersistentJournalDetailView: View {
     private var mapPhoto: JournalPhotoRecord? {
         selectedPhotos.first { $0.latitude != nil && $0.longitude != nil }
     }
+    private var displayedCaptureDate: Date {
+        selectedPhotos.first?.capturedAt ?? record.localDay
+    }
 
     init(record: JournalRecord, liveAssets: [PHAsset] = [], isTransient: Bool = false, savedOnly: Bool = false) {
         self.record = record
@@ -102,10 +113,10 @@ struct PersistentJournalDetailView: View {
                             .fixedSize(horizontal: false, vertical: true)
                             .shadow(color: HetkiaPalette.ink.opacity(0.12), radius: 18, y: 8)
                         actionPanel.frame(width: pageWidth)
-                        messageBoard.frame(width: pageWidth)
                         if record.bodyWasEdited, let draft = record.aiDraftBody, draft != record.bodyText {
                             generatedDraftCard(draft).frame(width: pageWidth)
                         }
+                        messageBoard.frame(width: pageWidth)
                     }
                     .frame(width: viewport.size.width)
                     .padding(.top, 12).padding(.bottom, 30)
@@ -116,6 +127,7 @@ struct PersistentJournalDetailView: View {
                     guard let target else { return }
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
                         switch target {
+                        case .diary: withAnimation(.easeOut(duration: 0.2)) { proxy.scrollTo("diary-editor", anchor: .center) }
                         case .edit(let id): withAnimation(.easeOut(duration: 0.2)) { proxy.scrollTo(id, anchor: .center) }
                         case .compose: withAnimation(.easeOut(duration: 0.2)) { proxy.scrollTo("message-composer", anchor: .bottom) }
                         }
@@ -125,7 +137,7 @@ struct PersistentJournalDetailView: View {
         }
         .background(HetkiaPalette.paper.ignoresSafeArea())
         .task { resolvePhotoLocations() }
-        .navigationTitle("brand.name")
+        .navigationTitle(Text(displayedCaptureDate.formatted(.dateTime.year().month(.wide).day().hour().minute())))
         .toolbar {
             if hasPersistedRecord {
               ToolbarItem(placement: .automatic) {
@@ -183,15 +195,73 @@ struct PersistentJournalDetailView: View {
     private func persistentPage(photoAreaHeight: CGFloat) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack {
-                Text((mapPhoto?.capturedAt ?? record.localDay).formatted(.dateTime.year().month(.wide).day().hour().minute()))
-                    .font(.system(size: headingFontSize, weight: .regular, design: .serif))
-                    .foregroundStyle(HetkiaPalette.secondaryInk)
-                Spacer()
+                Text("page.footer")
+                Spacer(minLength: 8)
+                Text("brand.footer")
             }
-            persistentPhotoGrid(height: photoAreaHeight).padding(.vertical, 13)
-            if !record.title.isEmpty { Text(verbatim: record.title).font(.system(size: headingFontSize, design: .serif)).padding(.bottom, 6) }
-            let pageText = posts.last?.text ?? (record.bodyText.isEmpty ? (record.aiDraftBody ?? NSLocalizedString("photos.journal.empty", comment: "Empty journal")) : record.bodyText)
-            Text(verbatim: pageText).font(.system(size: bodyFontSize)).lineSpacing(4).foregroundStyle(HetkiaPalette.secondaryInk).fixedSize(horizontal: false, vertical: true).lineLimit(5)
+            .font(.system(size: captionFontSize, design: .serif))
+            .foregroundStyle(HetkiaPalette.secondaryInk)
+            .padding(.top, 24)
+            .padding(.bottom, 20)
+
+            persistentPhotoGrid(height: photoAreaHeight)
+            if !record.title.isEmpty {
+                Text(verbatim: record.title)
+                    .font(.system(size: headingFontSize, design: .serif))
+                    .padding(.top, 12)
+                    .padding(.bottom, 6)
+            }
+            Group {
+                if isEditingDiary {
+                    VStack(alignment: .leading, spacing: 8) {
+                        TextEditor(text: $editDraft)
+                            .focused($focusedInput, equals: .diary)
+                            .scrollContentBackground(.hidden)
+                            .font(.system(size: bodyFontSize))
+                            .frame(minHeight: 100, maxHeight: 240)
+                            .padding(8)
+                            .background(HetkiaPalette.paper, in: RoundedRectangle(cornerRadius: 12))
+                        HStack {
+                            Button("journal.message.cancel") { cancelDiaryEditing() }
+                                .foregroundStyle(HetkiaPalette.secondaryInk)
+                            Spacer()
+                            Button("journal.message.save") { saveDiaryText() }
+                                .foregroundStyle(HetkiaPalette.amber)
+                                .disabled(editDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                        }
+                        .font(.system(size: 12, weight: .medium))
+                    }
+                } else {
+                    VStack(alignment: .leading, spacing: 7) {
+                        Text(verbatim: diaryText ?? NSLocalizedString("photos.journal.empty", comment: "Empty journal"))
+                            .font(.system(size: bodyFontSize))
+                            .lineSpacing(4)
+                            .foregroundStyle(HetkiaPalette.secondaryInk)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        HStack {
+                            Spacer()
+                            Button {
+                                editDraft = diaryText ?? ""
+                                isEditingDiary = true
+                                focusedInput = .diary
+                            } label: {
+                                Label("journal.message.edit", systemImage: "pencil")
+                                    .font(.system(size: 11, weight: .medium))
+                            }
+                            .foregroundStyle(HetkiaPalette.secondaryInk)
+                        }
+                    }
+                }
+            }
+            .padding(.top, record.title.isEmpty ? 12 : 0)
+            .id("diary-editor")
+            if let mood = record.moodText, !mood.isEmpty {
+                Label(mood, systemImage: "heart")
+                    .font(.system(size: captionFontSize))
+                    .foregroundStyle(HetkiaPalette.secondaryInk)
+                    .padding(.top, 8)
+            }
             Spacer(minLength: 10)
             if !locationCities.isEmpty {
                 VStack(alignment: .leading, spacing: 5) {
@@ -229,11 +299,8 @@ struct PersistentJournalDetailView: View {
             } else if selectedPhotos.contains(where: { $0.locationStatus == .available }) {
                 Label("photos.location.metadata-present", systemImage: "location").font(.system(size: captionFontSize)).foregroundStyle(HetkiaPalette.secondaryInk).padding(.top, 8)
             }
-            if let mood = record.moodText, !mood.isEmpty { Label(mood, systemImage: "heart").font(.system(size: captionFontSize)).foregroundStyle(HetkiaPalette.secondaryInk).padding(.top, 4) }
-            Rectangle().fill(HetkiaPalette.line).frame(height: 0.7).padding(.top, 10).padding(.bottom, 7)
-            HStack { Text("page.footer"); Spacer(); Text("brand.footer") }.font(.system(size: captionFontSize, design: .serif)).foregroundStyle(HetkiaPalette.secondaryInk)
         }
-        .foregroundStyle(HetkiaPalette.ink).padding(.horizontal, 12).padding(.vertical, 22)
+        .foregroundStyle(HetkiaPalette.ink).padding(.horizontal, 12).padding(.bottom, 12)
         .background(HetkiaPalette.page, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 
@@ -267,7 +334,10 @@ struct PersistentJournalDetailView: View {
                         }
                     }
                 }
-            }.frame(maxWidth: .infinity, maxHeight: .infinity).clipShape(RoundedRectangle(cornerRadius: 9))
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Color.clear)
+            .clipShape(RoundedRectangle(cornerRadius: 9))
         }.frame(height: max(1, height))
     }
 
@@ -334,7 +404,7 @@ struct PersistentJournalDetailView: View {
         }
 
         let card = JournalShareCard(
-            date: (mapPhoto?.capturedAt ?? record.localDay).formatted(.dateTime.year().month(.wide).day().hour().minute()),
+            date: displayedCaptureDate.formatted(.dateTime.year().month(.wide).day().hour().minute()),
             title: record.title,
             diaryText: shareBody,
             locations: locationCities.map(\.name),
@@ -387,7 +457,6 @@ struct PersistentJournalDetailView: View {
                         if newMessage.isEmpty { Text("journal.message.placeholder").font(.system(size: bodyFontSize)).foregroundStyle(HetkiaPalette.secondaryInk.opacity(0.65)).padding(.horizontal, 13).padding(.vertical, 17).allowsHitTesting(false) }
                     }
                 HStack {
-                    Text(Date.now.formatted(date: .numeric, time: .shortened)).font(.system(size: 10, design: .rounded)).foregroundStyle(HetkiaPalette.secondaryInk)
                     Spacer()
                     Button("journal.message.post") { addMessage() }
                         .font(.system(size: 12, weight: .semibold)).foregroundStyle(HetkiaPalette.ink)
@@ -404,9 +473,9 @@ struct PersistentJournalDetailView: View {
     @ViewBuilder private func messagePost(_ post: JournalMessagePost) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 6) {
-                Image(systemName: post.kind == .automatic ? "sparkles" : "quote.bubble")
-                    .foregroundStyle(post.kind == .automatic ? HetkiaPalette.amber : HetkiaPalette.secondaryInk)
-                Text(post.kind == .automatic ? LocalizedStringKey("journal.message.generated") : LocalizedStringKey("journal.message.note"))
+                Image(systemName: "quote.bubble")
+                    .foregroundStyle(HetkiaPalette.secondaryInk)
+                Text("journal.message.note")
                     .font(.system(size: 10, weight: .medium)).foregroundStyle(HetkiaPalette.secondaryInk)
                 Spacer()
                 Text(post.createdAt.formatted(date: .numeric, time: .shortened)).font(.system(size: 10, design: .rounded)).foregroundStyle(HetkiaPalette.secondaryInk)
@@ -441,16 +510,36 @@ struct PersistentJournalDetailView: View {
             Label("photos.draft.title", systemImage: "sparkles").font(.system(size: 13, weight: .semibold, design: .serif)).foregroundStyle(HetkiaPalette.ink)
             Text(verbatim: draft).font(.system(size: bodyFontSize)).lineSpacing(4).foregroundStyle(HetkiaPalette.secondaryInk).frame(maxWidth: .infinity, alignment: .leading)
             Button("photos.draft.use") {
-                Task {
-                    await commitJournalForUserAction()
-                    record.bodyText = draft
-                    record.bodyWasEdited = false
-                    appendPost(text: draft, kind: .automatic)
-                    record.updatedAt = .now
-                    try? modelContext.save()
+                let currentBody = record.bodyText.trimmingCharacters(in: .whitespacesAndNewlines)
+                if currentBody.isEmpty {
+                    applyGeneratedDraft(draft)
+                } else {
+                    showDraftReplacementConfirmation = true
                 }
             }.font(.system(size: 12, weight: .medium)).foregroundStyle(HetkiaPalette.amber)
         }.padding(16).background(HetkiaPalette.page, in: RoundedRectangle(cornerRadius: 16))
+            .confirmationDialog(
+                "photos.draft.replace.title",
+                isPresented: $showDraftReplacementConfirmation,
+                titleVisibility: .visible
+            ) {
+                Button("photos.draft.replace.confirm", role: .destructive) {
+                    applyGeneratedDraft(draft)
+                }
+                Button("common.cancel", role: .cancel) { }
+            } message: {
+                Text("photos.draft.replace.message")
+            }
+    }
+
+    private func applyGeneratedDraft(_ draft: String) {
+        Task {
+            await commitJournalForUserAction()
+            record.bodyText = draft
+            record.bodyWasEdited = false
+            record.updatedAt = .now
+            try? modelContext.save()
+        }
     }
 
     private func actionButton(_ title: LocalizedStringKey, symbol: String, action: @escaping () -> Void) -> some View {
@@ -463,6 +552,27 @@ struct PersistentJournalDetailView: View {
 
     private func resolvePhotoLocations() {
         PhotoLocationResolver.shared.enqueue(photos: selectedPhotos, record: record, context: modelContext)
+    }
+
+    private func cancelDiaryEditing() {
+        isEditingDiary = false
+        editDraft = ""
+        focusedInput = nil
+    }
+
+    private func saveDiaryText() {
+        let text = editDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty else { return }
+        Task {
+            await commitJournalForUserAction()
+            record.bodyText = text
+            record.bodyWasEdited = true
+            record.updatedAt = .now
+            try? modelContext.save()
+            isEditingDiary = false
+            editDraft = ""
+            focusedInput = nil
+        }
     }
 
     @MainActor
@@ -511,9 +621,9 @@ struct PersistentJournalDetailView: View {
         resolvePhotoLocations()
     }
 
-    private func appendPost(text: String, kind: JournalMessagePost.Kind) {
+    private func appendPost(text: String, kind: JournalMessagePost.Kind, createdAt: Date = .now) {
         var updated = record.messagePosts
-        updated.append(JournalMessagePost(text: text, createdAt: .now, kind: kind))
+        updated.append(JournalMessagePost(text: text, createdAt: createdAt, kind: kind))
         record.messagePosts = updated
     }
 
@@ -541,9 +651,10 @@ struct PersistentJournalDetailView: View {
     private func addMessage() {
         let text = newMessage.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return }
+        let postedAt = Date.now
         Task {
             await commitJournalForUserAction()
-            appendPost(text: text, kind: .note)
+            appendPost(text: text, kind: .note, createdAt: postedAt)
             newMessage = ""
             try? modelContext.save()
         }
@@ -559,7 +670,6 @@ struct PersistentJournalDetailView: View {
         guard let index = updated.firstIndex(where: { $0.id == post.id }) else { return }
         updated[index].text = text
         record.messagePosts = updated
-        if post.kind == .automatic { record.aiDraftBody = record.aiDraftBody ?? post.text; record.bodyText = text; record.bodyWasEdited = true }
         record.updatedAt = .now
         try? modelContext.save()
         editingPostID = nil
@@ -580,7 +690,6 @@ struct PersistentJournalDetailView: View {
             return
         }
         await commitJournalForUserAction()
-        if record.messagePosts.isEmpty, !posts.isEmpty { record.messagePosts = posts }
         if record.bodyText.isEmpty { record.source = .automatic }
         isGenerating = true
         let allTasks = (try? modelContext.fetch(FetchDescriptor<JournalGenerationTask>())) ?? []
@@ -621,7 +730,6 @@ struct PersistentJournalDetailView: View {
             )
             record.aiDraftBody = result.body
             if !record.bodyWasEdited { record.bodyText = result.body }
-            appendPost(text: result.body, kind: .automatic)
             record.generationStatus = .completed
             task.status = .completed
             task.lastError = nil
@@ -947,6 +1055,7 @@ private struct JournalShareCard: View {
             HStack {
                 Text(verbatim: date)
                     .font(.system(size: 42, weight: .regular, design: .serif))
+                    .foregroundStyle(HetkiaPalette.secondaryInk)
                 Spacer()
                 Text("brand.footer")
                     .font(.system(size: 26, weight: .regular, design: .serif))
@@ -1028,6 +1137,8 @@ private struct JournalSharePhotoGrid: View {
                     }
                 }
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Color.clear)
             .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
         }
     }
@@ -1056,7 +1167,9 @@ private struct PhotoLocationMapView: View {
     var body: some View {
         Map(
             initialPosition: .camera(
-                MapCamera(centerCoordinate: destination.coordinate, distance: 180)
+                // Start at neighborhood scale so the selected point has useful
+                // context around it instead of opening at a street-level zoom.
+                MapCamera(centerCoordinate: destination.coordinate, distance: 1_000)
             )
         ) {
             Marker(destination.title, coordinate: destination.coordinate)
@@ -1118,6 +1231,15 @@ private struct PhotoFullScreenGallery: View {
             }
             .padding(.horizontal, 18).padding(.top, 10)
         }
+        .simultaneousGesture(
+            DragGesture(minimumDistance: 30)
+                .onEnded { value in
+                    let translation = value.translation
+                    guard translation.height > 100,
+                          translation.height > abs(translation.width) * 1.25 else { return }
+                    dismiss()
+                }
+        )
         .preferredColorScheme(.dark)
 #if !os(macOS)
         .statusBarHidden()

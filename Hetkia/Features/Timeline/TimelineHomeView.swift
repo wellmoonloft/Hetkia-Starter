@@ -18,7 +18,10 @@ struct TimelineHomeView: View {
     @State private var entries: [OnThisDayEntry] = []
     @State private var path: [String] = []
     @State private var isLoading = true
+    @State private var hasResolvedInitialCache = false
     @State private var progress = 0.0
+    @State private var isRefreshing = false
+    @State private var didLeaveActiveState = false
     @State private var showSettings = false
     @State private var activeCalendarDay = PhotoDayGrouping.key(for: .now)
     @State private var pendingWidgetRoute: String?
@@ -32,7 +35,11 @@ struct TimelineHomeView: View {
                     if !PhotoLibraryService.hasFullReadAccess {
                         permissionState
                     } else if isLoading {
-                        loadingState
+                        if hasResolvedInitialCache {
+                            loadingState
+                        } else {
+                            Color.clear.frame(height: 54)
+                        }
                     } else if entries.isEmpty {
                         emptyOnThisDayState
                     } else {
@@ -54,6 +61,7 @@ struct TimelineHomeView: View {
                 .frame(maxWidth: .infinity)
             }
             .background(HetkiaPalette.paper.ignoresSafeArea())
+            .refreshable { await refresh(forceFullScan: true) }
             .navigationDestination(for: String.self) { dayKey in
                 if let entry = entries.first(where: { $0.id == dayKey }) {
                     let existing = savedRecords.filter { $0.dayKey == dayKey }.max { $0.updatedAt < $1.updatedAt }
@@ -75,23 +83,20 @@ struct TimelineHomeView: View {
         }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active {
+                guard didLeaveActiveState else { return }
+                didLeaveActiveState = false
+                guard path.isEmpty else { return }
                 PhotoLocationResolver.shared.resumePending(context: modelContext)
                 Task { await refresh() }
+            } else {
+                didLeaveActiveState = true
             }
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .hetkiaJournalRecordsDidChange)) { _ in
-            // PhotoKit remains the source of truth; a detail commit can add a saved
-            // journal without freezing the next year's matching photos.
-            Task { await refresh() }
-        }
-        .onChange(of: path) { _, newPath in
-            if newPath.isEmpty { Task { await refresh() } }
         }
         .onReceive(minuteTicker) { _ in
             let newDay = PhotoDayGrouping.key(for: .now)
             if newDay != activeCalendarDay {
                 activeCalendarDay = newDay
-                Task { await refresh() }
+                if path.isEmpty { Task { await refresh() } }
             }
         }
         .onOpenURL { url in
@@ -188,29 +193,47 @@ struct TimelineHomeView: View {
     }
 
     @MainActor
-    private func refresh() async {
+    private func refresh(forceFullScan: Bool = false) async {
+        guard !isRefreshing else { return }
+        isRefreshing = true
+        defer { isRefreshing = false }
+
         guard PhotoLibraryService.hasFullReadAccess else {
             entries = []
             isLoading = false
+            hasResolvedInitialCache = true
             return
         }
 
-        // Restore the last successful metadata snapshot immediately after launch.
-        // The fresh PhotoKit query below then adds newly imported photos or removes
-        // assets that are no longer available, and atomically replaces the cache.
         if let cachedEntries = OnThisDayCacheStore.load() {
+            // A valid cache, including a valid empty result, is rendered at once.
+            // Routine launches only query the current year; older years are
+            // rechecked by pull-to-refresh or when there is no same-day cache.
             entries = cachedEntries
-        } else if PhotoDayGrouping.key(for: .now) != activeCalendarDay {
+            isLoading = false
+            hasResolvedInitialCache = true
+            await Task.yield()
+            if forceFullScan {
+                let result = await OnThisDayLibrary.fetch { progress = $0 }
+                guard !Task.isCancelled else { return }
+                entries = result
+            } else {
+                entries = OnThisDayLibrary.refreshCurrentYear(preserving: cachedEntries)
+            }
+        } else {
+            // A missing/expired cache needs one full historical scan to build
+            // today's index. This is normally the first run or a new calendar day.
             entries = []
+            isLoading = true
+            hasResolvedInitialCache = true
+            progress = 0
+            let result = await OnThisDayLibrary.fetch { progress = $0 }
+            guard !Task.isCancelled else { return }
+            entries = result
         }
-        isLoading = entries.isEmpty
-        progress = 0
-        let result = await OnThisDayLibrary.fetch { progress = $0 }
-        guard !Task.isCancelled else { return }
-        entries = result
         isLoading = false
         WidgetCenter.shared.reloadTimelines(ofKind: "Hetkia.OnThisDay")
-        if let pendingWidgetRoute, result.contains(where: { $0.id == pendingWidgetRoute }) {
+        if let pendingWidgetRoute, entries.contains(where: { $0.id == pendingWidgetRoute }) {
             path = [pendingWidgetRoute]
             self.pendingWidgetRoute = nil
         }
@@ -291,7 +314,7 @@ private struct OnThisDayPhotoGrid: View {
             .clipped()
         }
         .aspectRatio(1, contentMode: .fit)
-        .background(HetkiaPalette.page)
+        .background(Color.clear)
     }
 
     private func assetTile(_ asset: PHAsset, width: CGFloat, height: CGFloat) -> some View {

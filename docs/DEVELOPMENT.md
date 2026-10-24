@@ -1,6 +1,6 @@
 # 时光 · Hetkia 开发文档
 
-版本：2.1（iOS 18 支持与满版图片卡片）
+版本：2.2（详情页日记正文与留言分离）
 更新日期：2026-10-24
 
 ## 1. 工程与平台
@@ -24,12 +24,14 @@
 
 ### 首页与详情
 
-- `Hetkia/Features/Timeline/TimelineHomeView.swift`：只显示历年同月同日卡片。首次进入、应用变为 active、从详情返回、记录变化及本地日期跨日时重新查询 PhotoKit。
+- `Hetkia/Features/Timeline/TimelineHomeView.swift`：只显示历年同月同日卡片。有效缓存会先显示；应用从后台回到 active 且当前位于首页时，只刷新今年的照片集合，不因从详情返回而重新查询。下拉刷新强制重查所有年份；缓存缺失或本地日期跨日时完整查询。
 - 首页卡片由 `OnThisDayCard` 和 `OnThisDayPhotoGrid` 组成：拼贴图片铺满正方形卡片，日期白字浮在图片顶部；顶部暗色渐层辅助对比，外缘由卡片统一裁圆角。照片预览由 PhotoKit 提供，不保存文件。首页数据重查后请求 WidgetCenter 更新小组件。
 - `Hetkia/Features/Timeline/SavedJournalsView.swift`：设置内的本地历史日记页。`@Query` 只查询 SwiftData，按 `dayKey` 合并为每天一篇并按年月分组，两列展示；`PersistedJournalThumbnail` 只读取 `thumbnailRelativePath` 对应的 Application Support JPEG，不调用 PhotoKit。导航到详情时传入 `savedOnly: true`，该模式的图片、分享和 AI 图像输入不从图库补取照片，用户编辑或留言也不会扩展图库照片集合。
 - 历史手札卡片使用本地保存的首图铺满正方形卡片，白字显示日期与照片数；以暗色渐层提高对比。无封面时使用占位背景。
-- `OnThisDayCacheStore` 在 Application Support 原子写入当天的年月日上下文、时区及按日排序的 PhotoKit `localIdentifier` 索引。启动先按标识向当前图库恢复 `PHAsset` 并显示，再执行实时查询并替换索引；不缓存照片位图/JPEG 或手札数据。缓存只保留单个 JSON 快照，不累积多日文件；日期、年份或时区变化/旧 schema 时，在新查询前删除旧快照。午夜后台刷新和引导首次查询共用 `OnThisDayLibrary.fetch`，查询成功即写入新索引。
-- 点首页卡片时找相同 `dayKey` 的已保存日记；没有则构造未插入的临时 `JournalRecord`。`PersistentJournalDetailView` 合并该日 PhotoKit 资源与已保存照片。详情导航标题与首页标题都使用 `brand.name` 本地化键；详情手札内部的照片网格水平内边距为 12pt。首页照片卡片改为图片铺满，日期浮于图片上。
+- `OnThisDayCacheStore` 在 Application Support 原子写入当天的年月日上下文、时区及按日排序的 PhotoKit `localIdentifier` 索引。启动先按标识向当前图库恢复 `PHAsset` 并立即显示；同一天普通刷新只查询今年并替换该年份条目，下拉刷新执行 `OnThisDayLibrary.fetch` 完整重查。缓存不含照片位图/JPEG 或手札数据，只保留单个 JSON 快照。日期、年份或时区变化/旧 schema 时，在新查询前删除旧快照并完整建立当天索引。午夜后台刷新和引导首次查询共用完整查询。
+- 点首页卡片时找相同 `dayKey` 的已保存日记；没有则构造未插入的临时 `JournalRecord`。`PersistentJournalDetailView` 合并该日 PhotoKit 资源与已保存照片。详情导航标题显示选中照片日期时间；首页标题和详情导航标题共用 `brand.name` 本地化键。详情卡片顶部为品牌短句/品牌名，随后显示照片拼贴、日记正文和位置。分享视图 `JournalShareCard` 独立实现，保留其日期时间与拼贴排版；详情卡片 UI 不复用到分享图。
+- 日记正文由 `bodyText`、`aiDraftBody` 和旧自动记录兼容读取，不再将自动生成文本写进留言数组。`posts` 仅显示 `.note` 类型留言，分享正文从日记文本取值。正文编辑调用显式持久化路径；留言新增与编辑仅操作留言数据。
+- `generatedDraftCard` 放在 action panel 后、message board 前。应用草稿时检查现有非空正文：空正文立即应用；非空正文显示本地化替换确认对话框，确认后更新正文并持久化。
 - `commitJournalForUserAction()` 只在生成文字、保存编辑或添加留言路径调用。它插入临时 JournalRecord/照片关系，按需写入应用 JPEG，并保存 SwiftData。若某已保存关系缺少 JPEG，也只在显式操作时补齐。
 - 仅打开详情、浏览照片或返回不调用 commit。详情打开时即将含坐标照片异步加入 `PhotoLocationResolver`；iOS 先用 `CLGeocoder` 获取国家、城市和区/街区字段，再以 MapKit 反向地理编码兜底；对请求失败执行 2、6、15、30 秒退避重试。App 启动、回到前台时，已保存日记中无地点名或仍只有城市级名称的照片再次排队。新缓存键为 `hetkia.reverseGeocoding.cache.v2`；队列和缓存按 5 公里半径合并坐标。展示地点按三级名称去重，地图仍使用照片原始坐标。地点名解析不因此保存临时日记或照片预览。
 
@@ -44,7 +46,7 @@
 
 - `Hetkia/App/HetkiaApp.swift` 注册 `com.hetkia.app.onthisday-refresh`，请求 `BGAppRefreshTask` 在下一次本地午夜之后运行；任务重新读取 PhotoKit，并请求 WidgetCenter 刷新。
 - 系统只承诺在允许时机执行后台任务；`earliestBeginDate` 是最早运行时间而非准点保证。App 每次前台激活都会补做当日查询。
-- `HetkiaWidget/HetkiaWidget.swift` 自行按同一日期、资格、排序和数量规则读取 PhotoKit，并为 WidgetKit 时间线生成系统管理的图像快照。声明 `.systemLarge` 供桌面主样式使用，另声明 `.systemSmall`；大尺寸显示满版拼图，标题和品牌名以白字叠在顶部渐层上，小尺寸仅渲染无内边距的满版拼图，不显示文字。WidgetKit 的 family 不能区分 StandBy 与桌面小尺寸，因此两处小尺寸都采用纯图片布局。
+- `HetkiaWidget/HetkiaWidget.swift` 自行按同一日期、资格、排序和数量规则读取 PhotoKit，并为 WidgetKit 时间线生成系统管理的图像快照。声明 `.systemLarge` 供桌面主样式使用，另声明 `.systemSmall`；大尺寸显示满版拼图，标题和品牌名以白字叠在顶部渐层上，小尺寸仅渲染无内边距的满版拼图，不显示文字。WidgetKit 的 family 不能区分 StandBy 与桌面小尺寸，因此两处小尺寸都采用纯图片布局。拼贴图块间距为 0、背景透明，以避免白色缝隙和组件底色露边。
 - Widget 生成一个静态拼图：同日年份由最早到较新排序，按 1/3/5 的奇数布局最多读取五组并各取首图。单组铺满；三组使用上方大图、下方并排双图；五组使用上方大图、下方 2×2。每张图分别使用 `hetkia://onthisday/YYYY-MM-DD` 深链打开对应详情。顶部左侧是“历史上的今天”，右侧是品牌名；不显示副标题、日期标签、滚动或翻页。
 - Widget 内容使用透明 `containerBackground`，并通过 `contentMarginsDisabled()` 取消系统默认内容缩进，让拼图图片铺满组件，由系统容器处理外缘。大尺寸在图片上叠加顶部暗色渐层和白色标题/品牌名；小尺寸不叠加文字。Widget 不使用滚动、分页按钮或时间线轮播；系统仍决定快照刷新的实际时机。
 - StandBy 使用 `.systemSmall` family（Apple 当前 StandBy 组件上下文采用小尺寸系统组件）；WidgetKit 会按 StandBy 外观处理背景与色彩，因此系统呈现可能与桌面全彩样式不同。StandBy 小尺寸直接铺满照片拼图，不显示标题、品牌或日期。两种 family 使用相同时间线、图片选择和逐图深链。

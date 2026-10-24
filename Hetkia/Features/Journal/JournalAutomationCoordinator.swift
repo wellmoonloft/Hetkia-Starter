@@ -270,7 +270,7 @@ final class JournalAutomationCoordinator: ObservableObject {
                 return record
             }()
             attachMetadata(assets, to: journal, context: context)
-            if journal.bodyText.isEmpty && journal.messagePosts.isEmpty && journal.generationStatus != .processing {
+            if journal.bodyText.isEmpty && journal.aiDraftBody?.isEmpty != false && journal.generationStatus != .processing {
                 journal.generationStatus = .skipped
             }
             if index.isMultiple(of: 24) || index == groups.count - 1 {
@@ -370,7 +370,8 @@ final class JournalAutomationCoordinator: ObservableObject {
         do {
             let sameDay = try records(dayKey: task.dayKey, context: context)
             guard !hasDateConflict(sameDay, task: task, journal: journal),
-                  !journal.bodyWasEdited, journal.bodyText.isEmpty else {
+                  !journal.bodyWasEdited, journal.bodyText.isEmpty,
+                  journal.aiDraftBody?.isEmpty != false else {
                 task.status = .skipped
                 try context.save()
                 return
@@ -402,7 +403,8 @@ final class JournalAutomationCoordinator: ObservableObject {
             }
             let beforeAI = try records(dayKey: task.dayKey, context: context)
             guard !hasDateConflict(beforeAI, task: task, journal: journal),
-                  !journal.bodyWasEdited, journal.bodyText.isEmpty else {
+                  !journal.bodyWasEdited, journal.bodyText.isEmpty,
+                  journal.aiDraftBody?.isEmpty != false else {
                 task.status = .skipped
                 journal.generationStatus = .skipped
                 try context.save()
@@ -423,7 +425,8 @@ final class JournalAutomationCoordinator: ObservableObject {
             // Recheck immediately before saving, in case the user created the manual entry while AI ran.
             let refreshed = try records(dayKey: task.dayKey, context: context)
             guard !hasDateConflict(refreshed, task: task, journal: journal),
-                  !journal.bodyWasEdited, journal.bodyText.isEmpty else {
+                  !journal.bodyWasEdited, journal.bodyText.isEmpty,
+                  journal.aiDraftBody?.isEmpty != false else {
                 task.status = .skipped
                 journal.generationStatus = .skipped
                 try context.save()
@@ -431,9 +434,6 @@ final class JournalAutomationCoordinator: ObservableObject {
             }
             journal.aiDraftBody = result.body
             journal.bodyText = result.body
-            var posts = journal.messagePosts
-            posts.append(JournalMessagePost(text: result.body, createdAt: .now, kind: .automatic))
-            journal.messagePosts = posts
             journal.generationStatus = .completed
             journal.generationError = nil
             task.status = .completed
