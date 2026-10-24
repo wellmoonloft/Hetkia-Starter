@@ -5,6 +5,7 @@ import ImageIO
 import CoreLocation
 import MapKit
 import OSLog
+import Photos
 #if os(iOS)
 import UIKit
 #elseif os(macOS)
@@ -15,6 +16,8 @@ struct PersistentJournalDetailView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
     @Bindable var record: JournalRecord
+    @State private var displayPhotos: [JournalPhotoRecord]
+    @State private var hasPersistedRecord: Bool
     @State private var isGenerating = false
     @State private var notice: String?
     @State private var editingPostID: UUID?
@@ -31,8 +34,15 @@ struct PersistentJournalDetailView: View {
     @ScaledMetric(relativeTo: .caption) private var captionFontSize: CGFloat = 12
 
     private enum InputTarget: Hashable { case edit(UUID), compose }
-    private var selectedPhotos: [JournalPhotoRecord] { JournalPhotoSelection.selected(from: record.photos) }
-    private var posts: [JournalMessagePost] { record.messagePosts.sorted { $0.createdAt < $1.createdAt } }
+    private var selectedPhotos: [JournalPhotoRecord] { JournalPhotoSelection.selected(from: displayPhotos) }
+    private var posts: [JournalMessagePost] {
+        let stored = record.messagePosts.sorted { $0.createdAt < $1.createdAt }
+        if !stored.isEmpty { return stored }
+        let existingText = record.bodyText.isEmpty ? (record.aiDraftBody ?? "") : record.bodyText
+        guard !existingText.isEmpty else { return [] }
+        return [JournalMessagePost(id: legacyPostID, text: existingText, createdAt: record.updatedAt, kind: record.aiDraftBody == nil ? .note : .automatic)]
+    }
+    @State private var legacyPostID = UUID()
     private var shareBody: String {
         posts.last?.text ?? (record.bodyText.isEmpty ? (record.aiDraftBody ?? "") : record.bodyText)
     }
@@ -65,6 +75,17 @@ struct PersistentJournalDetailView: View {
     }
     private var mapPhoto: JournalPhotoRecord? {
         selectedPhotos.first { $0.latitude != nil && $0.longitude != nil }
+    }
+
+    init(record: JournalRecord, liveAssets: [PHAsset] = [], isTransient: Bool = false) {
+        self.record = record
+        self._hasPersistedRecord = State(initialValue: !isTransient)
+        var photos = record.photos
+        let knownIdentifiers = Set(photos.compactMap(\.assetLocalIdentifier))
+        let fresh = OnThisDayLibrary.transientPhotoRecords(for: liveAssets)
+            .filter { $0.assetLocalIdentifier.map { !knownIdentifiers.contains($0) } ?? true }
+        photos.append(contentsOf: fresh)
+        self._displayPhotos = State(initialValue: photos)
     }
 
     var body: some View {
@@ -101,15 +122,18 @@ struct PersistentJournalDetailView: View {
             }
         }
         .background(HetkiaPalette.paper.ignoresSafeArea())
-        .navigationTitle(record.localDay.formatted(date: .long, time: .omitted))
+        .task { resolvePhotoLocations() }
+        .navigationTitle("brand.name")
         .toolbar {
-            ToolbarItem(placement: .automatic) {
+            if hasPersistedRecord {
+              ToolbarItem(placement: .automatic) {
                 Button(role: .destructive) {
                     showDeleteConfirmation = true
                 } label: {
                     Image(systemName: "trash")
                 }
                 .accessibilityLabel(Text("journal.delete.action"))
+              }
             }
         }
 #if os(macOS)
@@ -143,10 +167,6 @@ struct PersistentJournalDetailView: View {
             .frame(minWidth: 240, minHeight: 100)
         }
 #endif
-        .task {
-            migrateExistingBodyToMessagePost()
-            resolvePhotoLocations()
-        }
         .alert("photos.generate.status", isPresented: Binding(get: { notice != nil }, set: { if !$0 { notice = nil } })) {
             Button("common.ok", role: .cancel) { notice = nil }
         } message: { Text(notice ?? "") }
@@ -164,9 +184,6 @@ struct PersistentJournalDetailView: View {
                 Text((mapPhoto?.capturedAt ?? record.localDay).formatted(.dateTime.year().month(.wide).day().hour().minute()))
                     .font(.system(size: headingFontSize, weight: .regular, design: .serif))
                 Spacer()
-                Text(LocalizedStringKey(record.source == .automatic ? "journal.source.automatic" : "journal.source.manual"))
-                    .font(.system(size: captionFontSize, weight: .medium)).foregroundStyle(HetkiaPalette.secondaryInk)
-                Image(systemName: "sun.max").font(.system(size: 13, weight: .light)).foregroundStyle(HetkiaPalette.amber)
             }
             persistentPhotoGrid(height: photoAreaHeight).padding(.vertical, 13)
             if !record.title.isEmpty { Text(verbatim: record.title).font(.system(size: headingFontSize, design: .serif)).padding(.bottom, 6) }
@@ -213,7 +230,7 @@ struct PersistentJournalDetailView: View {
             Rectangle().fill(HetkiaPalette.line).frame(height: 0.7).padding(.top, 10).padding(.bottom, 7)
             HStack { Text("page.footer"); Spacer(); Text("brand.footer") }.font(.system(size: captionFontSize, design: .serif)).foregroundStyle(HetkiaPalette.secondaryInk)
         }
-        .foregroundStyle(HetkiaPalette.ink).padding(.horizontal, 28).padding(.vertical, 28)
+        .foregroundStyle(HetkiaPalette.ink).padding(.horizontal, 12).padding(.vertical, 22)
         .background(HetkiaPalette.page, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 
@@ -315,7 +332,6 @@ struct PersistentJournalDetailView: View {
             date: (mapPhoto?.capturedAt ?? record.localDay).formatted(.dateTime.year().month(.wide).day().hour().minute()),
             title: record.title,
             diaryText: shareBody,
-            source: record.source,
             locations: locationCities.map(\.name),
             photos: images
         )
@@ -421,11 +437,14 @@ struct PersistentJournalDetailView: View {
             Label("photos.draft.title", systemImage: "sparkles").font(.system(size: 13, weight: .semibold, design: .serif)).foregroundStyle(HetkiaPalette.ink)
             Text(verbatim: draft).font(.system(size: bodyFontSize)).lineSpacing(4).foregroundStyle(HetkiaPalette.secondaryInk).frame(maxWidth: .infinity, alignment: .leading)
             Button("photos.draft.use") {
-                record.bodyText = draft
-                record.bodyWasEdited = false
-                appendPost(text: draft, kind: .automatic)
-                record.updatedAt = .now
-                try? modelContext.save()
+                Task {
+                    await commitJournalForUserAction()
+                    record.bodyText = draft
+                    record.bodyWasEdited = false
+                    appendPost(text: draft, kind: .automatic)
+                    record.updatedAt = .now
+                    try? modelContext.save()
+                }
             }.font(.system(size: 12, weight: .medium)).foregroundStyle(HetkiaPalette.amber)
         }.padding(16).background(HetkiaPalette.page, in: RoundedRectangle(cornerRadius: 16))
     }
@@ -459,18 +478,49 @@ struct PersistentJournalDetailView: View {
         }.buttonStyle(.plain)
     }
 
-    private func migrateExistingBodyToMessagePost() {
-        guard record.messagePosts.isEmpty else { return }
-        let body = record.bodyText.isEmpty ? (record.aiDraftBody ?? "") : record.bodyText
-        guard !body.isEmpty else { return }
-        var posts = record.messagePosts
-        posts.append(JournalMessagePost(text: body, createdAt: record.updatedAt, kind: record.aiDraftBody == nil ? .note : .automatic))
-        record.messagePosts = posts
-        try? modelContext.save()
-    }
-
     private func resolvePhotoLocations() {
         PhotoLocationResolver.shared.enqueue(photos: selectedPhotos, record: record, context: modelContext)
+    }
+
+    @MainActor
+    private func commitJournalForUserAction() async {
+        if !record.storageKey.contains("|") {
+            // Defer legacy-key migration until an explicit user save operation.
+            record.storageKey = "\(record.dayKey)|\(record.source.rawValue)"
+        }
+        if !hasPersistedRecord {
+            modelContext.insert(record)
+            hasPersistedRecord = true
+        }
+        var existingByIdentifier = Dictionary(
+            record.photos.compactMap { photo in photo.assetLocalIdentifier.map { ($0, photo) } },
+            uniquingKeysWith: { first, _ in first }
+        )
+        for photo in selectedPhotos {
+            if let identifier = photo.assetLocalIdentifier, let storedPhoto = existingByIdentifier[identifier] {
+                // A saved diary can gain new matching-day photos next year. Keep its
+                // old links, and only fill a missing owned preview on explicit action.
+                if storedPhoto.thumbnailRelativePath.isEmpty,
+                   let asset = PHAsset.fetchAssets(withLocalIdentifiers: [identifier], options: nil).firstObject,
+                   let path = try? await PhotoAssetResolver.persistThumbnail(for: asset) {
+                    storedPhoto.thumbnailRelativePath = path
+                }
+                continue
+            }
+            photo.journal = record
+            record.photos.append(photo)
+            modelContext.insert(photo)
+            if let identifier = photo.assetLocalIdentifier {
+                existingByIdentifier[identifier] = photo
+                if let asset = PHAsset.fetchAssets(withLocalIdentifiers: [identifier], options: nil).firstObject,
+                   let path = try? await PhotoAssetResolver.persistThumbnail(for: asset) {
+                    photo.thumbnailRelativePath = path
+                }
+            }
+        }
+        record.updatedAt = .now
+        try? modelContext.save()
+        resolvePhotoLocations()
     }
 
     private func appendPost(text: String, kind: JournalMessagePost.Kind) {
@@ -503,15 +553,21 @@ struct PersistentJournalDetailView: View {
     private func addMessage() {
         let text = newMessage.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return }
-        appendPost(text: text, kind: .note)
-        newMessage = ""
-        try? modelContext.save()
+        Task {
+            await commitJournalForUserAction()
+            appendPost(text: text, kind: .note)
+            newMessage = ""
+            try? modelContext.save()
+        }
     }
 
     private func saveEditedPost(_ post: JournalMessagePost) {
         let text = editDraft.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return }
+        Task {
+        await commitJournalForUserAction()
         var updated = record.messagePosts
+        if updated.isEmpty { updated = posts }
         guard let index = updated.firstIndex(where: { $0.id == post.id }) else { return }
         updated[index].text = text
         record.messagePosts = updated
@@ -520,12 +576,16 @@ struct PersistentJournalDetailView: View {
         try? modelContext.save()
         editingPostID = nil
         focusedInput = nil
+        }
     }
 
     private func cancelEditing() { editingPostID = nil; focusedInput = nil; editDraft = "" }
 
     private func generateDraft() async {
         guard !selectedPhotos.isEmpty else { notice = NSLocalizedString("photos.generate.needs-photos", comment: ""); return }
+        await commitJournalForUserAction()
+        if record.messagePosts.isEmpty, !posts.isEmpty { record.messagePosts = posts }
+        if record.bodyText.isEmpty { record.source = .automatic }
         guard #available(iOS 26, macOS 26, *) else {
             notice = JournalDraftService.availabilityDescription
             record.generationStatus = .failed
@@ -614,11 +674,19 @@ final class PhotoLocationResolver {
         var photos: [JournalPhotoRecord]
         var records: [JournalRecord]
         let context: ModelContext
+
+        init(key: String, location: CLLocation, photos: [JournalPhotoRecord], records: [JournalRecord], context: ModelContext) {
+            self.key = key
+            self.location = location
+            self.photos = photos
+            self.records = records
+            self.context = context
+        }
     }
 
     private static let groupingRadius: CLLocationDistance = 5_000
 
-    private static let cacheKey = "hetkia.reverseGeocoding.cache.v1"
+    private static let cacheKey = "hetkia.reverseGeocoding.cache.v2"
     private static let logger = Logger(
         subsystem: Bundle.main.bundleIdentifier ?? "Hetkia",
         category: "PhotoLocationResolver"
@@ -637,7 +705,7 @@ final class PhotoLocationResolver {
         for record in journals {
             let unresolved = JournalPhotoSelection.selected(from: record.photos).filter { photo in
                 photo.latitude != nil && photo.longitude != nil
-                    && (photo.placeName?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true)
+                    && Self.needsDetailedPlace(photo.placeName)
             }
             enqueue(photos: unresolved, record: record, context: context)
         }
@@ -646,7 +714,7 @@ final class PhotoLocationResolver {
     func enqueue(photos: [JournalPhotoRecord], record: JournalRecord, context: ModelContext) {
         let eligible = photos.filter { photo in
             photo.latitude != nil && photo.longitude != nil
-                && (photo.placeName?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true)
+                && Self.needsDetailedPlace(photo.placeName)
         }
 
         for photo in eligible {
@@ -688,7 +756,7 @@ final class PhotoLocationResolver {
             activeRequest = request
             if let cached = cachedPlace(near: request.location) {
                 finish(request, place: cached)
-            } else if let place = await reverseGeocode(request.location) {
+            } else if let place = await reverseGeocodeWithRetries(request.location) {
                 var cache = Self.cache
                 cache[request.key] = place
                 Self.cache = cache
@@ -709,7 +777,7 @@ final class PhotoLocationResolver {
     private func finish(_ request: Request, place: String) {
         request.photos.forEach { $0.placeName = place; $0.locationStatus = .available }
         request.records.forEach { record in
-            if record.locationText?.isEmpty != false { record.locationText = place }
+            if Self.needsDetailedPlace(record.locationText) { record.locationText = place }
         }
         try? request.context.save()
         NotificationCenter.default.post(name: .hetkiaJournalRecordsDidChange, object: nil)
@@ -736,7 +804,7 @@ final class PhotoLocationResolver {
     private func apply(_ place: String, to photo: JournalPhotoRecord, record: JournalRecord) {
         photo.placeName = place
         photo.locationStatus = .available
-        if record.locationText?.isEmpty != false { record.locationText = place }
+        if Self.needsDetailedPlace(record.locationText) { record.locationText = place }
     }
 
     private func cachedPlace(near location: CLLocation) -> String? {
@@ -759,41 +827,92 @@ final class PhotoLocationResolver {
     }
 
     private func reverseGeocode(_ location: CLLocation) async -> String? {
-        if #available(iOS 26, macOS 26, *) {
-            if let request = MKReverseGeocodingRequest(location: location) {
-                request.preferredLocale = Locale(identifier: HetkiaSystemLanguage.identifier)
-                do {
-                    if let item = try await request.mapItems.first {
-                        let representations = item.addressRepresentations
-                        if let address = representations?.cityWithContext(.full)
-                            ?? representations?.cityName
-                            ?? representations?.fullAddress(includingRegion: true, singleLine: true)
-                            ?? item.name
-                            ?? item.placemark.title,
-                           !address.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                            return address
-                        }
-                    }
-                } catch {
-                    Self.logger.error("MapKit reverse-geocoding request failed: \(error.localizedDescription, privacy: .public)")
-                }
-            }
-        }
+        #if os(macOS)
+        if #available(macOS 26, *) { return await mapKitReverseGeocode(location) }
+        return await legacyMacReverseGeocode(location)
+        #else
+        if let address = await detailedIOSReverseGeocode(location) { return address }
+        return await mapKitReverseGeocode(location)
+        #endif
+    }
 
+    #if os(iOS)
+    private func detailedIOSReverseGeocode(_ location: CLLocation) async -> String? {
         do {
-            let geocoder = CLGeocoder()
-            let placemarks = try await geocoder.reverseGeocodeLocation(
+            let placemarks = try await CLGeocoder().reverseGeocodeLocation(
                 location,
                 preferredLocale: Locale(identifier: HetkiaSystemLanguage.identifier)
             )
-            guard let placemark = placemarks.first else { return nil }
-            let values = [placemark.name, placemark.subLocality, placemark.locality,
-                          placemark.administrativeArea, placemark.country]
+            guard let place = placemarks.first else { return nil }
+            let city = place.locality ?? place.administrativeArea
+            let detail = place.subLocality ?? place.subAdministrativeArea ?? place.name
+            let components = [place.country, city, detail]
                 .compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
                 .filter { !$0.isEmpty }
             var unique: [String] = []
-            for value in values where !unique.contains(where: { $0.caseInsensitiveCompare(value) == .orderedSame }) {
-                unique.append(value)
+            for component in components where !unique.contains(where: { $0.caseInsensitiveCompare(component) == .orderedSame }) {
+                unique.append(component)
+            }
+            return unique.isEmpty ? nil : unique.joined(separator: " · ")
+        } catch {
+            Self.logger.error("Detailed reverse-geocoding request failed: \(error.localizedDescription, privacy: .public)")
+            return nil
+        }
+    }
+    #endif
+
+    private static func needsDetailedPlace(_ value: String?) -> Bool {
+        guard let value = value?.trimmingCharacters(in: .whitespacesAndNewlines), !value.isEmpty else { return true }
+        return value.split(separator: "·").count < 3
+    }
+
+    private func reverseGeocodeWithRetries(_ location: CLLocation) async -> String? {
+        let retryDelays: [Duration] = [.seconds(2), .seconds(6), .seconds(15), .seconds(30)]
+        for attempt in 0...retryDelays.count {
+            if let place = await reverseGeocode(location) { return place }
+            guard attempt < retryDelays.count else { break }
+            try? await Task.sleep(for: retryDelays[attempt])
+        }
+        return nil
+    }
+
+    @available(iOS 26, macOS 26, *)
+    private func mapKitReverseGeocode(_ location: CLLocation) async -> String? {
+        guard let request = MKReverseGeocodingRequest(location: location) else { return nil }
+        request.preferredLocale = Locale(identifier: HetkiaSystemLanguage.identifier)
+        do {
+            guard let item = try await request.mapItems.first else { return nil }
+            let representations = item.addressRepresentations
+            let address = representations?.cityWithContext(.full)
+                ?? representations?.cityName
+                ?? representations?.fullAddress(includingRegion: true, singleLine: true)
+                ?? item.address?.shortAddress
+                ?? item.name
+            guard let address,
+                  !address.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return nil }
+            return address
+        } catch {
+            Self.logger.error("MapKit reverse-geocoding request failed: \(error.localizedDescription, privacy: .public)")
+            return nil
+        }
+    }
+
+    #if os(macOS)
+    @available(macOS, introduced: 14, obsoleted: 26)
+    private func legacyMacReverseGeocode(_ location: CLLocation) async -> String? {
+        do {
+            let results = try await CLGeocoder().reverseGeocodeLocation(
+                location,
+                preferredLocale: Locale(identifier: HetkiaSystemLanguage.identifier)
+            )
+            guard let placemark = results.first else { return nil }
+            let components = [placemark.name, placemark.subLocality, placemark.locality,
+                              placemark.administrativeArea, placemark.country]
+                .compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
+                .filter { !$0.isEmpty }
+            var unique: [String] = []
+            for component in components where !unique.contains(where: { $0.caseInsensitiveCompare(component) == .orderedSame }) {
+                unique.append(component)
             }
             return unique.isEmpty ? nil : unique.joined(separator: " · ")
         } catch {
@@ -801,6 +920,7 @@ final class PhotoLocationResolver {
             return nil
         }
     }
+    #endif
 
     private static var cache: [String: String] {
         get { UserDefaults.standard.dictionary(forKey: cacheKey) as? [String: String] ?? [:] }
@@ -818,7 +938,6 @@ private struct JournalShareCard: View {
     let date: String
     let title: String
     let diaryText: String
-    let source: JournalSource
     let locations: [String]
     let photos: [CGImage]
 
@@ -828,9 +947,9 @@ private struct JournalShareCard: View {
                 Text(verbatim: date)
                     .font(.system(size: 42, weight: .regular, design: .serif))
                 Spacer()
-                Text(LocalizedStringKey(source == .automatic ? "journal.source.automatic" : "journal.source.manual"))
-                    .font(.system(size: 26, weight: .medium)).foregroundStyle(HetkiaPalette.secondaryInk)
-                Image(systemName: "sun.max").font(.system(size: 28, weight: .light)).foregroundStyle(HetkiaPalette.amber)
+                Text("brand.footer")
+                    .font(.system(size: 26, weight: .regular, design: .serif))
+                    .foregroundStyle(HetkiaPalette.secondaryInk)
             }
             JournalSharePhotoGrid(photos: photos)
                 .frame(height: 1080)

@@ -81,7 +81,7 @@ struct FilteredPhotoPicker: View {
     @MainActor
     private func loadAssets() async {
         let status = PHPhotoLibrary.authorizationStatus(for: .readWrite)
-        guard status == .authorized || status == .limited else {
+        guard status == .authorized else {
             hasPhotoAccess = false
             isLoading = false
             return

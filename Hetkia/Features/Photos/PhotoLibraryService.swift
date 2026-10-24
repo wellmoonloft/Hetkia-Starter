@@ -16,10 +16,20 @@ struct ImportedPhotoSummary {
 
 enum PhotoAssetEligibility {
     static func allows(_ asset: PHAsset) -> Bool {
-        asset.mediaType == .image
-            && !asset.isHidden
-            && !asset.mediaSubtypes.contains(.photoScreenshot)
+        // Hidden assets remain outside the app's visible memory stream. Photos does
+        // not return items in Recently Deleted from ordinary library fetches.
+        !asset.isHidden && (asset.mediaType == .image || asset.mediaType == .video)
+    }
+
+    static func isPriorityAsset(_ asset: PHAsset) -> Bool {
+        !asset.mediaSubtypes.contains(.photoScreenshot)
             && !asset.mediaSubtypes.contains(.videoScreenRecording)
+    }
+}
+
+extension PhotoLibraryService {
+    static var hasFullReadAccess: Bool {
+        PHPhotoLibrary.authorizationStatus(for: .readWrite) == .authorized
     }
 }
 
@@ -28,7 +38,7 @@ final class PhotoLibraryService: ObservableObject {
     @Published private(set) var authorizationStatus = PHPhotoLibrary.authorizationStatus(for: .readWrite)
 
     var canReadLibrary: Bool {
-        authorizationStatus == .authorized || authorizationStatus == .limited
+        authorizationStatus == .authorized
     }
 
     func refreshAuthorization() {

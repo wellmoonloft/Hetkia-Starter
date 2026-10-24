@@ -1,7 +1,5 @@
 import SwiftUI
-import SwiftData
 import Photos
-import CoreLocation
 #if os(macOS)
 import AppKit
 #else
@@ -9,17 +7,8 @@ import UIKit
 #endif
 
 @MainActor
-private final class PermissionSettingsModel: NSObject, ObservableObject, CLLocationManagerDelegate {
+private final class PermissionSettingsModel: NSObject, ObservableObject {
     @Published private(set) var photoStatus = PHPhotoLibrary.authorizationStatus(for: .readWrite)
-    @Published private(set) var locationStatus: CLAuthorizationStatus = .notDetermined
-
-    private let locationManager = CLLocationManager()
-
-    override init() {
-        super.init()
-        locationManager.delegate = self
-        locationStatus = locationManager.authorizationStatus
-    }
 
     func requestPhotos() {
         PHPhotoLibrary.requestAuthorization(for: .readWrite) { [weak self] status in
@@ -27,20 +16,8 @@ private final class PermissionSettingsModel: NSObject, ObservableObject, CLLocat
         }
     }
 
-    func requestLocation() {
-        locationManager.requestWhenInUseAuthorization()
-    }
-
     func refresh() {
         photoStatus = PHPhotoLibrary.authorizationStatus(for: .readWrite)
-        locationStatus = locationManager.authorizationStatus
-    }
-
-    nonisolated func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
-        let status = manager.authorizationStatus
-        Task { @MainActor [weak self] in
-            self?.locationStatus = status
-        }
     }
 }
 
@@ -51,33 +28,15 @@ private enum JournalStorageChoice: String {
 
 struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.modelContext) private var modelContext
     @StateObject private var permissions = PermissionSettingsModel()
-    @StateObject private var indexCoordinator = JournalAutomationCoordinator.shared
-    @AppStorage("hetkia.dailyGenerationMinute") private var dailyGenerationMinute = 4 * 60 + 30
     @AppStorage("hetkia.storageChoice") private var storageChoice = JournalStorageChoice.local.rawValue
     @State private var showICloudNotice = false
-    @State private var showPhotoLibrary = false
-
-    private var generationTime: Binding<Date> {
-        Binding(
-            get: {
-                Calendar.current.date(from: DateComponents(hour: dailyGenerationMinute / 60, minute: dailyGenerationMinute % 60)) ?? .now
-            },
-            set: { date in
-                let components = Calendar.current.dateComponents([.hour, .minute], from: date)
-                dailyGenerationMinute = (components.hour ?? 4) * 60 + (components.minute ?? 30)
-            }
-        )
-    }
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
                     permissionSection
-                    dailyJournalSection
-                    photoGenerationSection
                     storageSection
                     aiSection
                     languageSection
@@ -95,16 +54,11 @@ struct SettingsView: View {
             }
             .onAppear {
                 permissions.refresh()
-                indexCoordinator.refreshHistoricalIndexStatus()
-                indexCoordinator.resumeHistoricalLibraryIndexIfNeeded(context: modelContext)
             }
             .alert("settings.icloud.title", isPresented: $showICloudNotice) {
                 Button("common.ok", role: .cancel) { }
             } message: {
                 Text("settings.icloud.unavailable")
-            }
-            .sheet(isPresented: $showPhotoLibrary) {
-                PhotoImportView()
             }
         }
         .tint(HetkiaPalette.amber)
@@ -120,81 +74,7 @@ struct SettingsView: View {
                 actionTitle: photoActionTitle,
                 action: handlePhotoPermission
             )
-            Divider().overlay(HetkiaPalette.line)
-            permissionRow(
-                title: "settings.permission.location",
-                detail: "settings.permission.location.detail",
-                symbol: "location",
-                status: locationStatusText,
-                actionTitle: locationActionTitle,
-                action: handleLocationPermission
-            )
-            Text("settings.permission.note")
-                .font(.system(size: 11))
-                .foregroundStyle(HetkiaPalette.secondaryInk)
-                .fixedSize(horizontal: false, vertical: true)
         }
-    }
-
-    private var dailyJournalSection: some View {
-        settingsCard(title: "settings.generation", symbol: "clock") {
-            DatePicker("settings.generation.time", selection: generationTime, displayedComponents: .hourAndMinute)
-                .font(.system(size: 14))
-                .tint(HetkiaPalette.amber)
-            Text("settings.generation.note")
-                .font(.system(size: 11))
-                .foregroundStyle(HetkiaPalette.secondaryInk)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-    }
-
-    private var photoGenerationSection: some View {
-        settingsCard(title: "settings.photo-generation", symbol: "photo.stack") {
-            HStack(spacing: 10) {
-                generationAction("settings.generation.select-photos", symbol: "photo.stack") {
-                    showPhotoLibrary = true
-                }
-                generationAction("settings.generation.all-photos", symbol: "square.stack.3d.up") {
-                    indexCoordinator.startHistoricalLibraryIndex(context: modelContext, restartIfCompleted: true)
-                }
-            }
-            if indexCoordinator.historicalIndexRequested || indexCoordinator.historicalIndexCompleted {
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack {
-                        Text(indexCoordinator.historicalIndexCompleted
-                             ? "settings.generation.index-complete"
-                             : indexCoordinator.historicalIndexIsRunning
-                                ? "settings.generation.index-running"
-                                : "settings.generation.index-paused")
-                            .font(.system(size: 11, weight: .medium))
-                            .foregroundStyle(HetkiaPalette.secondaryInk)
-                        Spacer()
-                        Text(indexCoordinator.historicalIndexProgress, format: .percent.precision(.fractionLength(0)))
-                            .font(.system(size: 11, weight: .medium, design: .rounded))
-                            .foregroundStyle(HetkiaPalette.amber)
-                    }
-                    ProgressView(value: indexCoordinator.historicalIndexProgress)
-                        .tint(HetkiaPalette.amber)
-                    Text("settings.generation.index-detail")
-                        .font(.system(size: 10))
-                        .foregroundStyle(HetkiaPalette.secondaryInk)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                .padding(12)
-                .background(HetkiaPalette.paper, in: RoundedRectangle(cornerRadius: 13, style: .continuous))
-            }
-        }
-    }
-
-    private func generationAction(_ title: LocalizedStringKey, symbol: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Label(title, systemImage: symbol)
-                .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(HetkiaPalette.amber)
-                .frame(maxWidth: .infinity, minHeight: 42)
-                .background(HetkiaPalette.paper, in: Capsule())
-        }
-        .buttonStyle(.plain)
     }
 
     private var storageSection: some View {
@@ -334,22 +214,8 @@ struct SettingsView: View {
         }
     }
 
-    private var locationStatusText: LocalizedStringKey {
-        switch permissions.locationStatus {
-        case .authorizedAlways, .authorizedWhenInUse: "settings.permission.granted"
-        case .denied: "settings.permission.denied"
-        case .restricted: "settings.permission.restricted"
-        case .notDetermined: "settings.permission.not-requested"
-        @unknown default: "settings.permission.unknown"
-        }
-    }
-
     private var photoActionTitle: LocalizedStringKey {
         permissions.photoStatus == .notDetermined ? "settings.permission.request" : "settings.permission.manage"
-    }
-
-    private var locationActionTitle: LocalizedStringKey {
-        permissions.locationStatus == .notDetermined ? "settings.permission.request" : "settings.permission.manage"
     }
 
     private func handlePhotoPermission() {
@@ -357,14 +223,6 @@ struct SettingsView: View {
             permissions.requestPhotos()
         } else {
             openPrivacySettings(section: "Photos")
-        }
-    }
-
-    private func handleLocationPermission() {
-        if permissions.locationStatus == .notDetermined {
-            permissions.requestLocation()
-        } else {
-            openPrivacySettings(section: "Location")
         }
     }
 

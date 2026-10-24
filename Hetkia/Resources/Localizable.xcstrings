@@ -4,9 +4,6 @@
     "(%lld)" : {
 
     },
-    "%lld" : {
-
-    },
     "%lld / %lld" : {
       "localizations" : {
         "en" : {
@@ -364,6 +361,7 @@
       }
     },
     "browse.no-entry-month" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1250,6 +1248,7 @@
       }
     },
     "journal.create-today" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1279,6 +1278,108 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "建立今日手札"
+          }
+        }
+      }
+    },
+    "journal.delete.action" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete journal"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eliminar diario"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ลบบันทึก"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "删除日记"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "刪除手札"
+          }
+        }
+      }
+    },
+    "journal.delete.confirm-detail" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Its journal photos and generation tasks will also be removed."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "También se eliminarán sus fotos y tareas de generación."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "รูปภาพและงานสร้างบันทึกที่เกี่ยวข้องจะถูกลบด้วย"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "这篇日记关联的照片记录和生成任务也会一并删除。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "這篇手札關聯的照片資料與生成工作也會一併刪除。"
+          }
+        }
+      }
+    },
+    "journal.delete.confirm-title" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete this journal?"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "¿Eliminar este diario?"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ลบบันทึกนี้หรือไม่"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "删除这篇日记？"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "要刪除這篇手札嗎？"
           }
         }
       }
@@ -1659,6 +1760,7 @@
       }
     },
     "journal.source.automatic" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1693,6 +1795,7 @@
       }
     },
     "journal.source.manual" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1833,6 +1936,7 @@
       }
     },
     "location.coast" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1867,6 +1971,7 @@
       }
     },
     "location.daan" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1901,6 +2006,7 @@
       }
     },
     "location.flower-market" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1935,6 +2041,7 @@
       }
     },
     "location.home" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1969,6 +2076,7 @@
       }
     },
     "location.oldstreet" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2071,6 +2179,7 @@
       }
     },
     "mood.calm" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2105,6 +2214,7 @@
       }
     },
     "mood.content" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2139,6 +2249,7 @@
       }
     },
     "mood.curious" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2173,6 +2284,7 @@
       }
     },
     "mood.grateful" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -3295,6 +3407,7 @@
       }
     },
     "onboarding.eyebrow" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -3329,6 +3442,7 @@
       }
     },
     "onboarding.history.background.no" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -3363,6 +3477,7 @@
       }
     },
     "onboarding.history.background.yes" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -3397,6 +3512,7 @@
       }
     },
     "onboarding.history.detail" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -3431,6 +3547,7 @@
       }
     },
     "onboarding.history.enter-home" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -3535,6 +3652,7 @@
       }
     },
     "onboarding.history.title" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -3643,31 +3761,31 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Photos help you remember the day. You can change access later in Settings."
+            "value" : "Full Photos access lets Hetkia find this calendar date across your library. It reads metadata to display memories; it saves a diary and photo previews only when you generate or edit a diary or add a comment."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Las fotos te ayudan a recordar el día. Puedes cambiar el acceso más tarde en Ajustes."
+            "value" : "El acceso completo a Fotos permite encontrar esta fecha en toda tu biblioteca. Hetkia solo lee metadatos para mostrar recuerdos y guarda el diario y las vistas previas cuando lo generas, editas o añades un comentario."
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "รูปภาพช่วยให้คุณนึกถึงวันนั้น และเปลี่ยนสิทธิ์ได้ภายหลังในการตั้งค่า"
+            "value" : "การเข้าถึงรูปภาพทั้งหมดช่วยให้ Hetkia ค้นหาวันเดียวกันจากคลังรูปภาพของคุณ แอปอ่านเฉพาะข้อมูลกำกับเพื่อแสดงความทรงจำ และจะบันทึกไดอารี่กับภาพตัวอย่างเมื่อคุณสร้างหรือแก้ไขไดอารี่ หรือเพิ่มความคิดเห็นเท่านั้น"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "照片帮助你回忆这一天。之后可以在设置中更改访问范围。"
+            "value" : "需要完整照片权限，时光才能从整个图库查找历年同一天。浏览时只读取信息用于展示；只有生成或修改日记、添加评论时，才会保存日记和照片预览。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "照片幫助你回憶這一天。之後可以在設定中更改存取範圍。"
+            "value" : "需要完整照片權限，時光才能從整個圖庫尋找歷年同一天。瀏覽時只讀取資訊供展示；只有生成或修改日記、添加留言時，才會儲存日記和照片預覽。"
           }
         }
       }
@@ -3677,36 +3795,37 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "No access was granted. Choose individual photos or continue without photos."
+            "value" : "Hetkia needs full Photos access to find this date across your library. You can grant access in Settings or close the app if you prefer not to."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "No se concedió acceso. Elige fotos individuales o continúa sin ellas."
+            "value" : "Hetkia necesita acceso completo a Fotos para buscar esta fecha en toda tu biblioteca. Puedes concederlo en Ajustes o cerrar la app si lo prefieres."
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ไม่ได้รับอนุญาตให้เข้าถึง คุณสามารถเลือกรูปภาพทีละรูปหรือดำเนินการต่อโดยไม่ใช้รูปภาพ"
+            "value" : "Hetkia ต้องใช้สิทธิ์เข้าถึงรูปภาพทั้งหมดเพื่อค้นหาวันนี้ในคลังของคุณ คุณอนุญาตได้ในการตั้งค่า หรือปิดแอปหากไม่ต้องการ"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "未获得照片访问权限。你可以选择单张照片，或不使用照片继续。"
+            "value" : "时光需要完整照片权限，才能在整个图库中查找历年同一天。你可以前往系统设置授权；如果不愿授权，也可以关闭应用。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "未取得照片存取權限。你可以選擇個別照片，或不使用照片繼續。"
+            "value" : "時光需要完整照片權限，才能在整個圖庫中尋找歷年同一天。你可以前往系統設定授權；若不願授權，也可以關閉 App。"
           }
         }
       }
     },
     "onboarding.photos.detail.full" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -3741,6 +3860,7 @@
       }
     },
     "onboarding.photos.detail.limited" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -3775,6 +3895,7 @@
       }
     },
     "onboarding.photos.detail.restricted" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -3981,6 +4102,9 @@
           }
         }
       }
+    },
+    "onboarding.photos.open-settings" : {
+
     },
     "onboarding.photos.permission-note" : {
       "localizations" : {
@@ -4294,31 +4418,31 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Hetkia is organizing photos from the past 30 days into dated journals. This step reads photo details and prepares previews; it does not generate AI text."
+            "value" : "Hetkia is finding photos taken on this calendar date in each year. This read-only scan does not save diaries or photo previews and does not use AI."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Hetkia organizará las fotos de los últimos 30 días en diarios por fecha. Leerá sus datos y preparará vistas previas, sin generar texto con IA."
+            "value" : "Hetkia buscará las fotos tomadas en esta fecha del calendario en cada año. La consulta es de solo lectura: no guarda diarios ni vistas previas y no usa IA."
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Hetkia จะจัดรูปภาพในช่วง 30 วันที่ผ่านมาเป็นบันทึกตามวันที่ โดยอ่านข้อมูลรูปและเตรียมภาพตัวอย่างโดยไม่สร้างข้อความด้วย AI"
+            "value" : "Hetkia จะค้นหารูปที่ถ่ายในวันที่เดียวกันของแต่ละปี การค้นหานี้อ่านอย่างเดียว ไม่บันทึกไดอารี่หรือภาพตัวอย่าง และไม่ใช้ AI"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "时光正在把过去30天的照片整理成按日期归档的手札。此步骤读取照片信息并准备预览，不会生成 AI 文字。"
+            "value" : "时光正在查找历年同月同日的照片。此步骤只读，不保存日记或照片预览，也不会调用 AI。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "時光正在把過去30天的照片整理成按日期歸檔的手札。此步驟讀取照片資訊並準備預覽，不會生成 AI 文字。"
+            "value" : "時光正在尋找歷年同月同日的照片。此步驟僅讀取，不儲存日記或照片預覽，也不會呼叫 AI。"
           }
         }
       }
@@ -4464,31 +4588,31 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Your last 30 days, gathered"
+            "value" : "On This Day"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tus últimos 30 días, reunidos"
+            "value" : "Un día como hoy"
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "รวบรวม 30 วันที่ผ่านมาไว้ด้วยกัน"
+            "value" : "วันนี้ในอดีต"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "先整理过去30天的手札"
+            "value" : "历史上的今天"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "先整理過去30天的手札"
+            "value" : "歷史上的今天"
           }
         }
       }
@@ -4634,6 +4758,7 @@
       }
     },
     "onboarding.start" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4668,6 +4793,7 @@
       }
     },
     "onboarding.step.history" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -5610,6 +5736,7 @@
       }
     },
     "onboarding.welcome.detail" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -5644,6 +5771,7 @@
       }
     },
     "onboarding.welcome.title" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -5673,6 +5801,46 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "把日常，慢慢寫成手札"
+          }
+        }
+      }
+    },
+    "onthisday.empty" : {
+
+    },
+    "onthisday.scanning" : {
+
+    },
+    "onthisday.tagline" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Leave today for yourself."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dedica el día de hoy a ti."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เก็บวันนี้ไว้เพื่อตัวคุณเอง"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "把今天，留给自己。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "把今天，留給自己。"
           }
         }
       }
@@ -6311,31 +6479,31 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "On-device model is ready. Image understanding requires iOS 27 or macOS 27 or later."
+            "value" : "On-device model is ready. Image understanding requires iOS 27 or later."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "El modelo local está listo. La comprensión de imágenes requiere iOS 27 o macOS 27 o posterior."
+            "value" : "El modelo local está listo. La comprensión de imágenes requiere iOS 27 o posterior."
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "โมเดลบนอุปกรณ์พร้อมใช้งาน การทำความเข้าใจภาพต้องใช้ iOS 27 หรือ macOS 27 ขึ้นไป"
+            "value" : "โมเดลบนอุปกรณ์พร้อมใช้งาน การทำความเข้าใจภาพต้องใช้ iOS 27 ขึ้นไป"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "设备端模型已就绪。照片画面理解需要 iOS 27 或 macOS 27 及以上版本。"
+            "value" : "设备端模型已就绪。照片画面理解需要 iOS 27 及以上版本。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "裝置端模型已就緒。照片畫面理解需要 iOS 27 或 macOS 27 以上版本。"
+            "value" : "裝置端模型已就緒。照片畫面理解需要 iOS 27 以上版本。"
           }
         }
       }
@@ -6447,31 +6615,31 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "On-device writing requires iOS 26 or macOS 26 or later."
+            "value" : "On-device writing requires iOS 26 or later."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "La escritura local requiere iOS 26 o macOS 26 o posterior."
+            "value" : "La escritura local requiere iOS 26 o posterior."
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "การเขียนบนอุปกรณ์ต้องใช้ iOS 26 หรือ macOS 26 ขึ้นไป"
+            "value" : "การเขียนบนอุปกรณ์ต้องใช้ iOS 26 ขึ้นไป"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "设备端写作需要 iOS 26 或 macOS 26 及以上版本。"
+            "value" : "设备端写作需要 iOS 26 及以上版本。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "裝置端寫作需要 iOS 26 或 macOS 26 以上版本。"
+            "value" : "裝置端寫作需要 iOS 26 以上版本。"
           }
         }
       }
@@ -6717,6 +6885,7 @@
       }
     },
     "photos.generate.interrupted" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -6923,6 +7092,7 @@
       }
     },
     "photos.import.action" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -7095,6 +7265,7 @@
       }
     },
     "photos.journal.empty-list" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -7129,6 +7300,7 @@
       }
     },
     "photos.journal.import-to-begin" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -7405,6 +7577,7 @@
       }
     },
     "photos.search.metadata-only" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -8704,6 +8877,7 @@
       }
     },
     "settings.generation" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -8738,6 +8912,7 @@
       }
     },
     "settings.generation.all-photos" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -8772,6 +8947,7 @@
       }
     },
     "settings.generation.index-complete" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -8806,6 +8982,7 @@
       }
     },
     "settings.generation.index-detail" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -8840,6 +9017,7 @@
       }
     },
     "settings.generation.index-paused" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -8874,6 +9052,7 @@
       }
     },
     "settings.generation.index-running" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -8908,6 +9087,7 @@
       }
     },
     "settings.generation.note" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -8976,6 +9156,7 @@
       }
     },
     "settings.generation.time" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -9249,6 +9430,7 @@
       }
     },
     "settings.permission.location" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -9283,6 +9465,7 @@
       }
     },
     "settings.permission.location.detail" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -9385,6 +9568,7 @@
       }
     },
     "settings.permission.note" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -9618,6 +9802,41 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "權限"
+          }
+        }
+      }
+    },
+    "settings.photo-generation" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Photo journal generation"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Generación de diarios con fotos"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "สร้างบันทึกจากรูปภาพ"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "照片生成日记"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "照片生成手札"
           }
         }
       }
@@ -10560,6 +10779,7 @@
       }
     },
     "timeline.tagline" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -10691,6 +10911,76 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "今天還沒有手札"
+          }
+        }
+      }
+    },
+    "timeline.widget.next" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Next memory"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Recuerdo siguiente"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ความทรงจำถัดไป"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "下一则回忆"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "下一則回憶"
+          }
+        }
+      }
+    },
+    "timeline.widget.previous" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Previous memory"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Recuerdo anterior"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ความทรงจำก่อนหน้า"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "上一则回忆"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "上一則回憶"
           }
         }
       }
@@ -10831,42 +11121,6 @@
             "value" : "上一年"
           }
         }
-      }
-    },
-    "settings.photo-generation" : {
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Photo journal generation" } },
-        "es" : { "stringUnit" : { "state" : "translated", "value" : "Generación de diarios con fotos" } },
-        "th" : { "stringUnit" : { "state" : "translated", "value" : "สร้างบันทึกจากรูปภาพ" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "照片生成日记" } },
-        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "照片生成手札" } }
-      }
-    },
-    "journal.delete.action" : {
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Delete journal" } },
-        "es" : { "stringUnit" : { "state" : "translated", "value" : "Eliminar diario" } },
-        "th" : { "stringUnit" : { "state" : "translated", "value" : "ลบบันทึก" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "删除日记" } },
-        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "刪除手札" } }
-      }
-    },
-    "journal.delete.confirm-title" : {
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Delete this journal?" } },
-        "es" : { "stringUnit" : { "state" : "translated", "value" : "¿Eliminar este diario?" } },
-        "th" : { "stringUnit" : { "state" : "translated", "value" : "ลบบันทึกนี้หรือไม่" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "删除这篇日记？" } },
-        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "要刪除這篇手札嗎？" } }
-      }
-    },
-    "journal.delete.confirm-detail" : {
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Its journal photos and generation tasks will also be removed." } },
-        "es" : { "stringUnit" : { "state" : "translated", "value" : "También se eliminarán sus fotos y tareas de generación." } },
-        "th" : { "stringUnit" : { "state" : "translated", "value" : "รูปภาพและงานสร้างบันทึกที่เกี่ยวข้องจะถูกลบด้วย" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "这篇日记关联的照片记录和生成任务也会一并删除。" } },
-        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "這篇手札關聯的照片資料與生成工作也會一併刪除。" } }
       }
     }
   },

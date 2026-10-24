@@ -219,7 +219,7 @@ final class JournalAutomationCoordinator: ObservableObject {
 
     private var canReadPhotoLibrary: Bool {
         let status = PHPhotoLibrary.authorizationStatus(for: .readWrite)
-        return status == .authorized || status == .limited
+        return status == .authorized
     }
 
     private func indexPhotoDays(

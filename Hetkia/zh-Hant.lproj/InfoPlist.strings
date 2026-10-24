@@ -1,4 +1,2 @@
-"CFBundleDisplayName" = "時光 · Hetkia";
-"NSPhotoLibraryUsageDescription" = "時光需要取用你的照片，以便整理所選照片並排版成私人日記頁面。照片會在此裝置上處理。";
-"NSLocationWhenInUseUsageDescription" = "僅在你允許時，定位用於為手札加入附近地點。";
-"NSLocationUsageDescription" = "僅在你使用 App 時，時光會在你允許後取用定位，以便為手札加入附近地點。";
+"CFBundleDisplayName" = "時光";
+"NSPhotoLibraryUsageDescription" = "時光需要完整照片權限，才能尋找歷年同月同日的照片。瀏覽時只讀取照片供展示；只有生成或修改日記、添加留言時，才會儲存日記和照片預覽。";

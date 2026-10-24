@@ -1,5 +1,6 @@
 import Foundation
 import SwiftData
+import Photos
 
 /// A journal is keyed by the photo's local calendar day at import time. The day key stays
 /// stable if the device later changes time zone; `capturedAt` on each photo remains absolute.
@@ -92,10 +93,28 @@ struct JournalMessagePost: Identifiable, Codable, Equatable {
 enum JournalPhotoSelection {
     /// Selects the same set for diary generation, detail pages, and timeline previews.
     static func selected(from photos: [JournalPhotoRecord]) -> [JournalPhotoRecord] {
-        let ordered = photos.sorted { $0.sortOrder < $1.sortOrder }
+        let ordered = photos.sorted {
+            if $0.isPriorityPhoto != $1.isPriorityPhoto { return $0.isPriorityPhoto && !$1.isPriorityPhoto }
+            return $0.sortOrder < $1.sortOrder
+        }
         let count = ordered.count
         let selectedCount = count > 9 ? 9 : (count.isMultiple(of: 2) ? max(0, count - 1) : count)
         return Array(ordered.prefix(selectedCount))
+    }
+
+    /// Keeps the established 1/3/5/7/9 composition while ranking ordinary camera
+    /// photos ahead of screenshots and screen recordings. Those lower-priority
+    /// assets remain eligible when needed to fill the day's selected count.
+    static func selectedAssets(from assets: [PHAsset]) -> [PHAsset] {
+        let eligible = assets.filter(PhotoAssetEligibility.allows)
+        let targetCount = eligible.count > 9 ? 9 : (eligible.count.isMultiple(of: 2) ? max(0, eligible.count - 1) : eligible.count)
+        let ranked = eligible.sorted { lhs, rhs in
+            let lhsPriority = PhotoAssetEligibility.isPriorityAsset(lhs)
+            let rhsPriority = PhotoAssetEligibility.isPriorityAsset(rhs)
+            if lhsPriority != rhsPriority { return lhsPriority && !rhsPriority }
+            return (lhs.creationDate ?? .distantPast) < (rhs.creationDate ?? .distantPast)
+        }
+        return Array(ranked.prefix(targetCount))
     }
 }
 
@@ -114,6 +133,7 @@ final class JournalPhotoRecord {
     var pixelWidth: Int
     var pixelHeight: Int
     var mediaType: String
+    var isPriorityPhoto: Bool = true
     var orientationRaw: Int?
     var thumbnailRelativePath: String
     var metadataReadStatusRaw: String
@@ -126,7 +146,8 @@ final class JournalPhotoRecord {
         assetLocalIdentifier: String?, capturedAt: Date?, addedAt: Date?, modificationDate: Date?,
         latitude: Double?, longitude: Double?, locationStatus: PhotoLocationStatus,
         pixelWidth: Int, pixelHeight: Int, orientationRaw: Int?, thumbnailRelativePath: String,
-        metadataReadStatus: PhotoMetadataReadStatus, sortOrder: Int
+        metadataReadStatus: PhotoMetadataReadStatus, sortOrder: Int,
+        mediaType: String = "image", isPriorityPhoto: Bool = true
     ) {
         self.id = UUID()
         self.assetLocalIdentifier = assetLocalIdentifier
@@ -140,7 +161,8 @@ final class JournalPhotoRecord {
         self.placeName = nil
         self.pixelWidth = pixelWidth
         self.pixelHeight = pixelHeight
-        self.mediaType = "image"
+        self.mediaType = mediaType
+        self.isPriorityPhoto = isPriorityPhoto
         self.orientationRaw = orientationRaw
         self.thumbnailRelativePath = thumbnailRelativePath
         self.metadataReadStatusRaw = metadataReadStatus.rawValue

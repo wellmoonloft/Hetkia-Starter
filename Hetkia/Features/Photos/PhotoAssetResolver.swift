@@ -1,5 +1,6 @@
 import Foundation
 import Photos
+import AVFoundation
 import ImageIO
 import SwiftData
 import CoreGraphics
@@ -16,22 +17,24 @@ enum PhotoAssetResolver {
     static func displayImage(for photo: JournalPhotoRecord, targetSize: CGSize) async -> CGImage? {
         if let identifier = photo.assetLocalIdentifier {
             let status = PHPhotoLibrary.authorizationStatus(for: .readWrite)
-            if status == .authorized || status == .limited {
+            if status == .authorized {
                 if let asset = PHAsset.fetchAssets(withLocalIdentifiers: [identifier], options: nil).firstObject {
-                    if let original = await requestImage(for: asset, targetSize: targetSize) {
-                        photo.lastVerifiedAt = .now
-                        photo.originalAvailabilityRaw = PhotoOriginalAvailability.available.rawValue
-                        return original
-                    }
-                    photo.originalAvailabilityRaw = PhotoOriginalAvailability.missing.rawValue
-                } else {
-                    photo.originalAvailabilityRaw = PhotoOriginalAvailability.missing.rawValue
+                    if let original = await previewImage(for: asset, targetSize: targetSize) { return original }
                 }
-            } else {
-                photo.originalAvailabilityRaw = PhotoOriginalAvailability.permissionUnavailable.rawValue
             }
         }
         return await thumbnailImage(relativePath: photo.thumbnailRelativePath, targetSize: targetSize)
+    }
+
+    @MainActor
+    static func previewImage(for asset: PHAsset, targetSize: CGSize) async -> CGImage? {
+        if asset.mediaType == .video, let avAsset = await requestAVAsset(for: asset) {
+            let generator = AVAssetImageGenerator(asset: avAsset)
+            generator.appliesPreferredTrackTransform = true
+            generator.maximumSize = targetSize
+            return try? await generator.image(at: .zero).image
+        }
+        return await requestImage(for: asset, targetSize: targetSize)
     }
 
     static func thumbnailImage(relativePath: String, targetSize: CGSize) async -> CGImage? {
@@ -56,6 +59,23 @@ enum PhotoAssetResolver {
         return support.appendingPathComponent(relativePath)
     }
 
+    @MainActor
+    static func persistThumbnail(for asset: PHAsset, targetSize: CGSize = CGSize(width: 1200, height: 1200)) async throws -> String {
+        guard let image = await previewImage(for: asset, targetSize: targetSize) else { throw PhotoImportError.unreadableAsset }
+        let data = NSMutableData()
+        guard let destination = CGImageDestinationCreateWithData(data, "public.jpeg" as CFString, 1, nil) else {
+            throw PhotoImportError.couldNotCreateJPEG
+        }
+        CGImageDestinationAddImage(destination, image, [kCGImageDestinationLossyCompressionQuality: 0.78] as CFDictionary)
+        guard CGImageDestinationFinalize(destination) else { throw PhotoImportError.couldNotCreateJPEG }
+        let support = try FileManager.default.url(for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
+        let directory = support.appendingPathComponent("JournalImages", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let filename = "\(UUID().uuidString).jpg"
+        try (data as Data).write(to: directory.appendingPathComponent(filename), options: .atomic)
+        return "JournalImages/\(filename)"
+    }
+
     private static func requestImage(for asset: PHAsset, targetSize: CGSize) async -> CGImage? {
         await withCheckedContinuation { continuation in
             let options = PHImageRequestOptions()
@@ -70,6 +90,18 @@ enum PhotoAssetResolver {
                     return
                 }
                 continuation.resume(returning: image.flatMap(Self.cgImage(from:)))
+            }
+        }
+    }
+
+    @MainActor
+    private static func requestAVAsset(for asset: PHAsset) async -> AVAsset? {
+        await withCheckedContinuation { continuation in
+            let options = PHVideoRequestOptions()
+            options.deliveryMode = .automatic
+            options.isNetworkAccessAllowed = true
+            PHImageManager.default().requestAVAsset(forVideo: asset, options: options) { avAsset, _, _ in
+                continuation.resume(returning: avAsset)
             }
         }
     }

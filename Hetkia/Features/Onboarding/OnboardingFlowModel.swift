@@ -82,7 +82,6 @@ final class OnboardingFlowModel: ObservableObject {
     @Published private(set) var stage: OnboardingStage
     @Published private(set) var isOnboardingComplete: Bool
     @Published private(set) var photoAccess: DemoPhotoAccess
-    @Published private(set) var preferredGenerationMinute: Int
     @Published private(set) var todayStatus: TodayJournalStatus
     @Published private(set) var todayProgress: Double
     @Published private(set) var todayOutcome: TodayDemoOutcome
@@ -102,7 +101,6 @@ final class OnboardingFlowModel: ObservableObject {
         var stage: OnboardingStage
         var isOnboardingComplete: Bool
         var photoAccess: DemoPhotoAccess
-        var preferredGenerationMinute: Int
         var todayStatus: TodayJournalStatus
         var todayProgress: Double
         var todayOutcome: TodayDemoOutcome
@@ -123,7 +121,6 @@ final class OnboardingFlowModel: ObservableObject {
             stage: .welcome,
             isOnboardingComplete: false,
             photoAccess: .full,
-            preferredGenerationMinute: defaults.object(forKey: "hetkia.dailyGenerationMinute") as? Int ?? 4 * 60 + 30,
             todayStatus: .idle,
             todayProgress: 0,
             todayOutcome: .samplePhotos,
@@ -136,13 +133,15 @@ final class OnboardingFlowModel: ObservableObject {
             isQueuePaused: true
         )
         let restored = defaults.data(forKey: storageKey).flatMap { try? JSONDecoder().decode(Snapshot.self, from: $0) } ?? initial
-        // Migrate snapshots from the retired schedule-selection step.
-        stage = restored.stage == .generationTime ? .todayJournal : restored.stage
+        // Migrate snapshots from retired onboarding steps.
+        switch restored.stage {
+        case .historyInvitation, .backfillRange, .backfillScanning, .backfillConfirmation, .backfillQueue, .backfillComplete, .generationTime:
+            stage = restored.isOnboardingComplete ? .finished : .photoAccess
+        default:
+            stage = restored.stage
+        }
         isOnboardingComplete = restored.isOnboardingComplete
         photoAccess = restored.photoAccess
-        let preferredMinute = defaults.object(forKey: "hetkia.dailyGenerationMinute") as? Int ?? (restored.preferredGenerationMinute == 21 * 60 ? 4 * 60 + 30 : restored.preferredGenerationMinute)
-        preferredGenerationMinute = preferredMinute
-        defaults.set(preferredMinute, forKey: "hetkia.dailyGenerationMinute")
         todayStatus = restored.todayStatus
         todayProgress = restored.todayProgress
         todayOutcome = restored.todayOutcome
@@ -154,10 +153,6 @@ final class OnboardingFlowModel: ObservableObject {
         queueItems = restored.queueItems
         isQueuePaused = restored.isQueuePaused
         restoreInterruptedWorkIfNeeded()
-    }
-
-    var preferredTime: Date {
-        Calendar.current.date(from: DateComponents(hour: preferredGenerationMinute / 60, minute: preferredGenerationMinute % 60)) ?? .now
     }
 
     var completedCount: Int { queueItems.filter { $0.status == .completed }.count }
@@ -177,17 +172,10 @@ final class OnboardingFlowModel: ObservableObject {
     }
 
     func continueFromPhotoAccess() {
-        // The daily target is configured in Settings and defaults to 04:30.
+        // The metadata-only same-day lookup runs as soon as photo access is granted.
         stage = .todayJournal
         todayStatus = .scanning
         todayProgress = 0
-        persist()
-    }
-
-    func setPreferredTime(_ date: Date) {
-        let parts = Calendar.current.dateComponents([.hour, .minute], from: date)
-        preferredGenerationMinute = (parts.hour ?? 4) * 60 + (parts.minute ?? 30)
-        defaults.set(preferredGenerationMinute, forKey: "hetkia.dailyGenerationMinute")
         persist()
     }
 
@@ -219,8 +207,7 @@ final class OnboardingFlowModel: ObservableObject {
     func initialIndexCompleted() {
         todayStatus = .ready
         todayProgress = 1
-        stage = .historyInvitation
-        persist()
+        completeOnboarding()
     }
 
     func startTodayGeneration(outcome: TodayDemoOutcome) {
@@ -270,8 +257,7 @@ final class OnboardingFlowModel: ObservableObject {
     }
 
     func continueFromToday() {
-        stage = .historyInvitation
-        persist()
+        completeOnboarding()
     }
 
     func skipHistory() {
@@ -487,7 +473,6 @@ final class OnboardingFlowModel: ObservableObject {
             stage: stage,
             isOnboardingComplete: isOnboardingComplete,
             photoAccess: photoAccess,
-            preferredGenerationMinute: preferredGenerationMinute,
             todayStatus: todayStatus,
             todayProgress: todayProgress,
             todayOutcome: todayOutcome,

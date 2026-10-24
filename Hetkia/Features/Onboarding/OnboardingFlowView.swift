@@ -1,5 +1,11 @@
 import SwiftUI
 import SwiftData
+import Photos
+#if os(macOS)
+import AppKit
+#else
+import UIKit
+#endif
 
 struct OnboardingFlowView: View {
     @ObservedObject var model: OnboardingFlowModel
@@ -7,31 +13,23 @@ struct OnboardingFlowView: View {
     @Environment(\.modelContext) private var modelContext
     @State private var isIndexingRecentPhotos = false
     @State private var didStartRecentIndex = false
-    @State private var shouldIndexOlderPhotos = true
 
     var body: some View {
         Group {
             switch model.stage {
-            case .welcome: welcome
+            // The former welcome and photo-permission pages are now one first-run page.
+            case .welcome: photoAccess
             case .photoAccess: photoAccess
             case .generationTime: todayJournal
             case .todayJournal: todayJournal
             case .historyInvitation: historyInvitation
             case .backfillRange, .backfillScanning, .backfillConfirmation, .backfillQueue, .backfillComplete:
-                // Old onboarding snapshots may point at the retired simulated bulk scan.
-                historyInvitation
+                todayJournal
             case .finished: TimelineHomeView()
             }
         }
         .background(HetkiaPalette.paper.ignoresSafeArea())
         .tint(HetkiaPalette.amber)
-    }
-
-    private var welcome: some View {
-        page(symbol: "book.closed", eyebrow: "onboarding.eyebrow", title: "onboarding.welcome.title", detail: "onboarding.welcome.detail") {
-            Spacer()
-            action("onboarding.start") { model.begin() }
-        }
     }
 
     private var photoAccess: some View {
@@ -41,11 +39,14 @@ struct OnboardingFlowView: View {
                     .font(.system(size: 14, weight: .medium)).foregroundStyle(HetkiaPalette.ink)
                 Text(photoAccessDetail).font(.system(size: 12)).lineSpacing(3)
                     .foregroundStyle(HetkiaPalette.secondaryInk).fixedSize(horizontal: false, vertical: true)
-                if photoLibrary.authorizationStatus == .notDetermined || photoLibrary.authorizationStatus == .denied || photoLibrary.authorizationStatus == .restricted {
+                if photoLibrary.authorizationStatus == .notDetermined {
                     Button("onboarding.photos.request") {
                         Task { await requestPhotoAccessAndAdvance() }
                     }
                     .font(.system(size: 13, weight: .medium)).foregroundStyle(HetkiaPalette.amber)
+                } else if photoLibrary.authorizationStatus != .authorized {
+                    Button("onboarding.photos.open-settings") { openSystemSettings() }
+                        .font(.system(size: 13, weight: .medium)).foregroundStyle(HetkiaPalette.amber)
                 }
             }
             .padding(15).background(.white.opacity(0.74), in: RoundedRectangle(cornerRadius: 15))
@@ -88,9 +89,7 @@ struct OnboardingFlowView: View {
                 .background(.white.opacity(0.74), in: RoundedRectangle(cornerRadius: 16))
             }
             .padding(.vertical, 12)
-            if model.todayStatus == .failed {
-                action("onboarding.recent.retry") { startRecentIndex() }
-            }
+            if model.todayStatus == .failed { action("onboarding.recent.retry") { startRecentIndex() } }
         }
         .task {
             guard !didStartRecentIndex else { return }
@@ -103,38 +102,16 @@ struct OnboardingFlowView: View {
         didStartRecentIndex = true
         isIndexingRecentPhotos = true
         Task {
-            do {
-                try await JournalAutomationCoordinator.shared.indexRecentJournals(context: modelContext) { progress in
-                    model.updateInitialIndexProgress(progress)
-                }
-                isIndexingRecentPhotos = false
-                model.initialIndexCompleted()
-            } catch {
-                isIndexingRecentPhotos = false
-                didStartRecentIndex = false
-                model.initialIndexFailed()
+            _ = await OnThisDayLibrary.fetch { progress in
+                model.updateInitialIndexProgress(progress)
             }
+            isIndexingRecentPhotos = false
+            model.initialIndexCompleted()
         }
     }
 
     private var historyInvitation: some View {
-        page(symbol: "calendar.badge.clock", eyebrow: "onboarding.step.history", title: "onboarding.history.title", detail: "onboarding.history.detail") {
-            VStack(alignment: .leading, spacing: 16) {
-                Button { shouldIndexOlderPhotos = true } label: {
-                    choiceRow("onboarding.history.background.yes", selected: shouldIndexOlderPhotos)
-                }.buttonStyle(.plain)
-                Button { shouldIndexOlderPhotos = false } label: {
-                    choiceRow("onboarding.history.background.no", selected: !shouldIndexOlderPhotos)
-                }.buttonStyle(.plain)
-                action("onboarding.history.enter-home") {
-                    if shouldIndexOlderPhotos {
-                        JournalAutomationCoordinator.shared.startHistoricalLibraryIndex(context: modelContext)
-                    }
-                    model.skipHistory()
-                }
-            }
-            .padding(.top, 12)
-        }
+        todayJournal
     }
 
     private func choiceRow(_ title: LocalizedStringKey, selected: Bool) -> some View {
@@ -191,10 +168,8 @@ struct OnboardingFlowView: View {
 
     private var photoAccessDetail: LocalizedStringKey {
         switch photoLibrary.authorizationStatus {
-        case .authorized: "onboarding.photos.detail.full"
-        case .limited: "onboarding.photos.detail.limited"
-        case .denied: "onboarding.photos.detail.denied"
-        case .restricted: "onboarding.photos.detail.restricted"
+        case .authorized: "onboarding.photos.detail"
+        case .limited, .denied, .restricted: "onboarding.photos.detail.denied"
         case .notDetermined: "onboarding.photos.detail.unknown"
         @unknown default: "onboarding.photos.detail.unknown"
         }
@@ -212,13 +187,21 @@ struct OnboardingFlowView: View {
     private func requestPhotoAccessAndAdvance() async {
         let status = await photoLibrary.requestAuthorization()
         model.choosePhotoAccess(status == .authorized ? .full : status == .limited ? .limited : .denied)
-        model.continueFromPhotoAccess()
+        if status == .authorized { model.continueFromPhotoAccess() }
     }
 
     private func advancePastPhotoAccess() {
         let status = photoLibrary.authorizationStatus
         model.choosePhotoAccess(status == .authorized ? .full : status == .limited ? .limited : .denied)
-        model.continueFromPhotoAccess()
+        if status == .authorized { model.continueFromPhotoAccess() }
+    }
+
+    private func openSystemSettings() {
+        #if os(macOS)
+        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Photos") { NSWorkspace.shared.open(url) }
+        #else
+        if let url = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(url) }
+        #endif
     }
 
 }

@@ -32,7 +32,35 @@
 		A10000000000000000000017 /* JournalDraftService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000001C /* JournalDraftService.swift */; };
 		A10000000000000000000018 /* JournalAutomationCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000001D /* JournalAutomationCoordinator.swift */; };
 		A10000000000000000000019 /* FilteredPhotoPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000001E /* FilteredPhotoPicker.swift */; };
+		A10000000000000000000020 /* OnThisDayLibrary.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000020 /* OnThisDayLibrary.swift */; };
+		A10000000000000000000021 /* HetkiaWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000021 /* HetkiaWidget.swift */; };
+		A10000000000000000000022 /* HetkiaWidgetExtension.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = A20000000000000000000022 /* HetkiaWidgetExtension.appex */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		A10000000000000000000023 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000006 /* Localizable.xcstrings */; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		A80000000000000000000002 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A80000000000000000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A50000000000000000000002;
+			remoteInfo = HetkiaWidgetExtension;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		A70000000000000000000005 /* Embed App Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				A10000000000000000000022 /* HetkiaWidgetExtension.appex in Embed App Extensions */,
+			);
+			name = "Embed App Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		A20000000000000000000001 /* HetkiaApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HetkiaApp.swift; sourceTree = "<group>"; };
@@ -65,10 +93,20 @@
 		A2000000000000000000001C /* JournalDraftService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JournalDraftService.swift; sourceTree = "<group>"; };
 		A2000000000000000000001D /* JournalAutomationCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JournalAutomationCoordinator.swift; sourceTree = "<group>"; };
 		A2000000000000000000001E /* FilteredPhotoPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilteredPhotoPicker.swift; sourceTree = "<group>"; };
+		A20000000000000000000020 /* OnThisDayLibrary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnThisDayLibrary.swift; sourceTree = "<group>"; };
+		A20000000000000000000021 /* HetkiaWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HetkiaWidget.swift; sourceTree = "<group>"; };
+		A20000000000000000000022 /* HetkiaWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = HetkiaWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		A30000000000000000000001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A30000000000000000000002 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -83,6 +121,7 @@
 			children = (
 				A40000000000000000000002 /* Hetkia */,
 				A40000000000000000000003 /* Products */,
+				A40000000000000000000010 /* HetkiaWidget */,
 			);
 			sourceTree = "<group>";
 		};
@@ -102,6 +141,7 @@
 			isa = PBXGroup;
 			children = (
 				A20000000000000000000005 /* Hetkia.app */,
+				A20000000000000000000022 /* HetkiaWidgetExtension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -202,6 +242,7 @@
 				A2000000000000000000001A /* PhotoAssetResolver.swift */,
 				A2000000000000000000001B /* PhotoImportView.swift */,
 				A2000000000000000000001E /* FilteredPhotoPicker.swift */,
+				A20000000000000000000020 /* OnThisDayLibrary.swift */,
 			);
 			path = Photos;
 			sourceTree = "<group>";
@@ -214,6 +255,14 @@
 			path = AI;
 			sourceTree = "<group>";
 		};
+		A40000000000000000000010 /* HetkiaWidget */ = {
+			isa = PBXGroup;
+			children = (
+				A20000000000000000000021 /* HetkiaWidget.swift */,
+			);
+			path = HetkiaWidget;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -224,15 +273,34 @@
 				A70000000000000000000001 /* Sources */,
 				A30000000000000000000001 /* Frameworks */,
 				A70000000000000000000002 /* Resources */,
+				A70000000000000000000005 /* Embed App Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				A80000000000000000000003 /* PBXTargetDependency */,
 			);
 			name = Hetkia;
 			productName = Hetkia;
 			productReference = A20000000000000000000005 /* Hetkia.app */;
 			productType = "com.apple.product-type.application";
+		};
+		A50000000000000000000002 /* HetkiaWidgetExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A60000000000000000000003 /* Build configuration list for PBXNativeTarget "HetkiaWidgetExtension" */;
+			buildPhases = (
+				A70000000000000000000003 /* Sources */,
+				A30000000000000000000002 /* Frameworks */,
+				A70000000000000000000004 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = HetkiaWidgetExtension;
+			productName = HetkiaWidgetExtension;
+			productReference = A20000000000000000000022 /* HetkiaWidgetExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
 
@@ -245,6 +313,9 @@
 				TargetAttributes = {
 					A50000000000000000000001 = {
 						CreatedOnToolsVersion = 27.0;
+					};
+					A50000000000000000000002 = {
+						CreatedOnToolsVersion = 27.1;
 					};
 				};
 			};
@@ -266,6 +337,7 @@
 			projectRoot = "";
 			targets = (
 				A50000000000000000000001 /* Hetkia */,
+				A50000000000000000000002 /* HetkiaWidgetExtension */,
 			);
 		};
 /* End PBXProject section */
@@ -279,6 +351,14 @@
 				A10000000000000000000004 /* Hetkia-App-Icon-Concept.png in Resources */,
 				A10000000000000000000005 /* Localizable.xcstrings in Resources */,
 				A10000000000000000000006 /* InfoPlist.strings in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A70000000000000000000004 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A10000000000000000000023 /* Localizable.xcstrings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -310,10 +390,27 @@
 				A10000000000000000000017 /* JournalDraftService.swift in Sources */,
 				A10000000000000000000018 /* JournalAutomationCoordinator.swift in Sources */,
 				A10000000000000000000019 /* FilteredPhotoPicker.swift in Sources */,
+				A10000000000000000000020 /* OnThisDayLibrary.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A70000000000000000000003 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A10000000000000000000021 /* HetkiaWidget.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		A80000000000000000000003 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = A50000000000000000000002 /* HetkiaWidgetExtension */;
+			targetProxy = A80000000000000000000002 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin PBXVariantGroup section */
 		A40000000000000000000009 /* InfoPlist.strings */ = {
@@ -420,28 +517,26 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				"ASSETCATALOG_COMPILER_APPICON_NAME[sdk=macosx*]" = HetkiaMacIcon;
 				CLANG_ENABLE_OBJC_WEAK = YES;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = VCUZHQSHRQ;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_FILE = Hetkia/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Hetkia;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.lifestyle";
 				INFOPLIST_KEY_NSLocationUsageDescription = "Location is used only to add a nearby place to a journal when you choose to allow it.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Location is used only to add a nearby place to a journal when you choose to allow it.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Photo access is used to organize selected images into a personal journal page.";
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = UIInterfaceOrientationPortrait;
 				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
-				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				MARKETING_VERSION = 0.1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.hetkia.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
-				SUPPORTS_MACCATALYST = NO;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -452,29 +547,69 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				"ASSETCATALOG_COMPILER_APPICON_NAME[sdk=macosx*]" = HetkiaMacIcon;
 				CLANG_ENABLE_OBJC_WEAK = YES;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = VCUZHQSHRQ;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_FILE = Hetkia/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Hetkia;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.lifestyle";
 				INFOPLIST_KEY_NSLocationUsageDescription = "Location is used only to add a nearby place to a journal when you choose to allow it.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Location is used only to add a nearby place to a journal when you choose to allow it.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Photo access is used to organize selected images into a personal journal page.";
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = UIInterfaceOrientationPortrait;
 				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
-				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				MARKETING_VERSION = 0.1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.hetkia.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
-				SUPPORTS_MACCATALYST = NO;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		A90000000000000000000005 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = VCUZHQSHRQ;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = HetkiaWidget/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.hetkia.app.widget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = auto;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		A90000000000000000000006 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = VCUZHQSHRQ;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = HetkiaWidget/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.hetkia.app.widget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = auto;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -497,6 +632,15 @@
 			buildConfigurations = (
 				A90000000000000000000003 /* Debug */,
 				A90000000000000000000004 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A60000000000000000000003 /* Build configuration list for PBXNativeTarget "HetkiaWidgetExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A90000000000000000000005 /* Debug */,
+				A90000000000000000000006 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
