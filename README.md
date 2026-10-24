@@ -1,48 +1,50 @@
-# 时光 / Hetkia
+# Hetkia
 
-时光（Hetkia）是一款专注于“历史上的今天”的 iOS 照片回忆应用。首页按设备本地日期展示历年同月同日的照片组合。浏览时只读取 PhotoKit 并按需显示系统图像；只有用户生成日记、编辑并保存文字或发布留言时，才会把日记、照片关联和 JPEG 预览保存到本机。
+English | [简体中文](README_CN.MD)
 
-## 功能
+Hetkia is an iOS photo-memory app centered on “On This Day.” The home screen shows photo groups captured on the same month and day in previous years, using the device’s local date. Browsing reads PhotoKit and displays system-provided images as needed. A journal, photo links, and JPEG previews are saved locally only when the user generates a journal, edits and saves its text, or posts a message.
 
-- 首次启动说明并申请完整照片图库权限；授权后扫描今天及历年同日照片，显示进度并自动进入首页。
-- 首页只展示“历史上的今天”。照片铺满卡片，日期以白色文字叠在图片上；照片拼贴按 1、3、5、7、9 张布局。
-- 详情页支持查看照片、放大翻页、地点地图、分享图片、编辑日记、设备端 AI 草稿和留言。日记正文与留言分开保存；AI 草稿卡片显示在留言板之前，应用草稿时若已有正文会先确认替换。仅查看不创建已保存日记或 JPEG 预览。
-- 设置中的“历史手札”只读取本机已保存记录，按年月分组、两列展示；卡片图片铺满，日期和照片数以白字叠加。
-- 桌面大尺寸 Widget 用同日记录首图生成满版拼贴，最多显示三篇，以 1 张或 3 张布局呈现，并优先选择带 GPS 坐标的照片；标题与品牌名浮在图片上。StandBy/小尺寸 Widget 保持纯图片拼贴。单张图片可深链到对应日记。
-- 个人留言可编辑或删除；删除最后一条留言时，如果日记没有正文或 AI 草稿，应用会连同空日记及其关联照片预览一起删除。
-- 照片、Live Photo、视频、截图和荧幕录影均可参与展示；普通相机照片优先，不排除截图或录影。隐藏照片不显示，“最近删除”不在 PhotoKit 常规图库查询中。
-- 支持简体中文、繁体中文、英语、西班牙语和泰语。
+## Features
 
-照片上的文字固定使用白色并加轻微暗色渐层保证对比度。WidgetKit 会按显示情境调整小组件的渲染，但不会自动按每张照片的明暗挑选文字颜色。详情页卡片顶部显示「把平凡日子，收藏在时光里。」与品牌名，日期时间只显示在导航栏；分享图片保留独立排版并在图片上显示日期时间。
+- The first launch explains and requests full access to the photo library. After access is granted, the app scans today and matching dates from previous years, shows progress, and opens the home screen automatically.
+- The home screen shows only “On This Day.” Photos fill each card, with the date overlaid in white. Photo collages use layouts of 1, 3, 5, 7, or 9 images.
+- Journal details support photo viewing, full-screen paging, place maps, share images, journal editing, on-device AI drafts, and messages. Journal text and messages are stored separately. An AI draft appears above the message board; applying it asks for confirmation if journal text already exists. Browsing alone does not create a saved journal or JPEG preview.
+- “Saved Journals” in Settings reads only locally saved records, grouped by year and month in a two-column grid. Card images fill the available area, with dates and photo counts overlaid in white.
+- The large Home Screen widget creates a full-bleed collage from the first image of each matching-date group. It shows up to three years in a one- or three-image layout and prioritizes photos with GPS coordinates. The title and brand name overlay the image. StandBy and small widgets use an image-only collage. Each image can deep-link to its corresponding journal.
+- Personal messages can be edited or deleted. If the last message is deleted and the journal has no body text or AI draft, the empty journal and its linked photo previews are deleted as well.
+- Photos, Live Photos, videos, screenshots, and screen recordings can appear. Regular camera photos are preferred; screenshots and recordings are not excluded. Hidden items are omitted. Items in “Recently Deleted” are not included in standard PhotoKit library fetches.
+- Supported languages: Simplified Chinese, Traditional Chinese, English, Spanish, and Thai.
 
-## 平台与 AI
+Text over photos uses white with a subtle dark gradient for contrast. WidgetKit may adapt widget rendering to the display context, but it does not automatically choose text color based on each image’s brightness. Journal detail cards show “Keep the ordinary days in Hetkia” and the brand name above the content; the date and time appear in the navigation bar. Shared journal images use a separate layout and retain their date and time.
 
-- 仅支持 iPhone 和 iPad，最低部署版本为 **iOS/iPadOS 18**；不支持 macOS 或 Mac Catalyst。
-- 照片读取、系统缩略图、日记本地保存、地图、分享和 WidgetKit 等非 AI 功能可用于 iOS 18。
-- Apple Foundation Models 日记文字生成需要 iOS 26 或更新版本、符合条件的设备以及已准备好的模型；项目会在用户点击生成时检查系统版本和模型状态。照片理解输入另要求 iOS 27 或更新版本。
+## Platforms and AI
 
-后台刷新是系统调度的最佳努力任务，不保证恰好在午夜执行；应用前台刷新会重新查询 PhotoKit。
+- iPhone and iPad only. The minimum deployment target is **iOS/iPadOS 18**; macOS and Mac Catalyst are not supported.
+- Non-AI features—including photo access, system thumbnails, local journal storage, maps, sharing, and WidgetKit—are available on iOS 18.
+- Journal text generation with Apple Foundation Models requires iOS 26 or later, a supported device, and a ready model. The app checks the OS version and model availability when the user requests generation. Image understanding input requires iOS 27 or later.
 
-首页优先显示当天的本地照片索引缓存；缓存有效时，常规打开只查询今年今天的照片。下拉首页会强制重新扫描所有年份；首次使用或新一天尚无缓存时也会全量扫描。
+Background refresh is scheduled on a best-effort basis by the system and is not guaranteed to run exactly at midnight. When the app is active, it refreshes by querying PhotoKit.
 
-## 构建
+The home screen first displays the local photo-index cache for the current date. When the cache is valid, a regular launch queries only the current year’s photos for today. Pulling down on the home screen forces a full scan across all years. The first scan and the first launch after a new day also scan all years.
+
+## Build
 
 ```sh
 xcodebuild -project Hetkia.xcodeproj -scheme Hetkia -configuration Debug -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build
 ```
 
-完整产品行为见[产品需求](docs/PRODUCT_REQUIREMENTS.md)，实现结构和验证记录见[开发说明](docs/DEVELOPMENT.md)。
+See the [product requirements](docs/PRODUCT_REQUIREMENTS.md) for the complete product behavior and the [development guide](docs/DEVELOPMENT.md) for implementation details and verification notes.
 
-## 目录
+## Repository layout
 
 ```text
 Hetkia-Starter/
-├── Hetkia.xcodeproj/            # App 与 WidgetKit extension targets
-├── Hetkia/                      # SwiftUI App、引导、详情、PhotoKit、设置与本地化
-├── HetkiaWidget/                # 历史上的今天 WidgetKit
-├── Design/                      # 设计源稿
-├── screenshot/                  # 当前界面参考截图，文件名按内容命名
-└── docs/                        # 产品需求与开发说明
+├── Hetkia.xcodeproj/            # App and WidgetKit extension targets
+├── Hetkia/                      # SwiftUI app, onboarding, details, PhotoKit, settings, and localization
+├── HetkiaWidget/                # On This Day WidgetKit extension
+├── Design/                      # Design source files
+├── screenshot/                  # Reference screenshots named by content
+└── docs/                        # Product requirements and development guide
 ```
 
-三份文档分别说明产品行为、实现结构与快速概览；界面截图可在 `screenshot/` 中按首页、详情、设置、历史手札、小组件和分享图查看。
+The README files provide an English and Simplified Chinese overview; detailed product behavior and implementation guidance are maintained in the linked documents. Reference screenshots are organized in `screenshot/` by home screen, details, settings, saved journals, widgets, and share images.
