@@ -124,7 +124,8 @@ final class PhotoLibraryService: ObservableObject {
                 orientationRaw: imported.orientation,
                 thumbnailRelativePath: imported.relativePath,
                 metadataReadStatus: imported.metadataComplete ? .complete : .partial,
-                sortOrder: index
+                sortOrder: index,
+                mediaType: asset.mediaType == .video ? "video" : "image"
             )
             photo.journal = journal
             context.insert(photo)
@@ -172,7 +173,14 @@ final class PhotoLibraryService: ObservableObject {
     }
 
     private func imageData(for asset: PHAsset) async -> Data? {
-        await withCheckedContinuation { continuation in
+        if asset.mediaType == .video {
+            guard let frame = await PhotoAssetResolver.previewImage(for: asset, targetSize: CGSize(width: 1600, height: 1600)) else { return nil }
+            let output = NSMutableData()
+            guard let destination = CGImageDestinationCreateWithData(output, UTType.jpeg.identifier as CFString, 1, nil) else { return nil }
+            CGImageDestinationAddImage(destination, frame, [kCGImageDestinationLossyCompressionQuality: 0.82] as CFDictionary)
+            return CGImageDestinationFinalize(destination) ? output as Data : nil
+        }
+        return await withCheckedContinuation { continuation in
             let options = PHImageRequestOptions()
             options.deliveryMode = .highQualityFormat
             options.resizeMode = .fast

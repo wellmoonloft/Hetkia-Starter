@@ -28,52 +28,59 @@ struct TimelineHomeView: View {
     private let minuteTicker = Timer.publish(every: 30, on: .main, in: .common).autoconnect()
 
     var body: some View {
-        NavigationStack(path: $path) {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 18) {
-                    header
-                    if !PhotoLibraryService.hasFullReadAccess {
-                        permissionState
-                    } else if isLoading {
-                        if hasResolvedInitialCache {
-                            loadingState
+        GeometryReader { geometry in
+            let columns = Array(
+                repeating: GridItem(.flexible(), spacing: 16, alignment: .top),
+                count: geometry.size.width >= 700 ? 2 : 1
+            )
+
+            NavigationStack(path: $path) {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 18) {
+                        header
+                        if !PhotoLibraryService.hasFullReadAccess {
+                            permissionState
+                        } else if isLoading {
+                            if hasResolvedInitialCache {
+                                loadingState
+                            } else {
+                                Color.clear.frame(height: 54)
+                            }
+                        } else if entries.isEmpty {
+                            emptyOnThisDayState
                         } else {
-                            Color.clear.frame(height: 54)
-                        }
-                    } else if entries.isEmpty {
-                        emptyOnThisDayState
-                    } else {
-                        LazyVStack(spacing: 16) {
-                            ForEach(entries) { entry in
-                                Button { path.append(entry.id) } label: {
-                                    OnThisDayCard(entry: entry)
+                            LazyVGrid(columns: columns, alignment: .center, spacing: 16) {
+                                ForEach(entries) { entry in
+                                    Button { path.append(entry.id) } label: {
+                                        OnThisDayCard(entry: entry)
+                                    }
+                                    .buttonStyle(.plain)
+                                    .accessibilityLabel(entry.date.formatted(date: .long, time: .omitted))
                                 }
-                                .buttonStyle(.plain)
-                                .accessibilityLabel(entry.date.formatted(date: .long, time: .omitted))
                             }
                         }
                     }
+                    .padding(.horizontal, 18)
+                    .padding(.top, 16)
+                    .padding(.bottom, 28)
+                    .frame(maxWidth: 1_100)
+                    .frame(maxWidth: .infinity)
                 }
-                .padding(.horizontal, 18)
-                .padding(.top, 16)
-                .padding(.bottom, 28)
-                .frame(maxWidth: 620)
-                .frame(maxWidth: .infinity)
-            }
-            .background(HetkiaPalette.paper.ignoresSafeArea())
-            .refreshable { await refresh(forceFullScan: true) }
-            .navigationDestination(for: String.self) { dayKey in
-                if let entry = entries.first(where: { $0.id == dayKey }) {
-                    let existing = savedRecords.filter { $0.dayKey == dayKey }.max { $0.updatedAt < $1.updatedAt }
-                    let record = existing ?? JournalRecord(dayKey: dayKey, localDay: entry.date, source: .manual)
-                    PersistentJournalDetailView(record: record, liveAssets: entry.assets, isTransient: existing == nil)
-                } else {
-                    ContentUnavailableView("onthisday.empty", systemImage: "calendar")
+                .background(HetkiaPalette.paper.ignoresSafeArea())
+                .refreshable { await refresh(forceFullScan: true) }
+                .navigationDestination(for: String.self) { dayKey in
+                    if let entry = entries.first(where: { $0.id == dayKey }) {
+                        let existing = savedRecords.filter { $0.dayKey == dayKey }.max { $0.updatedAt < $1.updatedAt }
+                        let record = existing ?? JournalRecord(dayKey: dayKey, localDay: entry.date, source: .manual)
+                        PersistentJournalDetailView(record: record, liveAssets: entry.assets, isTransient: existing == nil)
+                    } else {
+                        ContentUnavailableView("onthisday.empty", systemImage: "calendar")
+                    }
                 }
+                #if !os(macOS)
+                .toolbar(.hidden, for: .navigationBar)
+                #endif
             }
-            #if !os(macOS)
-            .toolbar(.hidden, for: .navigationBar)
-            #endif
         }
         .tint(HetkiaPalette.amber)
         .sheet(isPresented: $showSettings) { SettingsView() }
@@ -335,18 +342,30 @@ private struct OnThisDayAssetThumbnail: View {
     @State private var image: CGImage?
 
     var body: some View {
-        Group {
-            if let image {
-                Image(decorative: image, scale: 1)
-                    .resizable()
-                    .scaledToFill()
-            } else {
-                HetkiaPalette.page.overlay {
-                    Image(systemName: asset.mediaType == .video ? "play.rectangle" : "photo")
-                        .foregroundStyle(HetkiaPalette.secondaryInk.opacity(0.7))
+        ZStack {
+            Group {
+                if let image {
+                    Image(decorative: image, scale: 1)
+                        .resizable()
+                        .scaledToFill()
+                } else {
+                    HetkiaPalette.page.overlay {
+                        Image(systemName: asset.mediaType == .video ? "play.rectangle" : "photo")
+                            .foregroundStyle(HetkiaPalette.secondaryInk.opacity(0.7))
+                    }
                 }
             }
+            if asset.mediaType == .video {
+                Image(systemName: "play.fill")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundStyle(.white)
+                    .padding(11)
+                    .background(.black.opacity(0.48), in: Circle())
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .allowsHitTesting(false)
+            }
         }
+        .clipped()
         .task(id: asset.localIdentifier) {
             image = await PhotoAssetResolver.previewImage(for: asset, targetSize: CGSize(width: 900, height: 900))
         }

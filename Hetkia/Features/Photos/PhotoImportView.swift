@@ -211,12 +211,23 @@ struct PhotoFallbackThumbnail: View {
     }
 
     private var thumbnailContent: some View {
-        Group {
-            if let image {
-                Image(decorative: image, scale: 1).resizable().scaledToFill()
-            } else {
-                Image(systemName: "photo").foregroundStyle(HetkiaPalette.secondaryInk)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity).background(HetkiaPalette.paper)
+        ZStack(alignment: .topTrailing) {
+            Group {
+                if let image {
+                    Image(decorative: image, scale: 1).resizable().scaledToFill()
+                } else {
+                    Image(systemName: "photo").foregroundStyle(HetkiaPalette.secondaryInk)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity).background(HetkiaPalette.paper)
+                }
+            }
+            if photo.mediaType == "video" {
+                Image(systemName: "play.fill")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(.white)
+                    .padding(7)
+                    .background(.black.opacity(0.5), in: Circle())
+                    .padding(7)
+                    .allowsHitTesting(false)
             }
         }
         .frame(width: width, height: height).clipShape(RoundedRectangle(cornerRadius: 9))

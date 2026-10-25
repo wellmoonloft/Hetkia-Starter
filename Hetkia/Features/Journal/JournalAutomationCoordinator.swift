@@ -19,6 +19,7 @@ private struct IndexedPhotoMetadata: Sendable {
     let longitude: Double?
     let pixelWidth: Int
     let pixelHeight: Int
+    let mediaType: String
 }
 
 /// Runs only on foreground opportunities. The persistent task queue makes an interrupted
@@ -235,8 +236,7 @@ final class JournalAutomationCoordinator: ObservableObject {
             let options = PHFetchOptions()
             options.predicate = NSPredicate(format: "creationDate >= %@ AND creationDate <= %@", start as NSDate, end as NSDate)
             options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: true)]
-            options.includeHiddenAssets = false
-            let fetch = PHAsset.fetchAssets(with: .image, options: options)
+            let fetch = PHAsset.fetchAssets(with: options)
             var grouped: [String: [IndexedPhotoMetadata]] = [:]
             fetch.enumerateObjects { asset, _, _ in
                 guard PhotoAssetEligibility.allows(asset), let capturedAt = asset.creationDate else { return }
@@ -248,7 +248,8 @@ final class JournalAutomationCoordinator: ObservableObject {
                     latitude: coordinate?.latitude,
                     longitude: coordinate?.longitude,
                     pixelWidth: asset.pixelWidth,
-                    pixelHeight: asset.pixelHeight
+                    pixelHeight: asset.pixelHeight,
+                    mediaType: asset.mediaType == .video ? "video" : "image"
                 )
                 grouped[PhotoDayGrouping.key(for: capturedAt, calendar: calendar), default: []].append(photo)
             }
@@ -289,9 +290,8 @@ final class JournalAutomationCoordinator: ObservableObject {
         let options = PHFetchOptions()
         options.predicate = NSPredicate(format: "creationDate >= %@ AND creationDate < %@", start as NSDate, end as NSDate)
         options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: true)]
-        options.includeHiddenAssets = false
         var results: [PHAsset] = []
-        PHAsset.fetchAssets(with: .image, options: options).enumerateObjects { asset, _, _ in
+        PHAsset.fetchAssets(with: options).enumerateObjects { asset, _, _ in
             if PhotoAssetEligibility.allows(asset) { results.append(asset) }
         }
         return results
@@ -313,7 +313,8 @@ final class JournalAutomationCoordinator: ObservableObject {
                 orientationRaw: nil,
                 thumbnailRelativePath: "",
                 metadataReadStatus: asset.creationDate == nil ? .partial : .complete,
-                sortOrder: journal.photos.count + index
+                sortOrder: journal.photos.count + index,
+                mediaType: asset.mediaType == .video ? "video" : "image"
             )
             photo.journal = journal
             context.insert(photo)
@@ -338,7 +339,8 @@ final class JournalAutomationCoordinator: ObservableObject {
                 orientationRaw: nil,
                 thumbnailRelativePath: "",
                 metadataReadStatus: .complete,
-                sortOrder: journal.photos.count + index
+                sortOrder: journal.photos.count + index,
+                mediaType: asset.mediaType
             )
             photo.journal = journal
             context.insert(photo)

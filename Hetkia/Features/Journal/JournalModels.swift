@@ -95,6 +95,10 @@ enum JournalPhotoSelection {
     static func selected(from photos: [JournalPhotoRecord]) -> [JournalPhotoRecord] {
         let ordered = photos.sorted {
             if $0.isPriorityPhoto != $1.isPriorityPhoto { return $0.isPriorityPhoto && !$1.isPriorityPhoto }
+            let lhsHasLocation = $0.latitude != nil && $0.longitude != nil
+            let rhsHasLocation = $1.latitude != nil && $1.longitude != nil
+            if lhsHasLocation != rhsHasLocation { return lhsHasLocation && !rhsHasLocation }
+            if $0.capturedAt != $1.capturedAt { return ($0.capturedAt ?? .distantPast) > ($1.capturedAt ?? .distantPast) }
             return $0.sortOrder < $1.sortOrder
         }
         let count = ordered.count
@@ -112,7 +116,10 @@ enum JournalPhotoSelection {
             let lhsPriority = PhotoAssetEligibility.isPriorityAsset(lhs)
             let rhsPriority = PhotoAssetEligibility.isPriorityAsset(rhs)
             if lhsPriority != rhsPriority { return lhsPriority && !rhsPriority }
-            return (lhs.creationDate ?? .distantPast) < (rhs.creationDate ?? .distantPast)
+            let lhsHasLocation = lhs.location != nil
+            let rhsHasLocation = rhs.location != nil
+            if lhsHasLocation != rhsHasLocation { return lhsHasLocation && !rhsHasLocation }
+            return (lhs.creationDate ?? .distantPast) > (rhs.creationDate ?? .distantPast)
         }
         return Array(ranked.prefix(targetCount))
     }

@@ -92,7 +92,7 @@ struct FilteredPhotoPicker: View {
             let options = PHFetchOptions()
             options.includeHiddenAssets = false
             options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
-            let result = PHAsset.fetchAssets(with: .image, options: options)
+            let result = PHAsset.fetchAssets(with: options)
             var found: [PHAsset] = []
             result.enumerateObjects { asset, _, _ in
                 guard PhotoAssetEligibility.allows(asset) else { return }
@@ -133,6 +133,15 @@ private struct PhotoAssetSelectionThumbnail: View {
                         .symbolRenderingMode(.palette)
                         .foregroundStyle(.white, HetkiaPalette.amber)
                         .padding(6)
+                }
+                if asset.mediaType == .video {
+                    Image(systemName: "play.fill")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundStyle(.white)
+                        .padding(7)
+                        .background(.black.opacity(0.5), in: Circle())
+                        .padding(7)
+                        .allowsHitTesting(false)
                 }
             }
             .clipShape(RoundedRectangle(cornerRadius: 11, style: .continuous))

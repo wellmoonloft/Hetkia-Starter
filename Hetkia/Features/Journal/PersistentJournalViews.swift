@@ -6,6 +6,7 @@ import CoreLocation
 import MapKit
 import OSLog
 import Photos
+import AVKit
 #if os(iOS)
 import UIKit
 #elseif os(macOS)
@@ -337,8 +338,8 @@ struct PersistentJournalDetailView: View {
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(Color.clear)
             .clipShape(RoundedRectangle(cornerRadius: 9))
+            .contentShape(RoundedRectangle(cornerRadius: 9))
         }.frame(height: max(1, height))
     }
 
@@ -346,9 +347,23 @@ struct PersistentJournalDetailView: View {
         Group {
             if savedOnly {
                 Button { photoGallery = PhotoGallerySession(initialIndex: index) } label: {
-                    PersistedJournalThumbnail(photo: photo, width: width, height: height)
+                    ZStack {
+                        PersistedJournalThumbnail(photo: photo, width: width, height: height)
+                        if photo.mediaType == "video" {
+                            Image(systemName: "play.fill")
+                                .font(.system(size: 14, weight: .bold))
+                                .foregroundStyle(.white)
+                                .padding(11)
+                                .background(.black.opacity(0.5), in: Circle())
+                                .allowsHitTesting(false)
+                        }
+                    }
+                    .frame(width: width, height: height)
+                    .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+                .frame(width: width, height: height)
+                .contentShape(Rectangle())
                 .accessibilityLabel(Text("photos.open.fullscreen"))
             } else {
                 PhotoFallbackThumbnail(photo: photo, width: width, height: height) {
@@ -356,6 +371,11 @@ struct PersistentJournalDetailView: View {
                 }
             }
         }
+        // Keep both the rendered media and its tap target inside this collage cell.
+        // Tall portrait video posters can otherwise draw outside their fixed tile.
+        .frame(width: width, height: height, alignment: .center)
+        .clipped()
+        .contentShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
     }
 
     private var actionPanel: some View {
@@ -1322,12 +1342,43 @@ private struct PhotoGalleryPage: View {
     let savedOnly: Bool
     @Environment(\.dismiss) private var dismiss
     @State private var image: CGImage?
+    @State private var player: AVPlayer?
+    @State private var isLoadingVideo = false
 
     var body: some View {
         GeometryReader { geometry in
             Group {
-                if let image {
-                    Image(decorative: image, scale: 1).resizable().scaledToFit()
+                if let player {
+                    VideoPlayer(player: player)
+                        .onDisappear { player.pause() }
+                } else if let image {
+                    ZStack {
+                        Image(decorative: image, scale: 1).resizable().scaledToFit()
+                        if photo.mediaType == "video" {
+                            Button {
+                                Task { await loadAndPlayVideo() }
+                            } label: {
+                                Group {
+                                    if isLoadingVideo {
+                                        ProgressView().tint(.white)
+                                    } else {
+                                        Image(systemName: "play.fill")
+                                            .font(.system(size: 25, weight: .bold))
+                                            .foregroundStyle(.white)
+                                    }
+                                }
+                                .frame(width: 72, height: 72)
+                                .background(.black.opacity(0.58), in: Circle())
+                                .contentShape(Circle())
+                            }
+                            .buttonStyle(.plain)
+                            .disabled(isLoadingVideo)
+                            .accessibilityLabel(Text("photos.open.fullscreen"))
+                        } else {
+                            Color.clear.contentShape(Rectangle())
+                                .onTapGesture { dismiss() }
+                        }
+                    }
                 } else {
                     ProgressView().tint(.white)
                 }
@@ -1339,12 +1390,23 @@ private struct PhotoGalleryPage: View {
                     height: max(geometry.size.height * 2, 1800)
                 )
                 image = await PhotoAssetResolver.thumbnailImage(relativePath: photo.thumbnailRelativePath, targetSize: targetSize)
-                if !savedOnly, let highResolution = await PhotoAssetResolver.displayImage(for: photo, targetSize: targetSize) {
+                if photo.mediaType == "video" {
+                    await loadAndPlayVideo()
+                } else if !savedOnly, let highResolution = await PhotoAssetResolver.displayImage(for: photo, targetSize: targetSize) {
                     image = highResolution
                 }
             }
-            .contentShape(Rectangle())
-            .simultaneousGesture(TapGesture().onEnded { dismiss() })
         }
+    }
+
+    @MainActor
+    private func loadAndPlayVideo() async {
+        guard photo.mediaType == "video", player == nil, !isLoadingVideo else { return }
+        isLoadingVideo = true
+        defer { isLoadingVideo = false }
+        guard let videoAsset = await PhotoAssetResolver.videoAsset(for: photo) else { return }
+        let videoPlayer = AVPlayer(playerItem: AVPlayerItem(asset: videoAsset))
+        player = videoPlayer
+        videoPlayer.play()
     }
 }

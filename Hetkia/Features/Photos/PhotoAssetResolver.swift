@@ -37,6 +37,17 @@ enum PhotoAssetResolver {
         return await requestImage(for: asset, targetSize: targetSize)
     }
 
+    @MainActor
+    static func videoAsset(for photo: JournalPhotoRecord) async -> AVAsset? {
+        let authorization = PHPhotoLibrary.authorizationStatus(for: .readWrite)
+        guard photo.mediaType == "video",
+              let identifier = photo.assetLocalIdentifier,
+              authorization == .authorized || authorization == .limited,
+              let asset = PHAsset.fetchAssets(withLocalIdentifiers: [identifier], options: nil).firstObject,
+              asset.mediaType == .video else { return nil }
+        return await requestAVAsset(for: asset)
+    }
+
     static func thumbnailImage(relativePath: String, targetSize: CGSize) async -> CGImage? {
         guard !relativePath.isEmpty else { return nil }
         return await Task.detached(priority: .utility) {
