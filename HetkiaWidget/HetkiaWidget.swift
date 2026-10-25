@@ -25,6 +25,8 @@ private struct HetkiaWidgetEntry: TimelineEntry {
 }
 
 private struct HetkiaWidgetProvider: TimelineProvider {
+    private let settingsDefaults = UserDefaults(suiteName: "group.com.hetkia.app")
+
     func placeholder(in context: Context) -> HetkiaWidgetEntry {
         HetkiaWidgetEntry(date: .now, memories: [], hasPhotoAccess: false)
     }
@@ -72,6 +74,7 @@ private struct HetkiaWidgetProvider: TimelineProvider {
 
     @MainActor
     private func matchingPhotoGroups() -> [(date: Date, assets: [PHAsset])] {
+        let includesScreenshots = settingsDefaults?.bool(forKey: "hetkia.includeScreenshotsAndScreenRecordings") ?? false
         let calendar = Calendar.autoupdatingCurrent
         let components = calendar.dateComponents([.year, .month, .day], from: .now)
         guard let month = components.month, let day = components.day, let currentYear = components.year else { return [] }
@@ -91,6 +94,9 @@ private struct HetkiaWidgetProvider: TimelineProvider {
             var assets: [PHAsset] = []
             fetched.enumerateObjects { asset, _, _ in
                 guard !asset.isHidden, asset.mediaType == .image || asset.mediaType == .video else { return }
+                let isPriorityAsset = !asset.mediaSubtypes.contains(.photoScreenshot)
+                    && !asset.mediaSubtypes.contains(.videoScreenRecording)
+                guard includesScreenshots || isPriorityAsset else { return }
                 assets.append(asset)
             }
             guard !assets.isEmpty else { continue }

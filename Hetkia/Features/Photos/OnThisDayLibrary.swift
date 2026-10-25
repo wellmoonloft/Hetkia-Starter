@@ -24,11 +24,12 @@ enum OnThisDayCacheStore {
         let month: Int
         let day: Int
         let timeZoneIdentifier: String
+        let includesScreenshotsAndScreenRecordings: Bool
         let refreshedAt: Date
         let entries: [Entry]
     }
 
-    private static let schemaVersion = 2
+    private static let schemaVersion = 3
     private static let fileName = "on-this-day-index.json"
 
     /// Restores cards using the current PhotoKit library. A nil result means there
@@ -44,7 +45,8 @@ enum OnThisDayCacheStore {
         guard snapshot.year == parts.year,
               snapshot.month == parts.month,
               snapshot.day == parts.day,
-              snapshot.timeZoneIdentifier == calendar.timeZone.identifier else { return nil }
+              snapshot.timeZoneIdentifier == calendar.timeZone.identifier,
+              snapshot.includesScreenshotsAndScreenRecordings == PhotoAssetEligibility.includesScreenshotsAndScreenRecordings else { return nil }
 
         let identifiers = Array(Set(snapshot.entries.flatMap(\.assetIdentifiers)))
         let fetched = PHAsset.fetchAssets(withLocalIdentifiers: identifiers, options: nil)
@@ -72,6 +74,7 @@ enum OnThisDayCacheStore {
             month: month,
             day: day,
             timeZoneIdentifier: calendar.timeZone.identifier,
+            includesScreenshotsAndScreenRecordings: PhotoAssetEligibility.includesScreenshotsAndScreenRecordings,
             refreshedAt: .now,
             entries: entries.map { entry in
                 Snapshot.Entry(date: entry.date, assetIdentifiers: entry.assets.map(\.localIdentifier))

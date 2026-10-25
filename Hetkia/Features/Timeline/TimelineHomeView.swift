@@ -12,6 +12,7 @@ import Combine
 enum TimelineBrowseMode: Equatable { case all, year, month }
 
 struct TimelineHomeView: View {
+    @AppStorage(PhotoAssetEligibility.includeScreenshotsDefaultsKey, store: PhotoAssetEligibility.sharedDefaults) private var includeScreenshotsAndScreenRecordings = false
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \JournalRecord.localDay, order: .reverse) private var savedRecords: [JournalRecord]
@@ -98,6 +99,10 @@ struct TimelineHomeView: View {
             } else {
                 didLeaveActiveState = true
             }
+        }
+        .onChange(of: includeScreenshotsAndScreenRecordings) { _, _ in
+            guard path.isEmpty else { return }
+            Task { await refresh() }
         }
         .onReceive(minuteTicker) { _ in
             let newDay = PhotoDayGrouping.key(for: .now)

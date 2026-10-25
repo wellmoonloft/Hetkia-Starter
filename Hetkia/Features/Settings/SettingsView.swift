@@ -1,4 +1,5 @@
 import SwiftUI
+import WidgetKit
 
 private enum JournalStorageChoice: String {
     case local
@@ -7,6 +8,7 @@ private enum JournalStorageChoice: String {
 
 struct SettingsView: View {
     @AppStorage("hetkia.storageChoice") private var storageChoice = JournalStorageChoice.local.rawValue
+    @AppStorage(PhotoAssetEligibility.includeScreenshotsDefaultsKey, store: PhotoAssetEligibility.sharedDefaults) private var includeScreenshotsAndScreenRecordings = false
     @AppStorage(JournalDraftService.promptDefaultsKey) private var journalPrompt = JournalDraftService.defaultPrompt
     @State private var showICloudNotice = false
     @State private var showPromptEditor = false
@@ -19,6 +21,7 @@ struct SettingsView: View {
                         .font(.system(size: 31, weight: .regular, design: .serif))
                         .foregroundStyle(HetkiaPalette.ink)
                     savedJournalsSection
+                    photoSelectionSection
                     storageSection
                     aiSection
                     aiPromptSection
@@ -42,6 +45,9 @@ struct SettingsView: View {
             }
         }
         .tint(HetkiaPalette.amber)
+        .onChange(of: includeScreenshotsAndScreenRecordings) { _, _ in
+            WidgetCenter.shared.reloadTimelines(ofKind: "Hetkia.OnThisDay")
+        }
     }
 
     private var storageSection: some View {
@@ -69,6 +75,23 @@ struct SettingsView: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+        }
+    }
+
+    private var photoSelectionSection: some View {
+        settingsCard(title: "settings.photos", symbol: "photo.on.rectangle.angled") {
+            Toggle(isOn: $includeScreenshotsAndScreenRecordings) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("settings.photos.include-screenshots")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(HetkiaPalette.ink)
+                    Text("settings.photos.include-screenshots.detail")
+                        .font(.system(size: 11))
+                        .foregroundStyle(HetkiaPalette.secondaryInk)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .tint(HetkiaPalette.amber)
         }
     }
 

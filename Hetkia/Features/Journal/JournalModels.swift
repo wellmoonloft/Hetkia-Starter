@@ -93,7 +93,8 @@ struct JournalMessagePost: Identifiable, Codable, Equatable {
 enum JournalPhotoSelection {
     /// Selects the same set for diary generation, detail pages, and timeline previews.
     static func selected(from photos: [JournalPhotoRecord]) -> [JournalPhotoRecord] {
-        let ordered = photos.sorted {
+        let eligible = PhotoAssetEligibility.eligiblePersistedPhotos(photos)
+        let ordered = eligible.sorted {
             if $0.isPriorityPhoto != $1.isPriorityPhoto { return $0.isPriorityPhoto && !$1.isPriorityPhoto }
             let lhsHasLocation = $0.latitude != nil && $0.longitude != nil
             let rhsHasLocation = $1.latitude != nil && $1.longitude != nil

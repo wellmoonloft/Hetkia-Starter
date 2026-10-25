@@ -15,15 +15,42 @@ struct ImportedPhotoSummary {
 }
 
 enum PhotoAssetEligibility {
+    static let includeScreenshotsDefaultsKey = "hetkia.includeScreenshotsAndScreenRecordings"
+    static let appGroupIdentifier = "group.com.hetkia.app"
+    static var sharedDefaults: UserDefaults? { UserDefaults(suiteName: appGroupIdentifier) }
+
     static func allows(_ asset: PHAsset) -> Bool {
-        // Hidden assets remain outside the app's visible memory stream. Photos does
-        // not return items in Recently Deleted from ordinary library fetches.
-        !asset.isHidden && (asset.mediaType == .image || asset.mediaType == .video)
+        // PhotoKit fetch predicates stay focused on dates. Apply subtype checks
+        // to fetched assets because bitmask predicates can omit ordinary assets.
+        let isVisibleMedia = !asset.isHidden && (asset.mediaType == .image || asset.mediaType == .video)
+        return isVisibleMedia && (includesScreenshotsAndScreenRecordings || isPriorityAsset(asset))
+    }
+
+    static var includesScreenshotsAndScreenRecordings: Bool {
+        (sharedDefaults ?? .standard).bool(forKey: includeScreenshotsDefaultsKey)
     }
 
     static func isPriorityAsset(_ asset: PHAsset) -> Bool {
         !asset.mediaSubtypes.contains(.photoScreenshot)
             && !asset.mediaSubtypes.contains(.videoScreenRecording)
+    }
+
+    static func eligiblePersistedPhotos(_ photos: [JournalPhotoRecord]) -> [JournalPhotoRecord] {
+        guard !includesScreenshotsAndScreenRecordings else { return photos }
+
+        let identifiers = photos.compactMap(\.assetLocalIdentifier)
+        let fetched = PHAsset.fetchAssets(withLocalIdentifiers: identifiers, options: nil)
+        var assetsByIdentifier: [String: PHAsset] = [:]
+        fetched.enumerateObjects { asset, _, _ in
+            assetsByIdentifier[asset.localIdentifier] = asset
+        }
+
+        return photos.filter { photo in
+            guard photo.isPriorityPhoto else { return false }
+            guard let identifier = photo.assetLocalIdentifier,
+                  let asset = assetsByIdentifier[identifier] else { return true }
+            return isPriorityAsset(asset)
+        }
     }
 }
 
@@ -125,7 +152,8 @@ final class PhotoLibraryService: ObservableObject {
                 thumbnailRelativePath: imported.relativePath,
                 metadataReadStatus: imported.metadataComplete ? .complete : .partial,
                 sortOrder: index,
-                mediaType: asset.mediaType == .video ? "video" : "image"
+                mediaType: asset.mediaType == .video ? "video" : "image",
+                isPriorityPhoto: PhotoAssetEligibility.isPriorityAsset(asset)
             )
             photo.journal = journal
             context.insert(photo)
