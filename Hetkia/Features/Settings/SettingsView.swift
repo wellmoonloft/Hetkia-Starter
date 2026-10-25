@@ -7,7 +7,9 @@ private enum JournalStorageChoice: String {
 
 struct SettingsView: View {
     @AppStorage("hetkia.storageChoice") private var storageChoice = JournalStorageChoice.local.rawValue
+    @AppStorage(JournalDraftService.promptDefaultsKey) private var journalPrompt = JournalDraftService.defaultPrompt
     @State private var showICloudNotice = false
+    @State private var showPromptEditor = false
 
     var body: some View {
         NavigationStack {
@@ -19,6 +21,7 @@ struct SettingsView: View {
                     savedJournalsSection
                     storageSection
                     aiSection
+                    aiPromptSection
                     languageSection
                 }
                 .padding(18)
@@ -31,6 +34,11 @@ struct SettingsView: View {
                 Button("common.ok", role: .cancel) { }
             } message: {
                 Text("settings.icloud.unavailable")
+            }
+            .sheet(isPresented: $showPromptEditor) {
+                JournalPromptEditorView(initialPrompt: journalPrompt) { updatedPrompt in
+                    journalPrompt = updatedPrompt
+                }
             }
         }
         .tint(HetkiaPalette.amber)
@@ -87,6 +95,30 @@ struct SettingsView: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
+        }
+    }
+
+    private var aiPromptSection: some View {
+        settingsCard(title: "settings.ai.prompt.title", symbol: "text.alignleft") {
+            Text("settings.ai.prompt.detail")
+                .font(.system(size: 11))
+                .foregroundStyle(HetkiaPalette.secondaryInk)
+                .fixedSize(horizontal: false, vertical: true)
+            Button {
+                showPromptEditor = true
+            } label: {
+                HStack(spacing: 8) {
+                    Text("settings.ai.prompt.edit")
+                        .font(.system(size: 13, weight: .medium))
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(HetkiaPalette.secondaryInk)
+                }
+                .foregroundStyle(HetkiaPalette.ink)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
         }
     }
 
@@ -150,4 +182,78 @@ struct SettingsView: View {
         .buttonStyle(.plain)
     }
 
+}
+
+private struct JournalPromptEditorView: View {
+    @Environment(\.dismiss) private var dismiss
+    @State private var draft: String
+    @State private var showPromptLengthAlert = false
+    let onSave: (String) -> Void
+
+    init(initialPrompt: String, onSave: @escaping (String) -> Void) {
+        _draft = State(initialValue: initialPrompt)
+        self.onSave = onSave
+    }
+
+    private var trimmedDraft: String { draft.trimmingCharacters(in: .whitespacesAndNewlines) }
+    private var characterCount: Int { draft.count }
+    private let maximumCharacterCount = 1_500
+
+    var body: some View {
+        NavigationStack {
+            VStack(alignment: .leading, spacing: 12) {
+                Text("settings.ai.prompt.editor.detail")
+                    .font(.system(size: 12))
+                    .foregroundStyle(HetkiaPalette.secondaryInk)
+                    .fixedSize(horizontal: false, vertical: true)
+                TextEditor(text: $draft)
+                    .font(.system(size: 13))
+                    .scrollContentBackground(.hidden)
+                    .padding(10)
+                    .background(HetkiaPalette.paper, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(HetkiaPalette.line.opacity(0.75), lineWidth: 0.8))
+                    .frame(minHeight: 280)
+                HStack {
+                    Spacer()
+                    Text("\(characterCount) / \(maximumCharacterCount)")
+                        .foregroundStyle(characterCount > maximumCharacterCount ? Color.red : HetkiaPalette.secondaryInk)
+                    Text("settings.ai.prompt.characters")
+                        .foregroundStyle(HetkiaPalette.secondaryInk)
+                }
+                .font(.system(size: 11, design: .rounded))
+                Button("settings.ai.prompt.restore-default", systemImage: "arrow.counterclockwise") {
+                    draft = JournalDraftService.defaultPrompt
+                }
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(HetkiaPalette.amber)
+                Spacer(minLength: 0)
+            }
+            .padding(18)
+            .background(HetkiaPalette.page.ignoresSafeArea())
+            .navigationTitle("settings.ai.prompt.editor.title")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("settings.ai.prompt.cancel") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("settings.ai.prompt.save") {
+                        guard characterCount <= maximumCharacterCount else {
+                            showPromptLengthAlert = true
+                            return
+                        }
+                        onSave(trimmedDraft)
+                        dismiss()
+                    }
+                    .disabled(trimmedDraft.isEmpty)
+                }
+            }
+            .alert("settings.ai.prompt.too-long.title", isPresented: $showPromptLengthAlert) {
+                Button("common.ok", role: .cancel) { }
+            } message: {
+                Text("settings.ai.prompt.too-long.detail")
+            }
+        }
+        .tint(HetkiaPalette.amber)
+    }
 }

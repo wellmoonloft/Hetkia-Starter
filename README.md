@@ -12,6 +12,7 @@ Hetkia is an iOS photo-memory app centered on “On This Day.” The home screen
 - “Saved Journals” in Settings reads only locally saved records, grouped by year and month in a two-column grid. Card images fill the available area, with dates and photo counts overlaid in white.
 - The large Home Screen widget creates a full-bleed collage from the first image of each matching-date group. It shows up to three years in a one- or three-image layout and prioritizes photos with GPS coordinates. The title and brand name overlay the image. StandBy and small widgets use an image-only collage. Each image can deep-link to its corresponding journal.
 - Personal messages can be edited or deleted. If the last message is deleted and the journal has no body text or AI draft, the empty journal and its linked photo previews are deleted as well.
+- The AI prompt can be reviewed and customized in Settings. The default asks for a 2–5 sentence entry grounded in the photos and metadata, written in the current system language without specific dates. Prompts are limited to 1,500 user-perceived characters; Save displays an alert and is blocked above the limit.
 - Photos, Live Photos, videos, screenshots, and screen recordings can appear. Regular camera photos are preferred; screenshots and recordings are not excluded. Hidden items are omitted. Items in “Recently Deleted” are not included in standard PhotoKit library fetches.
 - Supported languages: Simplified Chinese, Traditional Chinese, English, Spanish, and Thai.
 

@@ -1,6 +1,6 @@
 # 时光 · Hetkia 开发文档
 
-版本：2.3（空日记清理与小组件选图规则）
+版本：2.4（可自定义 AI 日记提示词）
 更新日期：2026-10-25
 
 ## 1. 工程与平台
@@ -32,6 +32,8 @@
 - 点首页卡片时找相同 `dayKey` 的已保存日记；没有则构造未插入的临时 `JournalRecord`。`PersistentJournalDetailView` 合并该日 PhotoKit 资源与已保存照片。详情导航标题显示选中照片日期时间；首页标题和详情导航标题共用 `brand.name` 本地化键。详情卡片顶部为品牌短句/品牌名，随后显示照片拼贴、日记正文和位置。分享视图 `JournalShareCard` 独立实现，保留其日期时间与拼贴排版；详情卡片 UI 不复用到分享图。
 - 日记正文由 `bodyText`、`aiDraftBody` 和旧自动记录兼容读取，不再将自动生成文本写进留言数组。`posts` 仅显示 `.note` 类型留言，分享正文从日记文本取值。正文编辑调用显式持久化路径；留言新增与编辑仅操作留言数据。留言删除先移除指定 `.note`；若没有其他个人留言且 `bodyText`、`aiDraftBody` 和兼容的自动生成文本均为空，则复用整篇日记删除流程，级联删除照片关系并清理应用 JPEG 预览；否则只保存更新后的留言数组。
 - `generatedDraftCard` 放在 action panel 后、message board 前。应用草稿时检查现有非空正文：空正文立即应用；非空正文显示本地化替换确认对话框，确认后更新正文并持久化。
+- `JournalDraftService.defaultPrompt` 是 AI 日记生成的默认指令；用户可在设置中编辑，通过 `UserDefaults` 键 `hetkia.ai.journalPrompt` 保存。每次创建 Foundation Models 会话时读取当前值。默认提示要求依据全部照片与元数据写第一人称的 2–5 句日记，使用系统语言、不写具体日期，并避免缺乏证据的推断。
+- `JournalPromptEditorView` 使用 Swift `String.count`（扩展字素簇）计数，允许最多 1,500 个用户可见字符；超限时点击保存展示本地化警告且不写入设置，空白内容不可保存。此计数面向中文及其他 Unicode 输入，不是 UTF-8 字节数限制。恢复默认按钮只重置编辑器草稿，需点击保存才生效。
 - `commitJournalForUserAction()` 只在生成文字、保存编辑或添加留言路径调用。它插入临时 JournalRecord/照片关系，按需写入应用 JPEG，并保存 SwiftData。若某已保存关系缺少 JPEG，也只在显式操作时补齐。
 - 仅打开详情、浏览照片或返回不调用 commit。详情打开时即将含坐标照片异步加入 `PhotoLocationResolver`；iOS 先用 `CLGeocoder` 获取国家、城市和区/街区字段，再以 MapKit 反向地理编码兜底；对请求失败执行 2、6、15、30 秒退避重试。App 启动、回到前台时，已保存日记中无地点名或仍只有城市级名称的照片再次排队。新缓存键为 `hetkia.reverseGeocoding.cache.v2`；队列和缓存按 5 公里半径合并坐标。展示地点按三级名称去重，地图仍使用照片原始坐标。地点名解析不因此保存临时日记或照片预览。
 

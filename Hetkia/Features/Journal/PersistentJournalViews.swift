@@ -782,11 +782,21 @@ struct PersistentJournalDetailView: View {
                 guard let latitude = photo.latitude, let longitude = photo.longitude else { return nil }
                 return String(format: "%.5f, %.5f", latitude, longitude)
             }))
+            let photoMetadata = selectedPhotos.enumerated().map { index, photo in
+                JournalDraftService.photoMetadata(
+                    index: index + 1,
+                    capturedAt: photo.capturedAt,
+                    placeName: photo.placeName,
+                    latitude: photo.latitude,
+                    longitude: photo.longitude
+                )
+            }
             let result = try await JournalDraftService.generate(
                 date: record.localDay,
                 photoCount: selectedPhotos.count,
                 imageSamples: images,
-                locationContext: locationContext
+                locationContext: locationContext,
+                photoMetadata: photoMetadata
             )
             record.aiDraftBody = result.body
             if !record.bodyWasEdited { record.bodyText = result.body }

@@ -415,11 +415,21 @@ final class JournalAutomationCoordinator: ObservableObject {
                 guard let latitude = photo.latitude, let longitude = photo.longitude else { return nil }
                 return String(format: "%.5f, %.5f", latitude, longitude)
             }))
+            let photoMetadata = photos.enumerated().map { index, photo in
+                JournalDraftService.photoMetadata(
+                    index: index + 1,
+                    capturedAt: photo.capturedAt,
+                    placeName: photo.placeName,
+                    latitude: photo.latitude,
+                    longitude: photo.longitude
+                )
+            }
             let result = try await JournalDraftService.generate(
                 date: journal.localDay,
                 photoCount: photos.count,
                 imageSamples: images,
-                locationContext: locationContext
+                locationContext: locationContext,
+                photoMetadata: photoMetadata
             )
 
             // Recheck immediately before saving, in case the user created the manual entry while AI ran.

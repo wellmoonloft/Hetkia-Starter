@@ -4,6 +4,16 @@
     "(%lld)" : {
 
     },
+    "%lld / %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld / %2$lld"
+          }
+        }
+      }
+    },
     "%lld%%" : {
 
     },
@@ -1511,6 +1521,74 @@
         }
       }
     },
+    "journal.message.delete-journal.confirm-detail" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No other messages or diary text remain. The saved journal and its linked photo previews will also be deleted."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No quedan otros comentarios ni texto del diario. También se eliminarán el diario guardado y sus vistas previas de fotos."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ไม่มีข้อความอื่นหรือเนื้อหาไดอารี่เหลืออยู่ ไดอารี่ที่บันทึกไว้และภาพตัวอย่างที่เชื่อมโยงจะถูกลบด้วย"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "没有其他留言或日记正文，已保存的日记及其关联照片预览也会一并删除。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "沒有其他留言或日記正文，已儲存的日記及其關聯照片預覽也會一併刪除。"
+          }
+        }
+      }
+    },
+    "journal.message.delete-journal.confirm-title" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete this message and the empty journal?"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "¿Eliminar este comentario y el diario vacío?"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ลบข้อความนี้และไดอารี่ที่ว่างเปล่าหรือไม่"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "删除这条留言和空日记？"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "刪除這則留言和空日記？"
+          }
+        }
+      }
+    },
     "journal.message.delete.confirm-detail" : {
       "localizations" : {
         "en" : {
@@ -1577,24 +1655,6 @@
             "value" : "刪除這則留言？"
           }
         }
-      }
-    },
-    "journal.message.delete-journal.confirm-detail" : {
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "No other messages or diary text remain. The saved journal and its linked photo previews will also be deleted." } },
-        "es" : { "stringUnit" : { "state" : "translated", "value" : "No quedan otros comentarios ni texto del diario. También se eliminarán el diario guardado y sus vistas previas de fotos." } },
-        "th" : { "stringUnit" : { "state" : "translated", "value" : "ไม่มีข้อความอื่นหรือเนื้อหาไดอารี่เหลืออยู่ ไดอารี่ที่บันทึกไว้และภาพตัวอย่างที่เชื่อมโยงจะถูกลบด้วย" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "没有其他留言或日记正文，已保存的日记及其关联照片预览也会一并删除。" } },
-        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "沒有其他留言或日記正文，已儲存的日記及其關聯照片預覽也會一併刪除。" } }
-      }
-    },
-    "journal.message.delete-journal.confirm-title" : {
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Delete this message and the empty journal?" } },
-        "es" : { "stringUnit" : { "state" : "translated", "value" : "¿Eliminar este comentario y el diario vacío?" } },
-        "th" : { "stringUnit" : { "state" : "translated", "value" : "ลบข้อความนี้และไดอารี่ที่ว่างเปล่าหรือไม่" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "删除这条留言和空日记？" } },
-        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "刪除這則留言和空日記？" } }
       }
     },
     "journal.message.edit" : {
@@ -7088,6 +7148,108 @@
         }
       }
     },
+    "photos.draft.replace.confirm" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Replace journal text"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reemplazar el texto del diario"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "แทนที่ข้อความบันทึก"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "替换日记正文"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "取代手札正文"
+          }
+        }
+      }
+    },
+    "photos.draft.replace.message" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your current journal text will be replaced by this draft."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "El texto actual del diario se reemplazará por este borrador."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ข้อความบันทึกปัจจุบันจะถูกแทนที่ด้วยฉบับร่างนี้"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "当前日记正文将被这份草稿替换。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "目前的手札正文將由這份草稿取代。"
+          }
+        }
+      }
+    },
+    "photos.draft.replace.title" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Replace the existing journal text?"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "¿Reemplazar el texto actual del diario?"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "แทนที่ข้อความบันทึกเดิมหรือไม่"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "替换现有日记正文吗？"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "要取代現有的手札正文嗎？"
+          }
+        }
+      }
+    },
     "photos.draft.title" : {
       "localizations" : {
         "en" : {
@@ -7120,33 +7282,6 @@
             "value" : "AI 產生的草稿"
           }
         }
-      }
-    },
-    "photos.draft.replace.confirm" : {
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Replace journal text" } },
-        "es" : { "stringUnit" : { "state" : "translated", "value" : "Reemplazar el texto del diario" } },
-        "th" : { "stringUnit" : { "state" : "translated", "value" : "แทนที่ข้อความบันทึก" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "替换日记正文" } },
-        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "取代手札正文" } }
-      }
-    },
-    "photos.draft.replace.message" : {
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Your current journal text will be replaced by this draft." } },
-        "es" : { "stringUnit" : { "state" : "translated", "value" : "El texto actual del diario se reemplazará por este borrador." } },
-        "th" : { "stringUnit" : { "state" : "translated", "value" : "ข้อความบันทึกปัจจุบันจะถูกแทนที่ด้วยฉบับร่างนี้" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "当前日记正文将被这份草稿替换。" } },
-        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "目前的手札正文將由這份草稿取代。" } }
-      }
-    },
-    "photos.draft.replace.title" : {
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Replace the existing journal text?" } },
-        "es" : { "stringUnit" : { "state" : "translated", "value" : "¿Reemplazar el texto actual del diario?" } },
-        "th" : { "stringUnit" : { "state" : "translated", "value" : "แทนที่ข้อความบันทึกเดิมหรือไม่" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "替换现有日记正文吗？" } },
-        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "要取代現有的手札正文嗎？" } }
       }
     },
     "photos.draft.use" : {
@@ -9107,6 +9242,380 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "裝置端"
+          }
+        }
+      }
+    },
+    "settings.ai.prompt.cancel" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cancel"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cancelar"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ยกเลิก"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "取消"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "取消"
+          }
+        }
+      }
+    },
+    "settings.ai.prompt.characters" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "characters"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "caracteres"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "อักขระ"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "个字符"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "個字元"
+          }
+        }
+      }
+    },
+    "settings.ai.prompt.detail" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose the instructions used when generating a diary from today’s photos. The default prompt asks for a grounded entry in your system language."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Elige las instrucciones para generar un diario a partir de las fotos del día. El texto predeterminado pide una entrada basada en pruebas y escrita en el idioma del sistema."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "กำหนดคำสั่งสำหรับสร้างบันทึกจากรูปภาพของวันนี้ โดยค่าเริ่มต้นจะเขียนอย่างเป็นธรรมชาติในภาษาของระบบและอิงตามหลักฐาน"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "设置根据当天照片生成日记时使用的指令。默认提示词会要求使用系统语言，并以照片证据为依据。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "設定根據當日照片產生日記時使用的指令。預設提示詞會要求使用系統語言，並以照片證據為依據。"
+          }
+        }
+      }
+    },
+    "settings.ai.prompt.edit" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Edit writing prompt"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Editar instrucciones de escritura"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "แก้ไขคำสั่งการเขียน"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "修改写作提示词"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "修改寫作提示詞"
+          }
+        }
+      }
+    },
+    "settings.ai.prompt.editor.detail" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "These instructions are saved on this device and used for future AI-generated diary drafts. The limit is 1,500 characters."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Estas instrucciones se guardan en este dispositivo y se usan en futuros borradores generados por IA. El límite es de 1.500 caracteres."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "คำสั่งนี้จะบันทึกไว้ในอุปกรณ์และใช้กับร่างบันทึกที่สร้างด้วย AI ในครั้งต่อไป จำกัดไม่เกิน 1,500 อักขระ"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "提示词保存在本机，并用于之后生成的日记草稿。最多 1500 个字符。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "提示詞會儲存在本機，並用於之後產生的日記草稿。最多 1500 個字元。"
+          }
+        }
+      }
+    },
+    "settings.ai.prompt.editor.title" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Journal writing prompt"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Instrucciones para el diario"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "คำสั่งสำหรับเขียนบันทึก"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "日记写作提示词"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "日記寫作提示詞"
+          }
+        }
+      }
+    },
+    "settings.ai.prompt.restore-default" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Restore default prompt"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Restaurar instrucciones predeterminadas"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "คืนค่าคำสั่งเริ่มต้น"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "恢复默认提示词"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "還原預設提示詞"
+          }
+        }
+      }
+    },
+    "settings.ai.prompt.save" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Save"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Guardar"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "บันทึก"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "保存"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "儲存"
+          }
+        }
+      }
+    },
+    "settings.ai.prompt.title" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI writing prompt"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Instrucciones de escritura de IA"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "คำสั่งการเขียน AI"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI 写作提示词"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI 寫作提示詞"
+          }
+        }
+      }
+    },
+    "settings.ai.prompt.too-long.detail" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The prompt is over the 1,500-character limit. Shorten it before saving."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "El texto supera el límite de 1.500 caracteres. Acórtalo antes de guardarlo."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "คำสั่งยาวเกินขีดจำกัด 1,500 อักขระ โปรดย่อก่อนบันทึก"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "提示词超过 1500 个字符，请缩短后再保存。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "提示詞超過 1500 個字元，請縮短後再儲存。"
+          }
+        }
+      }
+    },
+    "settings.ai.prompt.too-long.title" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Prompt is too long"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "El texto es demasiado largo"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "คำสั่งยาวเกินไป"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "提示词过长"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "提示詞過長"
           }
         }
       }
