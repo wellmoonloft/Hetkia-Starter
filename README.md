@@ -2,6 +2,8 @@
 
 English | [简体中文](README_CN.MD)
 
+This project is licensed under the [MIT License](LICENSE).
+
 Hetkia is an iOS photo-memory app centered on “On This Day.” The home screen shows photo groups captured on the same month and day in previous years, using the device’s local date. Browsing reads PhotoKit and displays system-provided images as needed. A journal, photo links, and JPEG previews are saved locally only when the user generates a journal, edits and saves its text, or posts a message.
 
 ## Features
