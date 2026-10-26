@@ -167,9 +167,6 @@ private struct HetkiaWidgetProvider: TimelineProvider {
 private struct HetkiaWidgetView: View {
     let entry: HetkiaWidgetEntry
     @Environment(\.widgetFamily) private var family
-    private let ink = Color(red: 0.25, green: 0.23, blue: 0.20)
-    private let mutedInk = Color(red: 0.53, green: 0.49, blue: 0.42)
-
     private var isStandBySize: Bool { family == .systemSmall }
 
     var body: some View {
@@ -183,9 +180,6 @@ private struct HetkiaWidgetView: View {
             } else {
                 if entry.memories.isEmpty {
                     emptyState
-                        .padding(16)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                        .background(Color(red: 0.99, green: 0.98, blue: 0.95))
                 } else {
                     WidgetMemoryCollage(memories: entry.memories, rounded: false, showsDates: true)
                 }
@@ -200,14 +194,36 @@ private struct HetkiaWidgetView: View {
     }
 
     private var emptyState: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Image(systemName: "photo.on.rectangle.angled")
-                .font(.system(size: 28, weight: .regular))
-                .foregroundStyle(mutedInk)
-            Text(entry.hasPhotoAccess ? "photos.selection.empty" : "onboarding.photos.status.denied")
-                .font(.system(size: 14, weight: .regular, design: .serif))
-                .foregroundStyle(mutedInk)
-            Spacer()
+        GeometryReader { geometry in
+            ZStack(alignment: .bottomLeading) {
+                Image("Unknown")
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: geometry.size.width, height: geometry.size.height)
+                    .clipped()
+
+                LinearGradient(
+                    colors: [.clear, .black.opacity(0.55)],
+                    startPoint: .center,
+                    endPoint: .bottom
+                )
+
+                VStack(alignment: .leading, spacing: 4) {
+                    if entry.hasPhotoAccess {
+                        Text("widget.empty.today")
+                            .font(.system(size: 22, weight: .semibold, design: .serif))
+                        Text("widget.empty.no-memories")
+                            .font(.system(size: 16, weight: .medium, design: .serif))
+                    } else {
+                        Text("onboarding.photos.status.denied")
+                            .font(.system(size: 15, weight: .medium, design: .serif))
+                    }
+                }
+                .foregroundStyle(.white)
+                .shadow(color: .black.opacity(0.55), radius: 3, x: 0, y: 1)
+                .padding(16)
+            }
+            .frame(width: geometry.size.width, height: geometry.size.height)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
@@ -274,23 +290,7 @@ private struct WidgetMemoryCollage: View {
                     .clipped()
 
                 if showsDates {
-                    LinearGradient(
-                        colors: [.black.opacity(0.52), .black.opacity(0.12), .clear],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                    .allowsHitTesting(false)
-
-                    Text(DateFormatter.localizedString(from: memory.date, dateStyle: .medium, timeStyle: .none))
-                        .font(.system(size: min(15, max(8, width * 0.045)), weight: .semibold, design: .serif))
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.5)
-                        .foregroundStyle(.white)
-                        .shadow(color: .black.opacity(0.55), radius: 3, x: 0, y: 1)
-                        .padding(.horizontal, min(10, max(4, width * 0.035)))
-                        .padding(.top, min(10, max(4, height * 0.04)))
-                        .frame(maxWidth: width, alignment: .leading)
-                        .allowsHitTesting(false)
+                    WidgetDateOverlay(date: memory.date, width: width, height: height)
                 }
             }
             .frame(width: width, height: height)
@@ -305,6 +305,50 @@ private struct WidgetMemoryCollage: View {
         #else
         Image(uiImage: UIImage(data: data) ?? UIImage())
         #endif
+    }
+}
+
+private struct WidgetDateOverlay: View {
+    let date: Date
+    let width: CGFloat
+    let height: CGFloat
+    @Environment(\.locale) private var locale
+
+    private var dateBlockWidth: CGFloat { width * 2 / 3 }
+    private var yearFontSize: CGFloat { min(68, max(14, min(dateBlockWidth * 0.34, height * 0.26))) }
+    private var dateFontSize: CGFloat { min(30, max(9, min(dateBlockWidth * 0.15, height * 0.13))) }
+    private var inset: CGFloat { min(24, max(6, min(width, height) * 0.055)) }
+
+    var body: some View {
+        ZStack(alignment: .topLeading) {
+            LinearGradient(
+                colors: [.black.opacity(0.56), .black.opacity(0.18), .clear],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+
+            VStack(alignment: .leading, spacing: max(2, dateFontSize * 0.18)) {
+                Text(date.formatted(.dateTime.year().locale(locale)))
+                    .font(.system(size: yearFontSize, weight: .regular, design: .serif))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.45)
+                    .fixedSize(horizontal: false, vertical: true)
+                Rectangle()
+                    .fill(.white.opacity(0.95))
+                    .frame(width: min(46, max(18, dateBlockWidth * 0.22)), height: max(1, dateFontSize * 0.04))
+                Text(date.formatted(.dateTime.month(.abbreviated).day().locale(locale)))
+                    .font(.system(size: dateFontSize, weight: .regular, design: .serif))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.45)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .foregroundStyle(.white)
+            .shadow(color: .black.opacity(0.5), radius: 3, x: 0, y: 1)
+            .padding(inset)
+            .frame(width: dateBlockWidth, height: height, alignment: .topLeading)
+        }
+        .frame(width: width, height: height)
+        .allowsHitTesting(false)
     }
 }
 

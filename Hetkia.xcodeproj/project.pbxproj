@@ -37,6 +37,7 @@
 		A10000000000000000000022 /* HetkiaWidgetExtension.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = A20000000000000000000022 /* HetkiaWidgetExtension.appex */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		A10000000000000000000023 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000006 /* Localizable.xcstrings */; };
 		A10000000000000000000024 /* SavedJournalsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000023 /* SavedJournalsView.swift */; };
+		A10000000000000000000025 /* Assets.xcassets in Widget Resources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000024 /* Assets.xcassets */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -98,6 +99,7 @@
 		A20000000000000000000021 /* HetkiaWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HetkiaWidget.swift; sourceTree = "<group>"; };
 		A20000000000000000000022 /* HetkiaWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = HetkiaWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		A20000000000000000000023 /* SavedJournalsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavedJournalsView.swift; sourceTree = "<group>"; };
+		A20000000000000000000024 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -262,6 +264,7 @@
 			isa = PBXGroup;
 			children = (
 				A20000000000000000000021 /* HetkiaWidget.swift */,
+				A20000000000000000000024 /* Assets.xcassets */,
 			);
 			path = HetkiaWidget;
 			sourceTree = "<group>";
@@ -362,6 +365,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				A10000000000000000000023 /* Localizable.xcstrings in Resources */,
+				A10000000000000000000025 /* Assets.xcassets in Widget Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

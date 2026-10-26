@@ -323,15 +323,34 @@ private struct OnThisDayPhotoGrid: View {
     }
 
     private func assetTile(_ asset: PHAsset, width: CGFloat, height: CGFloat, showsDate: Bool = false) -> some View {
-        OnThisDayAssetThumbnail(asset: asset, date: showsDate ? date : nil, tileWidth: width)
+        OnThisDayAssetThumbnail(asset: asset, tileWidth: width)
             .frame(width: width, height: height)
+            .overlay(alignment: .topLeading) {
+                if showsDate {
+                    ZStack(alignment: .topLeading) {
+                        LinearGradient(
+                            colors: [.black.opacity(0.52), .black.opacity(0.12), .clear],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                        Text(date.formatted(date: .long, time: .omitted))
+                            .font(.system(size: min(17, max(10, width * 0.043)), weight: .semibold, design: .serif))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.65)
+                            .foregroundStyle(.white)
+                            .shadow(color: .black.opacity(0.4), radius: 4, x: 0, y: 1)
+                            .padding(min(16, max(8, width * 0.04)))
+                    }
+                    .frame(width: width, height: height, alignment: .topLeading)
+                    .allowsHitTesting(false)
+                }
+            }
             .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
     }
 }
 
 private struct OnThisDayAssetThumbnail: View {
     let asset: PHAsset
-    let date: Date?
     let tileWidth: CGFloat
     @State private var image: CGImage?
 
@@ -356,24 +375,6 @@ private struct OnThisDayAssetThumbnail: View {
                     .padding(11)
                     .background(.black.opacity(0.48), in: Circle())
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .allowsHitTesting(false)
-            }
-            if let date {
-                LinearGradient(
-                    colors: [.black.opacity(0.52), .black.opacity(0.12), .clear],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-                .allowsHitTesting(false)
-
-                Text(date.formatted(date: .long, time: .omitted))
-                    .font(.system(size: min(17, max(10, tileWidth * 0.043)), weight: .semibold, design: .serif))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.65)
-                    .foregroundStyle(.white)
-                    .shadow(color: .black.opacity(0.4), radius: 4, x: 0, y: 1)
-                    .padding(min(16, max(8, tileWidth * 0.04)))
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                     .allowsHitTesting(false)
             }
         }

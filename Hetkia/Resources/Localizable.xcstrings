@@ -12152,6 +12152,24 @@
         }
       }
     },
+    "widget.empty.today" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Today" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Hoy" } },
+        "th" : { "stringUnit" : { "state" : "translated", "value" : "วันนี้" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "今天" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "今天" } }
+      }
+    },
+    "widget.empty.no-memories" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "No old memories yet" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Aún no hay recuerdos de otros días" } },
+        "th" : { "stringUnit" : { "state" : "translated", "value" : "ยังไม่มีความทรงจำจากวันเก่า" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "尚无旧时光" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "尚無舊時光" } }
+      }
+    },
     "year.previous" : {
       "localizations" : {
         "en" : {
