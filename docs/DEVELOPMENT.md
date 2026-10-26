@@ -1,7 +1,7 @@
 # 时光 · Hetkia 开发文档
 
-版本：2.4（可自定义 AI 日记提示词）
-更新日期：2026-10-25
+版本：2.5（首页缓存刷新与截图文档）
+更新日期：2026-10-26
 
 ## 1. 工程与平台
 
@@ -17,14 +17,14 @@
 
 ### PhotoKit 查询
 
-- `Hetkia/Features/Photos/OnThisDayLibrary.swift`：`OnThisDayLibrary.fetch` 根据 `Calendar.autoupdatingCurrent` 逐年构造当前月日的本地时间区间，读取 `PHAsset` 元数据并返回临时 `OnThisDayEntry`。查询不插入 SwiftData、不生成 JPEG、不调用 AI。
-- 普通 PhotoKit fetch 不包含“最近删除”；显式排除 `isHidden`。媒体仅限 PhotoKit 可显示的 image/video，所以 Live Photo 与视频都保留。
-- `PhotoAssetEligibility.isPriorityAsset` 将普通照片/视频排在截图/荧幕录影之前；`JournalPhotoSelection.selectedAssets` 再执行最多 9、偶数减 1 的数量规则。首页与详情共享该排序逻辑。
+- `Hetkia/Features/Photos/OnThisDayLibrary.swift`：`OnThisDayLibrary.fetch` 根据 `Calendar.autoupdatingCurrent` 逐年构造当前月日的本地时间区间，先执行日期谓词，再读取 `PHAsset` 元数据并返回临时 `OnThisDayEntry`。查询不插入 SwiftData、不生成 JPEG、不调用 AI。
+- 普通 PhotoKit fetch 不包含“最近删除”；显式排除 `isHidden`。媒体仅限 PhotoKit 可显示的 image/video，所以 Live Photo 与视频都保留。日期查询之后由 `PhotoAssetEligibility.allows` 在内存中应用截图/荧幕录影设置；默认关闭时检查 `.photoScreenshot` 与 `.videoScreenRecording` 子类型并排除，避免依赖 PhotoKit 位掩码谓词。
+- `PhotoAssetEligibility.isPriorityAsset` 将普通照片/视频排在截图/荧幕录影之前；`JournalPhotoSelection.selectedAssets` 再执行最多 9、偶数减 1 的数量规则。首页、详情、持久化照片过滤和 WidgetKit 都读取共享 App Group 偏好，默认不包含截图/录屏。
 - `PhotoAssetResolver.previewImage` 为界面按需请求系统图像/视频首帧；`displayImage` 不更改 SwiftData 元数据。
 
 ### 首页与详情
 
-- `Hetkia/Features/Timeline/TimelineHomeView.swift`：只显示历年同月同日卡片。有效缓存会先显示；应用从后台回到 active 且当前位于首页时，只刷新今年的照片集合，不因从详情返回而重新查询。下拉刷新强制重查所有年份；缓存缺失或本地日期跨日时完整查询。强制扫描完成后即使 SwiftUI 刷新任务被取消，也要发布查询结果并清除加载状态，避免进度完成后旧页面卡住。
+- `Hetkia/Features/Timeline/TimelineHomeView.swift`：只显示历年同月同日卡片。首次读取有效缓存后先显示卡片；热启动/回到前台时保留当前内存中的卡片，只刷新今年的照片集合，不因从详情返回而重新查询。`publishEntriesIfChanged` 比较日期 ID 和有序 PhotoKit `localIdentifier`，只有内容变化才替换 `entries`，避免相同查询结果触发全网格重绘。首次全量查询和下拉强制全量查询显示进度；热启动的增量查询不显示进度。缓存缺失或本地日期跨日时完整查询。强制扫描完成后即使 SwiftUI 刷新任务被取消，也要发布查询结果并清除加载状态，避免进度完成后旧页面卡住。
 - 首页卡片由 `OnThisDayCard` 和 `OnThisDayPhotoGrid` 组成：拼贴图片铺满正方形卡片，日期白字浮在图片顶部；顶部暗色渐层辅助对比，外缘由卡片统一裁圆角。照片预览由 PhotoKit 提供，不保存文件。首页数据重查后请求 WidgetCenter 更新小组件。
 - `Hetkia/Features/Timeline/SavedJournalsView.swift`：设置内的本地历史日记页。`@Query` 只查询 SwiftData，按 `dayKey` 合并为每天一篇并按年月分组，两列展示；`PersistedJournalThumbnail` 只读取 `thumbnailRelativePath` 对应的 Application Support JPEG，不调用 PhotoKit。导航到详情时传入 `savedOnly: true`，该模式的图片、分享和 AI 图像输入不从图库补取照片，用户编辑或留言也不会扩展图库照片集合。
 - 历史手札卡片使用本地保存的首图铺满正方形卡片，白字显示日期与照片数；以暗色渐层提高对比。无封面时使用占位背景。
@@ -74,6 +74,8 @@ xcodebuild -project Hetkia.xcodeproj -scheme Hetkia -configuration Debug -destin
 2026-10-24：`Hetkia` 与 `HetkiaWidgetExtension` 均以 iOS 18.0 deployment target 通过通用 iOS Simulator Debug 构建，`git diff --check` 通过。该检查确认当前 SDK 下可编译并正确标注 iOS 18 最低目标，不替代 iOS 18 真机交互测试。Widget、PhotoKit、保存日记和地点基础路径使用 iOS 18 可用 API；Foundation Models 仅在 iOS 26 及以上调用，图片理解输入仅在 iOS 27 及以上调用。iOS 18 的照片地点反查走 Core Location；iOS 26 以上可使用 MapKit 新反查 API。
 
 ## 5. 目前限制与验证清单
+
+- README 中的代表性界面截图使用仓库 `screenshot/` 下按内容命名的 JPEG；文件经过尺寸缩放和质量压缩，每张不超过 500 KB。其余截图用于界面参考，不要求全部嵌入 README。
 
 - BGTaskScheduler 与 WidgetKit 时间线是最佳努力刷新，无法承诺每天 00:00 准时运行。
 - Widget 不使用普通滚动手势、分页按钮或轮播；静态拼图按 1/3 布局展示最多三篇同日记录首图。优先选择带 GPS 的拍摄照片，大尺寸含标题/品牌，小尺寸满版纯图片；每张图片分别提供对应日期的深链。

@@ -15,7 +15,7 @@ Hetkia is an iOS photo-memory app centered on “On This Day.” The home screen
 - The large Home Screen widget creates a full-bleed collage from the first image of each matching-date group. It shows up to three years in a one- or three-image layout and prioritizes photos with GPS coordinates. The title and brand name overlay the image. StandBy and small widgets use an image-only collage. Each image can deep-link to its corresponding journal.
 - Personal messages can be edited or deleted. If the last message is deleted and the journal has no body text or AI draft, the empty journal and its linked photo previews are deleted as well.
 - The AI prompt can be reviewed and customized in Settings. The default asks for a 2–5 sentence entry grounded in the photos and metadata, written in the current system language without specific dates. Prompts are limited to 1,500 user-perceived characters; Save displays an alert and is blocked above the limit.
-- Photos, Live Photos, videos, screenshots, and screen recordings can appear. Regular camera photos are preferred; screenshots and recordings are not excluded. Hidden items are omitted. Items in “Recently Deleted” are not included in standard PhotoKit library fetches.
+- Photos, Live Photos, and videos can appear. Screenshots and screen recordings are excluded by default and can be enabled in Settings; when enabled, regular camera media is prioritized. Hidden items are omitted. Items in “Recently Deleted” are not included in standard PhotoKit library fetches.
 - Supported languages: Simplified Chinese, Traditional Chinese, English, Spanish, and Thai.
 
 Text over photos uses white with a subtle dark gradient for contrast. WidgetKit may adapt widget rendering to the display context, but it does not automatically choose text color based on each image’s brightness. Journal detail cards show “Keep the ordinary days in Hetkia” and the brand name above the content; the date and time appear in the navigation bar. Shared journal images use a separate layout and retain their date and time.
@@ -29,6 +29,24 @@ Text over photos uses white with a subtle dark gradient for contrast. WidgetKit 
 Background refresh is scheduled on a best-effort basis by the system and is not guaranteed to run exactly at midnight. When the app is active, it refreshes by querying PhotoKit.
 
 The home screen first displays the local photo-index cache for the current date. When the cache is valid, a regular launch queries only the current year’s photos for today. Pulling down on the home screen forces a full scan across all years. The first scan and the first launch after a new day also scan all years.
+
+On a warm launch, the cached cards stay on screen while the current-year query runs. The home view only publishes the result when its dates or photo identifiers changed, avoiding a full-card redraw for an unchanged result. The progress indicator is reserved for the initial full scan and a user-requested full refresh.
+
+## Screenshots
+
+| Empty home state | Journal details |
+| --- | --- |
+| ![On This Day empty state](screenshot/home-empty-state.jpg) | ![Journal detail](screenshot/journal-detail.jpg) |
+
+| Home Screen widget | Shared journal image |
+| --- | --- |
+| ![Widget on the Home Screen](screenshot/widget-home-screen.jpg) | ![Shared journal image](screenshot/share-journal.jpg) |
+
+| Saved Journals | Settings |
+| --- | --- |
+| ![Saved Journals](screenshot/saved-journals.jpg) | ![Settings](screenshot/settings.jpg) |
+
+More reference screens, including widget collage formatting and detail actions, are in [`screenshot/`](screenshot/).
 
 ## Build
 
@@ -46,7 +64,7 @@ Hetkia-Starter/
 ├── Hetkia/                      # SwiftUI app, onboarding, details, PhotoKit, settings, and localization
 ├── HetkiaWidget/                # On This Day WidgetKit extension
 ├── Design/                      # Design source files
-├── screenshot/                  # Reference screenshots named by content
+├── screenshot/                  # Compressed reference screenshots named by content
 └── docs/                        # Product requirements and development guide
 ```
 

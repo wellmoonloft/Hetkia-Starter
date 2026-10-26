@@ -22,6 +22,7 @@ struct TimelineHomeView: View {
     @State private var hasResolvedInitialCache = false
     @State private var progress = 0.0
     @State private var isRefreshing = false
+    @State private var showsScanProgress = false
     @State private var didLeaveActiveState = false
     @State private var showSettings = false
     @State private var activeCalendarDay = PhotoDayGrouping.key(for: .now)
@@ -42,21 +43,26 @@ struct TimelineHomeView: View {
                         if !PhotoLibraryService.hasFullReadAccess {
                             permissionState
                         } else if isLoading {
-                            if hasResolvedInitialCache {
+                            if showsScanProgress {
                                 loadingState
                             } else {
                                 Color.clear.frame(height: 54)
                             }
-                        } else if entries.isEmpty {
-                            emptyOnThisDayState
                         } else {
-                            LazyVGrid(columns: columns, alignment: .center, spacing: 16) {
-                                ForEach(entries) { entry in
-                                    Button { path.append(entry.id) } label: {
-                                        OnThisDayCard(entry: entry)
+                            if showsScanProgress {
+                                loadingState
+                            }
+                            if entries.isEmpty {
+                                emptyOnThisDayState
+                            } else {
+                                LazyVGrid(columns: columns, alignment: .center, spacing: 16) {
+                                    ForEach(entries) { entry in
+                                        Button { path.append(entry.id) } label: {
+                                            OnThisDayCard(entry: entry)
+                                        }
+                                        .buttonStyle(.plain)
+                                        .accessibilityLabel(entry.date.formatted(date: .long, time: .omitted))
                                     }
-                                    .buttonStyle(.plain)
-                                    .accessibilityLabel(entry.date.formatted(date: .long, time: .omitted))
                                 }
                             }
                         }
@@ -87,7 +93,8 @@ struct TimelineHomeView: View {
         .sheet(isPresented: $showSettings) { SettingsView() }
         .task {
             PhotoLocationResolver.shared.resumePending(context: modelContext)
-            await refresh()
+            guard !hasResolvedInitialCache else { return }
+            await refresh(isInitialLoad: true)
         }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active {
@@ -205,11 +212,13 @@ struct TimelineHomeView: View {
     }
 
     @MainActor
-    private func refresh(forceFullScan: Bool = false) async {
+    private func refresh(forceFullScan: Bool = false, isInitialLoad: Bool = false) async {
         guard !isRefreshing else { return }
         isRefreshing = true
+        showsScanProgress = forceFullScan
         defer {
             isRefreshing = false
+            showsScanProgress = false
             // A cancelled SwiftUI refresh can otherwise leave the initial scan
             // state (and its completed progress indicator) on screen forever.
             isLoading = false
@@ -222,22 +231,36 @@ struct TimelineHomeView: View {
             return
         }
 
-        if let cachedEntries = OnThisDayCacheStore.load() {
+        if hasResolvedInitialCache {
+            // Keep the already-rendered cards in memory when returning to the
+            // app. Reloading the disk snapshot first republishes every card,
+            // even when the subsequent PhotoKit query finds no changes.
+            if forceFullScan {
+                progress = 0
+                let result = await OnThisDayLibrary.fetch { progress = $0 }
+                publishEntriesIfChanged(result)
+            } else {
+                let result = OnThisDayLibrary.refreshCurrentYear(preserving: entries)
+                publishEntriesIfChanged(result)
+            }
+        } else if let cachedEntries = OnThisDayCacheStore.load() {
             // A valid cache, including a valid empty result, is rendered at once.
             // Routine launches only query the current year; older years are
             // rechecked by pull-to-refresh or when there is no same-day cache.
-            entries = cachedEntries
+            publishEntriesIfChanged(cachedEntries)
             isLoading = false
             hasResolvedInitialCache = true
             await Task.yield()
             if forceFullScan {
+                progress = 0
                 let result = await OnThisDayLibrary.fetch { progress = $0 }
                 // PhotoKit's scan and cache write are not cancellation-aware. If
                 // the refresh task is cancelled after the scan finishes, still
                 // publish its result so the visible page matches the new cache.
-                entries = result
+                publishEntriesIfChanged(result)
             } else {
-                entries = OnThisDayLibrary.refreshCurrentYear(preserving: cachedEntries)
+                let result = OnThisDayLibrary.refreshCurrentYear(preserving: entries)
+                publishEntriesIfChanged(result)
             }
         } else {
             // A missing/expired cache needs one full historical scan to build
@@ -245,15 +268,31 @@ struct TimelineHomeView: View {
             entries = []
             isLoading = true
             hasResolvedInitialCache = true
+            showsScanProgress = forceFullScan || isInitialLoad
             progress = 0
-            let result = await OnThisDayLibrary.fetch { progress = $0 }
-            entries = result
+            let result = await OnThisDayLibrary.fetch { value in
+                if showsScanProgress { progress = value }
+            }
+            publishEntriesIfChanged(result)
         }
         isLoading = false
         WidgetCenter.shared.reloadTimelines(ofKind: "Hetkia.OnThisDay")
         if let pendingWidgetRoute, entries.contains(where: { $0.id == pendingWidgetRoute }) {
             path = [pendingWidgetRoute]
             self.pendingWidgetRoute = nil
+        }
+    }
+
+    private func publishEntriesIfChanged(_ updatedEntries: [OnThisDayEntry]) {
+        guard !haveSameContent(entries, updatedEntries) else { return }
+        entries = updatedEntries
+    }
+
+    private func haveSameContent(_ lhs: [OnThisDayEntry], _ rhs: [OnThisDayEntry]) -> Bool {
+        guard lhs.count == rhs.count else { return false }
+        return zip(lhs, rhs).allSatisfy { current, updated in
+            current.id == updated.id &&
+            current.assets.map(\.localIdentifier) == updated.assets.map(\.localIdentifier)
         }
     }
 
