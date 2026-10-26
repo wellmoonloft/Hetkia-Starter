@@ -881,13 +881,16 @@ final class PhotoLocationResolver {
     private var requests: [Request] = []
     private var activeRequest: Request?
     private var worker: Task<Void, Never>?
+    private var didResumePendingRequests = false
 
     private init() { }
 
     /// Re-queue unresolved photo locations after launch or when the app becomes active.
-    /// This recovers work interrupted by navigation, suspension, or process termination.
+    /// This runs once per process; newly changed journals enter through enqueue().
     func resumePending(context: ModelContext) {
+        guard !didResumePendingRequests else { return }
         guard let journals = try? context.fetch(FetchDescriptor<JournalRecord>()) else { return }
+        didResumePendingRequests = true
         for record in journals {
             let unresolved = JournalPhotoSelection.selected(from: record.photos).filter { photo in
                 photo.latitude != nil && photo.longitude != nil
@@ -898,6 +901,7 @@ final class PhotoLocationResolver {
     }
 
     func enqueue(photos: [JournalPhotoRecord], record: JournalRecord, context: ModelContext) {
+        var didMutateStoredData = false
         let eligible = photos.filter { photo in
             photo.latitude != nil && photo.longitude != nil
                 && Self.needsDetailedPlace(photo.placeName)
@@ -908,11 +912,11 @@ final class PhotoLocationResolver {
             let location = CLLocation(latitude: latitude, longitude: longitude)
 
             if let request = matchingRequest(for: location) {
-                add(photo, to: request, record: record)
+                didMutateStoredData = add(photo, to: request, record: record) || didMutateStoredData
                 continue
             }
             if let cached = cachedPlace(near: location) {
-                apply(cached, to: photo, record: record)
+                didMutateStoredData = apply(cached, to: photo, record: record) || didMutateStoredData
                 continue
             }
 
@@ -923,11 +927,14 @@ final class PhotoLocationResolver {
                 records: [record],
                 context: context
             )
-            photo.locationStatus = .geocodingPending
+            if photo.locationStatus != .geocodingPending {
+                photo.locationStatus = .geocodingPending
+                didMutateStoredData = true
+            }
             requests.append(request)
         }
 
-        try? context.save()
+        if didMutateStoredData { try? context.save() }
         guard worker == nil, !requests.isEmpty else { return }
         worker = Task { [weak self] in
             guard let self else { return }
@@ -950,6 +957,9 @@ final class PhotoLocationResolver {
             } else {
                 request.photos.forEach { $0.locationStatus = .geocodingFailed }
                 try? request.context.save()
+                // Keep the existing retry-on-next-foreground behavior for
+                // transient network or geocoder failures.
+                didResumePendingRequests = false
                 NotificationCenter.default.post(name: .hetkiaJournalRecordsDidChange, object: nil)
                 Self.logger.error("Reverse geocoding returned no place name; retained photo coordinates for map display.")
             }
@@ -977,20 +987,38 @@ final class PhotoLocationResolver {
         return requests.first { $0.location.distance(from: location) <= Self.groupingRadius }
     }
 
-    private func add(_ photo: JournalPhotoRecord, to request: Request, record: JournalRecord) {
+    @discardableResult
+    private func add(_ photo: JournalPhotoRecord, to request: Request, record: JournalRecord) -> Bool {
+        var didMutateStoredData = false
         if !request.photos.contains(where: { $0.id == photo.id }) {
             request.photos.append(photo)
-            photo.locationStatus = .geocodingPending
+            if photo.locationStatus != .geocodingPending {
+                photo.locationStatus = .geocodingPending
+                didMutateStoredData = true
+            }
         }
         if !request.records.contains(where: { $0.persistentModelID == record.persistentModelID }) {
             request.records.append(record)
         }
+        return didMutateStoredData
     }
 
-    private func apply(_ place: String, to photo: JournalPhotoRecord, record: JournalRecord) {
-        photo.placeName = place
-        photo.locationStatus = .available
-        if Self.needsDetailedPlace(record.locationText) { record.locationText = place }
+    @discardableResult
+    private func apply(_ place: String, to photo: JournalPhotoRecord, record: JournalRecord) -> Bool {
+        var didMutateStoredData = false
+        if photo.placeName != place {
+            photo.placeName = place
+            didMutateStoredData = true
+        }
+        if photo.locationStatus != .available {
+            photo.locationStatus = .available
+            didMutateStoredData = true
+        }
+        if Self.needsDetailedPlace(record.locationText), record.locationText != place {
+            record.locationText = place
+            didMutateStoredData = true
+        }
+        return didMutateStoredData
     }
 
     private func cachedPlace(near location: CLLocation) -> String? {

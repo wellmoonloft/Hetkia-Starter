@@ -239,11 +239,8 @@ struct PhotoFallbackThumbnail: View {
             let size = CGSize(width: width * displayScale, height: height * displayScale)
             // Prefer the current PhotoKit original for clarity. Older saved
             // journals may reference assets that were deleted from Photos, so
-            // keep the persisted JPEG as a fallback.
+            // displayImage already falls back to the persisted JPEG.
             image = await PhotoAssetResolver.displayImage(for: photo, targetSize: size)
-            if image == nil {
-                image = await PhotoAssetResolver.thumbnailImage(relativePath: photo.thumbnailRelativePath, targetSize: size)
-            }
         }
     }
 }

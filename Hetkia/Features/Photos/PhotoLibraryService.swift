@@ -19,6 +19,15 @@ enum PhotoAssetEligibility {
     static let appGroupIdentifier = "group.com.hetkia.app"
     static var sharedDefaults: UserDefaults? { UserDefaults(suiteName: appGroupIdentifier) }
 
+    // Media subtypes are stable for a PhotoKit local identifier. Reuse the
+    // result when saved-journal cards are rendered repeatedly, while keeping
+    // the cache bounded for large libraries.
+    private static let persistedPriorityCache: NSCache<NSString, NSNumber> = {
+        let cache = NSCache<NSString, NSNumber>()
+        cache.countLimit = 4_096
+        return cache
+    }()
+
     static func allows(_ asset: PHAsset) -> Bool {
         // PhotoKit fetch predicates stay focused on dates. Apply subtype checks
         // to fetched assets because bitmask predicates can omit ordinary assets.
@@ -38,18 +47,29 @@ enum PhotoAssetEligibility {
     static func eligiblePersistedPhotos(_ photos: [JournalPhotoRecord]) -> [JournalPhotoRecord] {
         guard !includesScreenshotsAndScreenRecordings else { return photos }
 
-        let identifiers = photos.compactMap(\.assetLocalIdentifier)
-        let fetched = PHAsset.fetchAssets(withLocalIdentifiers: identifiers, options: nil)
-        var assetsByIdentifier: [String: PHAsset] = [:]
-        fetched.enumerateObjects { asset, _, _ in
-            assetsByIdentifier[asset.localIdentifier] = asset
+        let identifiers = Array(Set(photos.compactMap(\.assetLocalIdentifier)))
+        let uncachedIdentifiers = identifiers.filter {
+            persistedPriorityCache.object(forKey: $0 as NSString) == nil
+        }
+        if !uncachedIdentifiers.isEmpty {
+            let fetched = PHAsset.fetchAssets(withLocalIdentifiers: uncachedIdentifiers, options: nil)
+            fetched.enumerateObjects { asset, _, _ in
+                persistedPriorityCache.setObject(
+                    NSNumber(value: isPriorityAsset(asset)),
+                    forKey: asset.localIdentifier as NSString
+                )
+            }
         }
 
         return photos.filter { photo in
             guard photo.isPriorityPhoto else { return false }
             guard let identifier = photo.assetLocalIdentifier,
-                  let asset = assetsByIdentifier[identifier] else { return true }
-            return isPriorityAsset(asset)
+                  let isPriority = persistedPriorityCache.object(forKey: identifier as NSString) else {
+                // Preserve the existing behavior for assets no longer present
+                // in PhotoKit: rely on the subtype captured when the journal was saved.
+                return true
+            }
+            return isPriority.boolValue
         }
     }
 }

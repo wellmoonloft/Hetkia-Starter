@@ -35,18 +35,9 @@ enum OnThisDayCacheStore {
     /// Restores cards using the current PhotoKit library. A nil result means there
     /// is no compatible cache; an empty array is a valid cached empty result.
     static func load(today: Date = .now) -> [OnThisDayEntry]? {
-        clearIfExpired(today: today)
+        guard let snapshot = readCurrentSnapshot(today: today) else { return nil }
         guard PhotoLibraryService.hasFullReadAccess else { return nil }
-        guard let data = try? Data(contentsOf: cacheURL()),
-              let snapshot = try? JSONDecoder().decode(Snapshot.self, from: data) else { return nil }
-
-        let calendar = Calendar.autoupdatingCurrent
-        let parts = calendar.dateComponents([.month, .day], from: today)
-        guard snapshot.year == parts.year,
-              snapshot.month == parts.month,
-              snapshot.day == parts.day,
-              snapshot.timeZoneIdentifier == calendar.timeZone.identifier,
-              snapshot.includesScreenshotsAndScreenRecordings == PhotoAssetEligibility.includesScreenshotsAndScreenRecordings else { return nil }
+        guard snapshot.includesScreenshotsAndScreenRecordings == PhotoAssetEligibility.includesScreenshotsAndScreenRecordings else { return nil }
 
         let identifiers = Array(Set(snapshot.entries.flatMap(\.assetIdentifiers)))
         let fetched = PHAsset.fetchAssets(withLocalIdentifiers: identifiers, options: nil)
@@ -108,6 +99,29 @@ enum OnThisDayCacheStore {
             clear()
             return
         }
+    }
+
+    /// Reads and validates the one-day snapshot in one disk pass. Invalid or
+    /// expired files are removed; a valid snapshot with a different filter
+    /// preference remains on disk but is not restored by `load`.
+    private static func readCurrentSnapshot(today: Date) -> Snapshot? {
+        guard FileManager.default.fileExists(atPath: cacheURL().path) else { return nil }
+        guard let data = try? Data(contentsOf: cacheURL()),
+              let snapshot = try? JSONDecoder().decode(Snapshot.self, from: data) else {
+            clear()
+            return nil
+        }
+        let calendar = Calendar.autoupdatingCurrent
+        let parts = calendar.dateComponents([.year, .month, .day], from: today)
+        guard snapshot.schemaVersion == schemaVersion,
+              snapshot.year == parts.year,
+              snapshot.month == parts.month,
+              snapshot.day == parts.day,
+              snapshot.timeZoneIdentifier == calendar.timeZone.identifier else {
+            clear()
+            return nil
+        }
+        return snapshot
     }
 
     private static func clear() {

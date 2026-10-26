@@ -92,9 +92,12 @@ struct TimelineHomeView: View {
         .tint(HetkiaPalette.amber)
         .sheet(isPresented: $showSettings) { SettingsView() }
         .task {
-            PhotoLocationResolver.shared.resumePending(context: modelContext)
             guard !hasResolvedInitialCache else { return }
             await refresh(isInitialLoad: true)
+            // Let the cached timeline paint before the recovery scan touches
+            // persisted journals and their PhotoKit references.
+            await Task.yield()
+            PhotoLocationResolver.shared.resumePending(context: modelContext)
         }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active {
