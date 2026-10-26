@@ -154,12 +154,12 @@ struct PersistentJournalDetailView: View {
         }
 #if os(macOS)
         .sheet(item: $photoGallery) { session in
-            PhotoFullScreenGallery(photos: selectedPhotos, initialIndex: session.initialIndex, savedOnly: savedOnly)
+            PhotoFullScreenGallery(photos: selectedPhotos, initialIndex: session.initialIndex)
                 .frame(minWidth: 760, minHeight: 620)
         }
 #else
         .fullScreenCover(item: $photoGallery) { session in
-            PhotoFullScreenGallery(photos: selectedPhotos, initialIndex: session.initialIndex, savedOnly: savedOnly)
+            PhotoFullScreenGallery(photos: selectedPhotos, initialIndex: session.initialIndex)
         }
 #endif
         .sheet(item: $mapDestination) { destination in
@@ -199,7 +199,7 @@ struct PersistentJournalDetailView: View {
             HStack {
                 Text("page.footer")
                 Spacer(minLength: 8)
-                Text("brand.footer")
+                Text("brand.name")
             }
             .font(.system(size: captionFontSize, design: .serif))
             .foregroundStyle(HetkiaPalette.secondaryInk)
@@ -345,7 +345,7 @@ struct PersistentJournalDetailView: View {
 
     private func photoTile(_ photo: JournalPhotoRecord, index: Int, width: CGFloat, height: CGFloat) -> some View {
         Group {
-            PhotoFallbackThumbnail(photo: photo, width: width, height: height) {
+            PhotoFallbackThumbnail(photo: photo, width: width, height: height, showsVideoIndicator: false) {
                 photoGallery = PhotoGallerySession(initialIndex: index)
             }
         }
@@ -353,6 +353,16 @@ struct PersistentJournalDetailView: View {
         // Tall portrait video posters can otherwise draw outside their fixed tile.
         .frame(width: width, height: height, alignment: .center)
         .clipped()
+        .overlay {
+            if photo.mediaType == "video" {
+                Image(systemName: "play.fill")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundStyle(.white)
+                    .padding(11)
+                    .background(.black.opacity(0.48), in: Circle())
+                    .allowsHitTesting(false)
+            }
+        }
         .contentShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
     }
 
@@ -1125,7 +1135,7 @@ private struct JournalShareCard: View {
                     .font(.system(size: 42, weight: .regular, design: .serif))
                     .foregroundStyle(HetkiaPalette.secondaryInk)
                 Spacer()
-                Text("brand.footer")
+                Text("brand.name")
                     .font(.system(size: 26, weight: .regular, design: .serif))
                     .foregroundStyle(HetkiaPalette.secondaryInk)
             }
@@ -1151,7 +1161,7 @@ private struct JournalShareCard: View {
             }
             Spacer(minLength: 24)
             Rectangle().fill(HetkiaPalette.line).frame(height: 2).padding(.bottom, 18)
-            HStack { Text("page.footer"); Spacer(); Text("brand.footer") }
+            HStack { Text("page.footer"); Spacer(); Text("brand.name") }
                 .font(.system(size: 24, design: .serif)).foregroundStyle(HetkiaPalette.secondaryInk)
         }
         .foregroundStyle(HetkiaPalette.ink)
@@ -1249,12 +1259,10 @@ private struct PhotoLocationMapView: View {
 private struct PhotoFullScreenGallery: View {
     @Environment(\.dismiss) private var dismiss
     let photos: [JournalPhotoRecord]
-    let savedOnly: Bool
     @State private var selection: Int
 
-    init(photos: [JournalPhotoRecord], initialIndex: Int, savedOnly: Bool = false) {
+    init(photos: [JournalPhotoRecord], initialIndex: Int) {
         self.photos = photos
-        self.savedOnly = savedOnly
         _selection = State(initialValue: initialIndex)
     }
 
@@ -1263,7 +1271,7 @@ private struct PhotoFullScreenGallery: View {
             Color.black.ignoresSafeArea()
             TabView(selection: $selection) {
                 ForEach(Array(photos.enumerated()), id: \.element.id) { index, photo in
-                    PhotoGalleryPage(photo: photo, savedOnly: savedOnly).tag(index)
+                    PhotoGalleryPage(photo: photo).tag(index)
                 }
             }
 #if os(macOS)
@@ -1317,7 +1325,6 @@ private struct PhotoFullScreenGallery: View {
 
 private struct PhotoGalleryPage: View {
     let photo: JournalPhotoRecord
-    let savedOnly: Bool
     @Environment(\.dismiss) private var dismiss
     @State private var image: CGImage?
     @State private var player: AVPlayer?
@@ -1367,11 +1374,11 @@ private struct PhotoGalleryPage: View {
                     width: max(geometry.size.width * 2, 1800),
                     height: max(geometry.size.height * 2, 1800)
                 )
-                image = await PhotoAssetResolver.thumbnailImage(relativePath: photo.thumbnailRelativePath, targetSize: targetSize)
                 if photo.mediaType == "video" {
+                    image = await PhotoAssetResolver.thumbnailImage(relativePath: photo.thumbnailRelativePath, targetSize: targetSize)
                     await loadAndPlayVideo()
-                } else if !savedOnly, let highResolution = await PhotoAssetResolver.displayImage(for: photo, targetSize: targetSize) {
-                    image = highResolution
+                } else {
+                    image = await PhotoAssetResolver.fullFrameImage(for: photo, targetSize: targetSize)
                 }
             }
         }

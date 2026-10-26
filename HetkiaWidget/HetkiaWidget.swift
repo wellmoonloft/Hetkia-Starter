@@ -316,7 +316,6 @@ private struct WidgetDateOverlay: View {
 
     private var dateBlockWidth: CGFloat { width * 2 / 3 }
     private var yearFontSize: CGFloat { min(68, max(14, min(dateBlockWidth * 0.34, height * 0.26))) }
-    private var dateFontSize: CGFloat { min(30, max(9, min(dateBlockWidth * 0.15, height * 0.13))) }
     private var inset: CGFloat { min(24, max(6, min(width, height) * 0.055)) }
 
     var body: some View {
@@ -327,25 +326,16 @@ private struct WidgetDateOverlay: View {
                 endPoint: .bottom
             )
 
-            VStack(alignment: .leading, spacing: max(2, dateFontSize * 0.18)) {
-                Text(date.formatted(.dateTime.year().locale(locale)))
-                    .font(.system(size: yearFontSize, weight: .regular, design: .serif))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.45)
-                    .fixedSize(horizontal: false, vertical: true)
-                Rectangle()
-                    .fill(.white.opacity(0.95))
-                    .frame(width: min(46, max(18, dateBlockWidth * 0.22)), height: max(1, dateFontSize * 0.04))
-                Text(date.formatted(.dateTime.month(.abbreviated).day().locale(locale)))
-                    .font(.system(size: dateFontSize, weight: .regular, design: .serif))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.45)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            .foregroundStyle(.white)
-            .shadow(color: .black.opacity(0.5), radius: 3, x: 0, y: 1)
-            .padding(inset)
-            .frame(width: dateBlockWidth, height: height, alignment: .topLeading)
+            Text(date.formatted(.dateTime.year().locale(locale)))
+                .font(.system(size: yearFontSize, weight: .regular, design: .serif))
+                .lineLimit(1)
+                .minimumScaleFactor(0.45)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(width: dateBlockWidth, height: height, alignment: .center)
+                .foregroundStyle(.white)
+                .shadow(color: .black.opacity(0.5), radius: 3, x: 0, y: 1)
+                .padding(inset)
+                .frame(width: width, height: height, alignment: .center)
         }
         .frame(width: width, height: height)
         .allowsHitTesting(false)

@@ -26,6 +26,23 @@ enum PhotoAssetResolver {
         return await thumbnailImage(relativePath: photo.thumbnailRelativePath, targetSize: targetSize)
     }
 
+    /// Full-screen photo viewing must never use the aspect-filled collage rendition.
+    /// Resolve the original PhotoKit asset by its stable local identifier first,
+    /// then fall back to the persisted, full-frame compressed JPEG.
+    @MainActor
+    static func fullFrameImage(for photo: JournalPhotoRecord, targetSize: CGSize) async -> CGImage? {
+        if let identifier = photo.assetLocalIdentifier {
+            let status = PHPhotoLibrary.authorizationStatus(for: .readWrite)
+            if status == .authorized || status == .limited,
+               let asset = PHAsset.fetchAssets(withLocalIdentifiers: [identifier], options: nil).firstObject,
+               asset.mediaType == .image,
+               let original = await requestFullFrameImage(for: asset, targetSize: targetSize) {
+                return original
+            }
+        }
+        return await thumbnailImage(relativePath: photo.thumbnailRelativePath, targetSize: targetSize)
+    }
+
     @MainActor
     static func previewImage(for asset: PHAsset, targetSize: CGSize) async -> CGImage? {
         if asset.mediaType == .video, let avAsset = await requestAVAsset(for: asset) {
@@ -71,8 +88,14 @@ enum PhotoAssetResolver {
     }
 
     @MainActor
-    static func persistThumbnail(for asset: PHAsset, targetSize: CGSize = CGSize(width: 1200, height: 1200)) async throws -> String {
-        guard let image = await previewImage(for: asset, targetSize: targetSize) else { throw PhotoImportError.unreadableAsset }
+    static func persistThumbnail(for asset: PHAsset, targetSize: CGSize = CGSize(width: 1600, height: 1600)) async throws -> String {
+        let image: CGImage?
+        if asset.mediaType == .image {
+            image = await requestFullFrameImage(for: asset, targetSize: targetSize)
+        } else {
+            image = await previewImage(for: asset, targetSize: targetSize)
+        }
+        guard let image else { throw PhotoImportError.unreadableAsset }
         let data = NSMutableData()
         guard let destination = CGImageDestinationCreateWithData(data, "public.jpeg" as CFString, 1, nil) else {
             throw PhotoImportError.couldNotCreateJPEG
@@ -85,6 +108,25 @@ enum PhotoAssetResolver {
         let filename = "\(UUID().uuidString).jpg"
         try (data as Data).write(to: directory.appendingPathComponent(filename), options: .atomic)
         return "JournalImages/\(filename)"
+    }
+
+    @MainActor
+    private static func requestFullFrameImage(for asset: PHAsset, targetSize: CGSize) async -> CGImage? {
+        await withCheckedContinuation { continuation in
+            let options = PHImageRequestOptions()
+            options.deliveryMode = .highQualityFormat
+            options.resizeMode = .exact
+            options.isNetworkAccessAllowed = true
+            PHImageManager.default().requestImage(for: asset, targetSize: targetSize, contentMode: .aspectFit, options: options) { image, info in
+                if (info?[PHImageResultIsDegradedKey] as? Bool) == true { return }
+                guard (info?[PHImageCancelledKey] as? Bool) != true,
+                      (info?[PHImageErrorKey] as? Error) == nil else {
+                    continuation.resume(returning: nil)
+                    return
+                }
+                continuation.resume(returning: image.flatMap(Self.cgImage(from:)))
+            }
+        }
     }
 
     private static func requestImage(for asset: PHAsset, targetSize: CGSize) async -> CGImage? {

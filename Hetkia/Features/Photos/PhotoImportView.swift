@@ -189,14 +189,16 @@ struct PhotoFallbackThumbnail: View {
     let photo: JournalPhotoRecord
     let width: CGFloat
     let height: CGFloat
+    var showsVideoIndicator: Bool = true
     var onTap: (() -> Void)? = nil
     @State private var image: CGImage?
     @Environment(\.displayScale) private var displayScale
 
-    init(photo: JournalPhotoRecord, width: CGFloat, height: CGFloat, onTap: (() -> Void)? = nil) {
+    init(photo: JournalPhotoRecord, width: CGFloat, height: CGFloat, showsVideoIndicator: Bool = true, onTap: (() -> Void)? = nil) {
         self.photo = photo
         self.width = width
         self.height = height
+        self.showsVideoIndicator = showsVideoIndicator
         self.onTap = onTap
     }
 
@@ -221,7 +223,7 @@ struct PhotoFallbackThumbnail: View {
                         .frame(maxWidth: .infinity, maxHeight: .infinity).background(HetkiaPalette.paper)
                 }
             }
-            if photo.mediaType == "video" {
+            if photo.mediaType == "video", showsVideoIndicator {
                 Image(systemName: "play.fill")
                     .font(.system(size: 11, weight: .bold))
                     .foregroundStyle(.white)
