@@ -178,7 +178,7 @@ private struct HetkiaWidgetView: View {
                 if entry.memories.isEmpty {
                     emptyState
                 } else {
-                    WidgetMemoryCollage(memories: entry.memories, rounded: false)
+                    WidgetMemoryCollage(memories: entry.memories, rounded: false, showsDates: true)
                 }
             } else {
                 if entry.memories.isEmpty {
@@ -187,34 +187,16 @@ private struct HetkiaWidgetView: View {
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                         .background(Color(red: 0.99, green: 0.98, blue: 0.95))
                 } else {
-                    ZStack(alignment: .topLeading) {
-                        WidgetMemoryCollage(memories: entry.memories, rounded: false)
-
-                        LinearGradient(
-                            colors: [.black.opacity(0.56), .black.opacity(0.12), .clear],
-                            startPoint: .top,
-                            endPoint: .bottom
-                        )
-                        .allowsHitTesting(false)
-
-                        HStack(alignment: .firstTextBaseline) {
-                            Text("timeline.on-this-day")
-                                .font(.system(size: 20, weight: .semibold, design: .serif))
-                            Spacer(minLength: 4)
-                            Text("brand.footer")
-                                .font(.system(size: 12, weight: .regular, design: .serif))
-                                .lineLimit(1)
-                        }
-                        .foregroundStyle(.white)
-                        .shadow(color: .black.opacity(0.42), radius: 4, x: 0, y: 1)
-                        .padding(16)
-                        .allowsHitTesting(false)
-                    }
+                    WidgetMemoryCollage(memories: entry.memories, rounded: false, showsDates: true)
                 }
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .containerBackground(.clear, for: .widget)
+        // Keep collage gaps transparent; WidgetKit can still remove or tint
+        // the container background for contexts such as StandBy and Clear mode.
+        .containerBackground(for: .widget) {
+            Color.clear
+        }
     }
 
     private var emptyState: some View {
@@ -234,7 +216,10 @@ private struct HetkiaWidgetView: View {
 private struct WidgetMemoryCollage: View {
     let memories: [WidgetMemory]
     let rounded: Bool
+    // A zero-width seam avoids exposing a system-composited widget background
+    // between photos, which can look opaque in Clear or StandBy presentations.
     private var gap: CGFloat { 0 }
+    var showsDates: Bool = false
 
     var body: some View {
         GeometryReader { geometry in
@@ -280,12 +265,35 @@ private struct WidgetMemoryCollage: View {
 
     private func linkedPhoto(_ memory: WidgetMemory, width: CGFloat, height: CGFloat) -> some View {
         Link(destination: URL(string: "hetkia://onthisday/\(memory.id)")!) {
-            photo(for: memory.imageData)
-                .resizable()
-                .widgetAccentedRenderingMode(.fullColor)
-                .aspectRatio(contentMode: .fill)
-                .frame(width: width, height: height)
-                .clipped()
+            ZStack(alignment: .topLeading) {
+                photo(for: memory.imageData)
+                    .resizable()
+                    .widgetAccentedRenderingMode(.fullColor)
+                    .aspectRatio(contentMode: .fill)
+                    .frame(width: width, height: height)
+                    .clipped()
+
+                if showsDates {
+                    LinearGradient(
+                        colors: [.black.opacity(0.52), .black.opacity(0.12), .clear],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                    .allowsHitTesting(false)
+
+                    Text(DateFormatter.localizedString(from: memory.date, dateStyle: .medium, timeStyle: .none))
+                        .font(.system(size: min(15, max(8, width * 0.045)), weight: .semibold, design: .serif))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.5)
+                        .foregroundStyle(.white)
+                        .shadow(color: .black.opacity(0.55), radius: 3, x: 0, y: 1)
+                        .padding(.horizontal, min(10, max(4, width * 0.035)))
+                        .padding(.top, min(10, max(4, height * 0.04)))
+                        .frame(maxWidth: width, alignment: .leading)
+                        .allowsHitTesting(false)
+                }
+            }
+            .frame(width: width, height: height)
         }
         .buttonStyle(.plain)
         .background(Color.clear)

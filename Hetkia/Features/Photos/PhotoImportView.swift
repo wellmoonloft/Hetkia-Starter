@@ -191,6 +191,7 @@ struct PhotoFallbackThumbnail: View {
     let height: CGFloat
     var onTap: (() -> Void)? = nil
     @State private var image: CGImage?
+    @Environment(\.displayScale) private var displayScale
 
     init(photo: JournalPhotoRecord, width: CGFloat, height: CGFloat, onTap: (() -> Void)? = nil) {
         self.photo = photo
@@ -233,9 +234,14 @@ struct PhotoFallbackThumbnail: View {
         .frame(width: width, height: height).clipShape(RoundedRectangle(cornerRadius: 9))
         .task(id: "\(photo.id.uuidString)-\(Int(width.rounded()))x\(Int(height.rounded()))") {
             guard width > 0, height > 0 else { return }
-            let size = CGSize(width: width * 2, height: height * 2)
-            image = await PhotoAssetResolver.thumbnailImage(relativePath: photo.thumbnailRelativePath, targetSize: size)
-            if image == nil { image = await PhotoAssetResolver.displayImage(for: photo, targetSize: size) }
+            let size = CGSize(width: width * displayScale, height: height * displayScale)
+            // Prefer the current PhotoKit original for clarity. Older saved
+            // journals may reference assets that were deleted from Photos, so
+            // keep the persisted JPEG as a fallback.
+            image = await PhotoAssetResolver.displayImage(for: photo, targetSize: size)
+            if image == nil {
+                image = await PhotoAssetResolver.thumbnailImage(relativePath: photo.thumbnailRelativePath, targetSize: size)
+            }
         }
     }
 }

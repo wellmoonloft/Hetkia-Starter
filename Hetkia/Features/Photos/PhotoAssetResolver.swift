@@ -17,7 +17,7 @@ enum PhotoAssetResolver {
     static func displayImage(for photo: JournalPhotoRecord, targetSize: CGSize) async -> CGImage? {
         if let identifier = photo.assetLocalIdentifier {
             let status = PHPhotoLibrary.authorizationStatus(for: .readWrite)
-            if status == .authorized {
+            if status == .authorized || status == .limited {
                 if let asset = PHAsset.fetchAssets(withLocalIdentifiers: [identifier], options: nil).firstObject {
                     if let original = await previewImage(for: asset, targetSize: targetSize) { return original }
                 }
@@ -91,9 +91,12 @@ enum PhotoAssetResolver {
         await withCheckedContinuation { continuation in
             let options = PHImageRequestOptions()
             options.deliveryMode = .highQualityFormat
-            options.resizeMode = .fast
+            // Match the requested display resolution exactly. `.fast` can
+            // return a smaller Photos rendition that looks soft in the detail
+            // collage, especially on 3x displays.
+            options.resizeMode = .exact
             options.isNetworkAccessAllowed = true
-            PHImageManager.default().requestImage(for: asset, targetSize: targetSize, contentMode: .aspectFit, options: options) { image, info in
+            PHImageManager.default().requestImage(for: asset, targetSize: targetSize, contentMode: .aspectFill, options: options) { image, info in
                 if (info?[PHImageResultIsDegradedKey] as? Bool) == true { return }
                 guard (info?[PHImageCancelledKey] as? Bool) != true,
                       (info?[PHImageErrorKey] as? Error) == nil else {

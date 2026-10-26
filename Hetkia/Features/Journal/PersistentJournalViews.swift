@@ -345,30 +345,8 @@ struct PersistentJournalDetailView: View {
 
     private func photoTile(_ photo: JournalPhotoRecord, index: Int, width: CGFloat, height: CGFloat) -> some View {
         Group {
-            if savedOnly {
-                Button { photoGallery = PhotoGallerySession(initialIndex: index) } label: {
-                    ZStack {
-                        PersistedJournalThumbnail(photo: photo, width: width, height: height)
-                        if photo.mediaType == "video" {
-                            Image(systemName: "play.fill")
-                                .font(.system(size: 14, weight: .bold))
-                                .foregroundStyle(.white)
-                                .padding(11)
-                                .background(.black.opacity(0.5), in: Circle())
-                                .allowsHitTesting(false)
-                        }
-                    }
-                    .frame(width: width, height: height)
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .frame(width: width, height: height)
-                .contentShape(Rectangle())
-                .accessibilityLabel(Text("photos.open.fullscreen"))
-            } else {
-                PhotoFallbackThumbnail(photo: photo, width: width, height: height) {
-                    photoGallery = PhotoGallerySession(initialIndex: index)
-                }
+            PhotoFallbackThumbnail(photo: photo, width: width, height: height) {
+                photoGallery = PhotoGallerySession(initialIndex: index)
             }
         }
         // Keep both the rendered media and its tap target inside this collage cell.

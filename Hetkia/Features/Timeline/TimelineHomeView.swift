@@ -270,24 +270,9 @@ private struct OnThisDayCard: View {
     let entry: OnThisDayEntry
 
     var body: some View {
-        ZStack(alignment: .topLeading) {
-            OnThisDayPhotoGrid(assets: entry.assets)
-
-            LinearGradient(
-                colors: [.black.opacity(0.52), .black.opacity(0.12), .clear],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-            .allowsHitTesting(false)
-
-            Text(entry.date.formatted(date: .long, time: .omitted))
-                .font(.system(size: 17, weight: .semibold, design: .serif))
-                .foregroundStyle(.white)
-                .shadow(color: .black.opacity(0.4), radius: 4, x: 0, y: 1)
-                .padding(16)
-                .allowsHitTesting(false)
-        }
+        OnThisDayPhotoGrid(assets: entry.assets, date: entry.date)
         .aspectRatio(1, contentMode: .fit)
+        .background(HetkiaPalette.paper)
         .clipShape(RoundedRectangle(cornerRadius: 19, style: .continuous))
         .contentShape(RoundedRectangle(cornerRadius: 19, style: .continuous))
     }
@@ -295,6 +280,8 @@ private struct OnThisDayCard: View {
 
 private struct OnThisDayPhotoGrid: View {
     let assets: [PHAsset]
+    let date: Date
+    @Environment(\.displayScale) private var displayScale
     private let gap: CGFloat = 5
 
     var body: some View {
@@ -303,13 +290,13 @@ private struct OnThisDayPhotoGrid: View {
             let count = photos.count
             Group {
                 if count == 1, let photo = photos.first {
-                    assetTile(photo, width: geometry.size.width, height: geometry.size.height)
+                    assetTile(photo, width: geometry.size.width, height: geometry.size.height, showsDate: true)
                 } else if count == 9 {
                     LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: gap), count: 3), spacing: gap) {
                         ForEach(Array(photos.enumerated()), id: \.element.localIdentifier) { _, photo in
                             let tileWidth = max(1, (geometry.size.width - gap * 2) / 3)
                             let tileHeight = max(1, (geometry.size.height - gap * 2) / 3)
-                            assetTile(photo, width: tileWidth, height: tileHeight)
+                            assetTile(photo, width: tileWidth, height: tileHeight, showsDate: photo.localIdentifier == photos.first?.localIdentifier)
                         }
                     }
                 } else {
@@ -318,7 +305,7 @@ private struct OnThisDayPhotoGrid: View {
                     let heroHeight = geometry.size.height * (count == 3 ? 0.64 : 0.44)
                     let tileHeight = max(1, (geometry.size.height - heroHeight - CGFloat(rows) * gap) / CGFloat(rows))
                     VStack(spacing: gap) {
-                        if let hero = photos.first { assetTile(hero, width: geometry.size.width, height: heroHeight) }
+                        if let hero = photos.first { assetTile(hero, width: geometry.size.width, height: heroHeight, showsDate: true) }
                         LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: gap), count: columns), spacing: gap) {
                             ForEach(Array(photos.dropFirst().enumerated()), id: \.element.localIdentifier) { _, asset in
                                 let width = max(1, (geometry.size.width - gap * CGFloat(columns - 1)) / CGFloat(columns))
@@ -335,15 +322,17 @@ private struct OnThisDayPhotoGrid: View {
         .background(Color.clear)
     }
 
-    private func assetTile(_ asset: PHAsset, width: CGFloat, height: CGFloat) -> some View {
-        OnThisDayAssetThumbnail(asset: asset)
+    private func assetTile(_ asset: PHAsset, width: CGFloat, height: CGFloat, showsDate: Bool = false) -> some View {
+        OnThisDayAssetThumbnail(asset: asset, date: showsDate ? date : nil, tileWidth: width)
             .frame(width: width, height: height)
-            .clipped()
+            .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
     }
 }
 
 private struct OnThisDayAssetThumbnail: View {
     let asset: PHAsset
+    let date: Date?
+    let tileWidth: CGFloat
     @State private var image: CGImage?
 
     var body: some View {
@@ -369,10 +358,32 @@ private struct OnThisDayAssetThumbnail: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .allowsHitTesting(false)
             }
+            if let date {
+                LinearGradient(
+                    colors: [.black.opacity(0.52), .black.opacity(0.12), .clear],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .allowsHitTesting(false)
+
+                Text(date.formatted(date: .long, time: .omitted))
+                    .font(.system(size: min(17, max(10, tileWidth * 0.043)), weight: .semibold, design: .serif))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.65)
+                    .foregroundStyle(.white)
+                    .shadow(color: .black.opacity(0.4), radius: 4, x: 0, y: 1)
+                    .padding(min(16, max(8, tileWidth * 0.04)))
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                    .allowsHitTesting(false)
+            }
         }
         .clipped()
-        .task(id: asset.localIdentifier) {
-            image = await PhotoAssetResolver.previewImage(for: asset, targetSize: CGSize(width: 900, height: 900))
+        .background(Color.clear)
+        .task(id: "\(asset.localIdentifier)-\(Int(tileWidth * displayScale))") {
+            let targetSize = CGSize(width: tileWidth * displayScale, height: tileWidth * displayScale)
+            image = await PhotoAssetResolver.previewImage(for: asset, targetSize: targetSize)
         }
     }
+
+    @Environment(\.displayScale) private var displayScale
 }
