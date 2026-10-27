@@ -35,8 +35,10 @@ final class HetkiaApplicationDelegate: NSObject, UIApplicationDelegate {
     private func handleOnThisDayRefresh(_ task: BGAppRefreshTask) {
         scheduleNextOnThisDayRefresh()
         let work = Task { @MainActor in
-            _ = await OnThisDayLibrary.fetch()
-            WidgetCenter.shared.reloadAllTimelines()
+            _ = await OnThisDayScanCoordinator.shared.fullScan()
+            if OnThisDayWidgetIndexStore.needsTimelineReload() {
+                WidgetCenter.shared.reloadTimelines(ofKind: "Hetkia.OnThisDay")
+            }
             task.setTaskCompleted(success: !Task.isCancelled)
         }
         task.expirationHandler = { work.cancel() }

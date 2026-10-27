@@ -2,6 +2,7 @@ import SwiftUI
 import WidgetKit
 import Photos
 import AVFoundation
+import CryptoKit
 #if os(macOS)
 import AppKit
 #else
@@ -22,6 +23,24 @@ private struct HetkiaWidgetEntry: TimelineEntry {
     let date: Date
     let memories: [WidgetMemory]
     let hasPhotoAccess: Bool
+}
+
+private struct WidgetIndexSnapshot: Codable {
+    struct Item: Codable {
+        let date: Date
+        let assetIdentifier: String
+        let assetModificationDate: Date?
+    }
+
+    let schemaVersion: Int
+    let year: Int
+    let month: Int
+    let day: Int
+    let timeZoneIdentifier: String
+    let includesScreenshotsAndScreenRecordings: Bool
+    let refreshedAt: Date
+    let entries: [Item]
+    let contentFingerprint: String
 }
 
 private struct HetkiaWidgetProvider: TimelineProvider {
@@ -55,7 +74,13 @@ private struct HetkiaWidgetProvider: TimelineProvider {
             return HetkiaWidgetEntry(date: .now, memories: [], hasPhotoAccess: false)
         }
 
-        let groups = matchingPhotoGroups()
+        let groups: [(date: Date, assets: [PHAsset])]
+        if let cachedGroups = groupsFromSharedSnapshot() {
+            groups = cachedGroups
+        } else {
+            groups = matchingPhotoGroups()
+            writeSharedSnapshot(from: groups)
+        }
         // Keep the collage readable with one or three memories. Groups are
         // discovered newest-first, then reversed so the collage reads oldest
         // anniversary to today.
@@ -115,6 +140,115 @@ private struct HetkiaWidgetProvider: TimelineProvider {
             groups.append((date: start, assets: selected))
         }
         return groups
+    }
+
+    /// Reads the app's widget-specific index so WidgetKit doesn't repeat the
+    /// historical year-by-year PhotoKit queries during normal timeline loads.
+    /// A missing, stale, incompatible, or partially deleted snapshot falls back
+    /// to the established PhotoKit scan below.
+    @MainActor
+    private func groupsFromSharedSnapshot() -> [(date: Date, assets: [PHAsset])]? {
+        guard let url = FileManager.default.containerURL(
+            forSecurityApplicationGroupIdentifier: "group.com.hetkia.app"
+        )?.appendingPathComponent("on-this-day-widget-index.json"),
+              let data = try? Data(contentsOf: url),
+              let snapshot = try? JSONDecoder().decode(WidgetIndexSnapshot.self, from: data),
+              isCurrent(snapshot),
+              snapshot.contentFingerprint == fingerprint(for: snapshot.entries) else { return nil }
+
+        let identifiers = snapshot.entries.map(\.assetIdentifier)
+        guard !identifiers.isEmpty else {
+            recordWidgetFingerprint(snapshot.contentFingerprint)
+            return []
+        }
+
+        let fetched = PHAsset.fetchAssets(withLocalIdentifiers: identifiers, options: nil)
+        var assetsByIdentifier: [String: PHAsset] = [:]
+        fetched.enumerateObjects { asset, _, _ in
+            let includesScreenshots = settingsDefaults?.bool(forKey: "hetkia.includeScreenshotsAndScreenRecordings") ?? false
+            let isVisibleMedia = !asset.isHidden && (asset.mediaType == .image || asset.mediaType == .video)
+            let isPriority = !asset.mediaSubtypes.contains(.photoScreenshot)
+                && !asset.mediaSubtypes.contains(.videoScreenRecording)
+            if isVisibleMedia && (includesScreenshots || isPriority) {
+                assetsByIdentifier[asset.localIdentifier] = asset
+            }
+        }
+        guard assetsByIdentifier.count == Set(identifiers).count else { return nil }
+
+        recordWidgetFingerprint(snapshot.contentFingerprint)
+        return snapshot.entries.compactMap { item in
+            guard let asset = assetsByIdentifier[item.assetIdentifier] else { return nil }
+            return (date: item.date, assets: [asset])
+        }
+    }
+
+    @MainActor
+    private func isCurrent(_ snapshot: WidgetIndexSnapshot) -> Bool {
+        let calendar = Calendar.autoupdatingCurrent
+        let parts = calendar.dateComponents([.year, .month, .day], from: .now)
+        let includesScreenshots = settingsDefaults?.bool(forKey: "hetkia.includeScreenshotsAndScreenRecordings") ?? false
+        return snapshot.schemaVersion == 1
+            && snapshot.year == parts.year
+            && snapshot.month == parts.month
+            && snapshot.day == parts.day
+            && snapshot.timeZoneIdentifier == calendar.timeZone.identifier
+            && snapshot.includesScreenshotsAndScreenRecordings == includesScreenshots
+    }
+
+    private func fingerprint(for entries: [WidgetIndexSnapshot.Item]) -> String {
+        let calendar = Calendar.autoupdatingCurrent
+        let parts = calendar.dateComponents([.year, .month, .day], from: .now)
+        let includesScreenshots = settingsDefaults?.bool(forKey: "hetkia.includeScreenshotsAndScreenRecordings") ?? false
+        let canonical = ([
+            "\(parts.year ?? 0)-\(parts.month ?? 0)-\(parts.day ?? 0)",
+            calendar.timeZone.identifier,
+            includesScreenshots ? "1" : "0"
+        ] + entries.sorted { $0.date > $1.date }.map { item in
+            let modification = item.assetModificationDate.map { String($0.timeIntervalSinceReferenceDate.bitPattern) } ?? "none"
+            return "\(calendar.component(.year, from: item.date)):\(item.assetIdentifier):\(modification)"
+        }).joined(separator: "\n")
+        return SHA256.hash(data: Data(canonical.utf8)).map { String(format: "%02x", $0) }.joined()
+    }
+
+    @MainActor
+    private func writeSharedSnapshot(from groups: [(date: Date, assets: [PHAsset])]) {
+        let calendar = Calendar.autoupdatingCurrent
+        let parts = calendar.dateComponents([.year, .month, .day], from: .now)
+        guard let year = parts.year, let month = parts.month, let day = parts.day,
+              let url = FileManager.default.containerURL(
+                forSecurityApplicationGroupIdentifier: "group.com.hetkia.app"
+              )?.appendingPathComponent("on-this-day-widget-index.json") else { return }
+        let items = groups.compactMap { group -> WidgetIndexSnapshot.Item? in
+            guard let first = group.assets.first else { return nil }
+            return WidgetIndexSnapshot.Item(
+                date: group.date,
+                assetIdentifier: first.localIdentifier,
+                assetModificationDate: first.modificationDate
+            )
+        }.sorted { $0.date > $1.date }
+        let includesScreenshots = settingsDefaults?.bool(forKey: "hetkia.includeScreenshotsAndScreenRecordings") ?? false
+        let snapshot = WidgetIndexSnapshot(
+            schemaVersion: 1,
+            year: year,
+            month: month,
+            day: day,
+            timeZoneIdentifier: calendar.timeZone.identifier,
+            includesScreenshotsAndScreenRecordings: includesScreenshots,
+            refreshedAt: .now,
+            entries: items,
+            contentFingerprint: fingerprint(for: items)
+        )
+        guard let data = try? JSONEncoder().encode(snapshot) else { return }
+        do {
+            try data.write(to: url, options: .atomic)
+            recordWidgetFingerprint(snapshot.contentFingerprint)
+        } catch {
+            // A later WidgetKit request can retry the legacy PhotoKit path.
+        }
+    }
+
+    private func recordWidgetFingerprint(_ fingerprint: String) {
+        settingsDefaults?.set(fingerprint, forKey: "hetkia.widget.lastReloadedFingerprint")
     }
 
     @MainActor

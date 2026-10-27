@@ -104,11 +104,26 @@ struct TimelineHomeView: View {
                 guard didLeaveActiveState else { return }
                 didLeaveActiveState = false
                 guard path.isEmpty else { return }
+                let today = PhotoDayGrouping.key(for: .now)
+                let crossedCalendarDay = today != activeCalendarDay
+                activeCalendarDay = today
                 PhotoLocationResolver.shared.resumePending(context: modelContext)
-                Task { await refresh() }
+                Task {
+                    await refresh(
+                        forceFullScan: crossedCalendarDay,
+                        showFullScanProgress: !crossedCalendarDay
+                    )
+                }
             } else {
                 didLeaveActiveState = true
             }
+        }
+        .onChange(of: path) { _, newPath in
+            guard newPath.isEmpty else { return }
+            let today = PhotoDayGrouping.key(for: .now)
+            guard today != activeCalendarDay else { return }
+            activeCalendarDay = today
+            Task { await refresh(forceFullScan: true, showFullScanProgress: false) }
         }
         .onChange(of: includeScreenshotsAndScreenRecordings) { _, _ in
             guard path.isEmpty else { return }
@@ -116,9 +131,9 @@ struct TimelineHomeView: View {
         }
         .onReceive(minuteTicker) { _ in
             let newDay = PhotoDayGrouping.key(for: .now)
-            if newDay != activeCalendarDay {
+            if newDay != activeCalendarDay && path.isEmpty {
                 activeCalendarDay = newDay
-                if path.isEmpty { Task { await refresh() } }
+                Task { await refresh(forceFullScan: true, showFullScanProgress: false) }
             }
         }
         .onOpenURL { url in
@@ -215,10 +230,14 @@ struct TimelineHomeView: View {
     }
 
     @MainActor
-    private func refresh(forceFullScan: Bool = false, isInitialLoad: Bool = false) async {
+    private func refresh(
+        forceFullScan: Bool = false,
+        isInitialLoad: Bool = false,
+        showFullScanProgress: Bool = true
+    ) async {
         guard !isRefreshing else { return }
         isRefreshing = true
-        showsScanProgress = forceFullScan
+        showsScanProgress = forceFullScan && showFullScanProgress
         defer {
             isRefreshing = false
             showsScanProgress = false
@@ -240,11 +259,13 @@ struct TimelineHomeView: View {
             // even when the subsequent PhotoKit query finds no changes.
             if forceFullScan {
                 progress = 0
-                let result = await OnThisDayLibrary.fetch { progress = $0 }
-                publishEntriesIfChanged(result)
+                if let result = await OnThisDayScanCoordinator.shared.fullScan(progress: { progress = $0 }) {
+                    publishEntriesIfChanged(result)
+                }
             } else {
-                let result = OnThisDayLibrary.refreshCurrentYear(preserving: entries)
-                publishEntriesIfChanged(result)
+                if let result = await OnThisDayScanCoordinator.shared.currentYearRefresh(preserving: entries) {
+                    publishEntriesIfChanged(result)
+                }
             }
         } else if let cachedEntries = OnThisDayCacheStore.load() {
             // A valid cache, including a valid empty result, is rendered at once.
@@ -256,14 +277,15 @@ struct TimelineHomeView: View {
             await Task.yield()
             if forceFullScan {
                 progress = 0
-                let result = await OnThisDayLibrary.fetch { progress = $0 }
+                let result = await OnThisDayScanCoordinator.shared.fullScan(progress: { progress = $0 })
                 // PhotoKit's scan and cache write are not cancellation-aware. If
                 // the refresh task is cancelled after the scan finishes, still
                 // publish its result so the visible page matches the new cache.
-                publishEntriesIfChanged(result)
+                if let result { publishEntriesIfChanged(result) }
             } else {
-                let result = OnThisDayLibrary.refreshCurrentYear(preserving: entries)
-                publishEntriesIfChanged(result)
+                if let result = await OnThisDayScanCoordinator.shared.currentYearRefresh(preserving: entries) {
+                    publishEntriesIfChanged(result)
+                }
             }
         } else {
             // A missing/expired cache needs one full historical scan to build
@@ -273,13 +295,15 @@ struct TimelineHomeView: View {
             hasResolvedInitialCache = true
             showsScanProgress = forceFullScan || isInitialLoad
             progress = 0
-            let result = await OnThisDayLibrary.fetch { value in
+            let result = await OnThisDayScanCoordinator.shared.fullScan { value in
                 if showsScanProgress { progress = value }
             }
-            publishEntriesIfChanged(result)
+            if let result { publishEntriesIfChanged(result) }
         }
         isLoading = false
-        WidgetCenter.shared.reloadTimelines(ofKind: "Hetkia.OnThisDay")
+        if OnThisDayWidgetIndexStore.needsTimelineReload(force: forceFullScan) {
+            WidgetCenter.shared.reloadTimelines(ofKind: "Hetkia.OnThisDay")
+        }
         if let pendingWidgetRoute, entries.contains(where: { $0.id == pendingWidgetRoute }) {
             path = [pendingWidgetRoute]
             self.pendingWidgetRoute = nil

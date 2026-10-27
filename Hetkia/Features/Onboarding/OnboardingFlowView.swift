@@ -102,7 +102,7 @@ struct OnboardingFlowView: View {
         didStartRecentIndex = true
         isIndexingRecentPhotos = true
         Task {
-            _ = await OnThisDayLibrary.fetch { progress in
+            _ = await OnThisDayScanCoordinator.shared.fullScan { progress in
                 model.updateInitialIndexProgress(progress)
             }
             isIndexingRecentPhotos = false

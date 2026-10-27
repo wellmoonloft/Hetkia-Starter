@@ -30,7 +30,11 @@ Background refresh is scheduled on a best-effort basis by the system and is not 
 
 The home screen first displays the local photo-index cache for the current date. When the cache is valid, a regular launch queries only the current year’s photos for today. Pulling down on the home screen forces a full scan across all years. The first scan and the first launch after a new day also scan all years.
 
-On a warm launch, the cached cards stay on screen while the current-year query runs. The home view only publishes the result when its dates or photo identifiers changed, avoiding a full-card redraw for an unchanged result. The progress indicator is reserved for the initial full scan and a user-requested full refresh.
+On a warm launch, the cached cards stay on screen while the current-year query runs. The home view only publishes the result when its dates or photo identifiers changed, avoiding a full-card redraw for an unchanged result. An in-process scan coordinator coalesces concurrent requests with the same date, time zone, filter settings, and scope. An in-flight full scan can satisfy a narrower current-year check; a narrow check cannot replace a requested full scan. Results carry generations so stale dates or older batches cannot overwrite a newer index. The progress indicator is reserved for the initial full scan and a user-requested full refresh.
+
+A full scan still queries PhotoKit by date for media from 1900 through the current year, even when saved journals exist. A saved journal does not prove that no new photos were added for that anniversary, and the complete media set needed for journal actions is distinct from the home screen’s prioritized display set. Journal persistence keeps its existing triggers and write behavior; a home-cache hit does not skip photo associations or JPEG preview generation required by an explicit user action.
+
+The main app and Widget Extension run in separate processes. The app writes a lightweight widget index through the App Group, and the widget restores assets by identifier. If the snapshot is stale or an asset is unavailable, the widget falls back to its own PhotoKit query. The app’s scan coordinator is not shared across processes, avoiding concurrent SwiftData writes from the widget.
 
 ## Screenshots
 
