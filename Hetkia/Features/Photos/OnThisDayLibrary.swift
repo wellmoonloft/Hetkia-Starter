@@ -30,7 +30,7 @@ enum OnThisDayCacheStore {
         let entries: [Entry]
     }
 
-    private static let schemaVersion = 3
+    private static let schemaVersion = 4
     private static let fileName = "on-this-day-index.json"
 
     /// Restores cards using the current PhotoKit library. A nil result means there
@@ -318,7 +318,7 @@ enum OnThisDayLibrary {
                         assetModificationDate: widgetAsset.modificationDate
                     ))
                 }
-                found.append(OnThisDayEntry(date: start, assets: JournalPhotoSelection.selectedAssets(from: assets)))
+                found.append(OnThisDayEntry(date: start, assets: JournalPhotoSelection.displayAssets(from: assets)))
             }
             progress?(Double(year - earliestYear + 1) / Double(yearCount))
             if year % 8 == 0 { await Task.yield() }
@@ -383,7 +383,7 @@ enum OnThisDayLibrary {
                 assetModificationDate: $0.modificationDate
             )
         }
-        return (OnThisDayEntry(date: start, assets: JournalPhotoSelection.selectedAssets(from: assets)), widgetEntry)
+        return (OnThisDayEntry(date: start, assets: JournalPhotoSelection.displayAssets(from: assets)), widgetEntry)
     }
 
     /// Matches the widget's existing representative-photo ordering exactly:
@@ -401,7 +401,7 @@ enum OnThisDayLibrary {
     }
 
     static func transientPhotoRecords(for assets: [PHAsset]) -> [JournalPhotoRecord] {
-        JournalPhotoSelection.selectedAssets(from: assets).enumerated().map { index, asset in
+        JournalPhotoSelection.displayAssets(from: assets).enumerated().map { index, asset in
             let addedDate: Date?
             if #available(iOS 26, macOS 26, *) { addedDate = asset.addedDate }
             else { addedDate = nil }

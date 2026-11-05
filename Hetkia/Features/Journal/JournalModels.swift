@@ -1,6 +1,7 @@
 import Foundation
 import SwiftData
 import Photos
+import CoreGraphics
 
 /// A journal is keyed by the photo's local calendar day at import time. The day key stays
 /// stable if the device later changes time zone; `capturedAt` on each photo remains absolute.
@@ -91,7 +92,7 @@ struct JournalMessagePost: Identifiable, Codable, Equatable {
 }
 
 enum JournalPhotoSelection {
-    /// Selects the same set for diary generation, detail pages, and timeline previews.
+    /// Selects the bounded set used for diary generation and representative previews.
     static func selected(from photos: [JournalPhotoRecord]) -> [JournalPhotoRecord] {
         let eligible = PhotoAssetEligibility.eligiblePersistedPhotos(photos)
         let ordered = eligible.sorted {
@@ -123,6 +124,119 @@ enum JournalPhotoSelection {
             return (lhs.creationDate ?? .distantPast) > (rhs.creationDate ?? .distantPast)
         }
         return Array(ranked.prefix(targetCount))
+    }
+
+    /// The timeline and journal detail present every eligible image. Ranking and
+    /// count reduction belong only to generation/widget selection, never display.
+    static func displayAssets(from assets: [PHAsset]) -> [PHAsset] {
+        assets.filter(PhotoAssetEligibility.allows).sorted {
+            let lhsPriority = PhotoAssetEligibility.isPriorityAsset($0)
+            let rhsPriority = PhotoAssetEligibility.isPriorityAsset($1)
+            if lhsPriority != rhsPriority { return lhsPriority && !rhsPriority }
+            let lhsHasLocation = $0.location != nil
+            let rhsHasLocation = $1.location != nil
+            if lhsHasLocation != rhsHasLocation { return lhsHasLocation && !rhsHasLocation }
+            return ($0.creationDate ?? .distantPast) > ($1.creationDate ?? .distantPast)
+        }
+    }
+
+    static func displayPhotos(from photos: [JournalPhotoRecord]) -> [JournalPhotoRecord] {
+        PhotoAssetEligibility.eligiblePersistedPhotos(photos).sorted {
+            if $0.isPriorityPhoto != $1.isPriorityPhoto { return $0.isPriorityPhoto && !$1.isPriorityPhoto }
+            let lhsHasLocation = $0.latitude != nil && $0.longitude != nil
+            let rhsHasLocation = $1.latitude != nil && $1.longitude != nil
+            if lhsHasLocation != rhsHasLocation { return lhsHasLocation && !rhsHasLocation }
+            if $0.capturedAt != $1.capturedAt { return ($0.capturedAt ?? .distantPast) > ($1.capturedAt ?? .distantPast) }
+            return $0.sortOrder < $1.sortOrder
+        }
+    }
+}
+
+/// Responsive mosaic positions expressed in normalized card coordinates.
+/// One base unit is one third of the card width; every source image gets a tile.
+enum PhotoMosaicLayout {
+    struct Tile: Identifiable {
+        let index: Int
+        let rect: CGRect
+        var id: Int { index }
+    }
+
+    static func height(width: CGFloat, count: Int, gap: CGFloat = 0) -> CGFloat {
+        guard count > 0 else { return width }
+        let rowCount = gridRowCount(for: count)
+        let unit = (width - gap * 2) / 3
+        return unit * CGFloat(rowCount) + gap * CGFloat(max(0, rowCount - 1))
+    }
+
+    static func tiles(width: CGFloat, count: Int, gap: CGFloat) -> [Tile] {
+        guard count > 0 else { return [] }
+        let height = height(width: width, count: count, gap: gap)
+        if count == 1 { return [Tile(index: 0, rect: CGRect(x: 0, y: 0, width: width, height: height))] }
+        let unit = (width - gap * 2) / 3
+        let step = unit + gap
+        let wide = unit * 2 + gap
+        if count == 2 {
+            // Two photos use a 2/3 + 1/3 split and share a two-unit height.
+            return [
+                Tile(index: 0, rect: CGRect(x: 0, y: 0, width: wide, height: height)),
+                Tile(index: 1, rect: CGRect(x: wide + gap, y: 0, width: unit, height: height))
+            ]
+        }
+        if count == 3 {
+            return [
+                Tile(index: 0, rect: CGRect(x: 0, y: 0, width: wide, height: wide)),
+                Tile(index: 1, rect: CGRect(x: 2 * step, y: 0, width: unit, height: unit)),
+                Tile(index: 2, rect: CGRect(x: 2 * step, y: step, width: unit, height: unit))
+            ]
+        }
+        let tailCount = count % 3 == 1 ? 4 : (count % 3 == 2 ? 5 : 0)
+        let fullCount = count - tailCount
+        var result: [Tile] = []
+
+        for index in 0..<fullCount {
+            let column = index % 3
+            let row = index / 3
+            result.append(Tile(
+                index: index, rect: CGRect(x: CGFloat(column) * step, y: CGFloat(row) * step, width: unit, height: unit)
+            ))
+        }
+
+        guard tailCount > 0 else { return result }
+        let baseIndex = fullCount
+        let baseRow = fullCount / 3
+        let x0: CGFloat = 0
+        let x1 = step
+        let x2 = step * 2
+        let y0 = CGFloat(baseRow) * step
+        let y1 = y0 + step
+        let y2 = y1 + step
+
+        if tailCount == 4 {
+            // Fill a 3×3 block with one 2×2, one 1×2, one 2×1, and one 1×1 tile.
+            result.append(Tile(index: baseIndex, rect: CGRect(x: x0, y: y0, width: wide, height: wide)))
+            result.append(Tile(index: baseIndex + 1, rect: CGRect(x: x2, y: y0, width: unit, height: wide)))
+            result.append(Tile(index: baseIndex + 2, rect: CGRect(x: x0, y: y2, width: wide, height: unit)))
+            result.append(Tile(index: baseIndex + 3, rect: CGRect(x: x2, y: y2, width: unit, height: unit)))
+        } else {
+            // Fill a 3×2 block with one 2×1 tile and four single cells.
+            result.append(Tile(index: baseIndex, rect: CGRect(x: x0, y: y0, width: wide, height: unit)))
+            result.append(Tile(index: baseIndex + 1, rect: CGRect(x: x2, y: y0, width: unit, height: unit)))
+            result.append(Tile(index: baseIndex + 2, rect: CGRect(x: x0, y: y1, width: unit, height: unit)))
+            result.append(Tile(index: baseIndex + 3, rect: CGRect(x: x1, y: y1, width: unit, height: unit)))
+            result.append(Tile(index: baseIndex + 4, rect: CGRect(x: x2, y: y1, width: unit, height: unit)))
+        }
+        return result
+    }
+
+    private static func gridRowCount(for count: Int) -> Int {
+        guard count > 0 else { return 0 }
+        if count == 1 { return 3 }
+        if count == 2 || count == 3 { return 2 }
+        let tailCount = count % 3 == 1 ? 4 : (count % 3 == 2 ? 5 : 0)
+        let fullCount = count - tailCount
+        let fullRows = fullCount / 3
+        let tailRows = tailCount == 4 ? 3 : (tailCount == 5 ? 2 : 0)
+        return max(1, fullRows + tailRows)
     }
 }
 

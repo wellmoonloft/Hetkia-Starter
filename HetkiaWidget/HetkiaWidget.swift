@@ -81,11 +81,11 @@ private struct HetkiaWidgetProvider: TimelineProvider {
             groups = matchingPhotoGroups()
             writeSharedSnapshot(from: groups)
         }
-        // Keep the collage readable with one or three memories. Groups are
-        // discovered newest-first, then reversed so the collage reads oldest
-        // anniversary to today.
+        // Keep up to nine anniversary memories. The fixed widget canvas has
+        // dedicated layouts for every count, including the two-photo inset.
+        // Groups are reversed so the collage reads oldest anniversary to today.
         let availableCount = groups.count
-        let selectedCount = min(3, availableCount.isMultiple(of: 2) ? max(0, availableCount - 1) : availableCount)
+        let selectedCount = min(9, availableCount)
         let chosenGroups = Array(groups.prefix(selectedCount).reversed())
         var memories: [WidgetMemory] = []
         for group in chosenGroups {
@@ -126,9 +126,7 @@ private struct HetkiaWidgetProvider: TimelineProvider {
             }
             guard !assets.isEmpty else { continue }
 
-            let count = assets.count
-            let desired = count > 9 ? 9 : (count.isMultiple(of: 2) ? max(0, count - 1) : count)
-            let selected = Array(assets.sorted {
+            let selected = assets.sorted {
                 let lhsHasLocation = $0.location != nil
                 let rhsHasLocation = $1.location != nil
                 if lhsHasLocation != rhsHasLocation { return lhsHasLocation && !rhsHasLocation }
@@ -136,7 +134,7 @@ private struct HetkiaWidgetProvider: TimelineProvider {
                 let rhsEveryday = !($1.mediaSubtypes.contains(.photoScreenshot) || $1.mediaSubtypes.contains(.videoScreenRecording))
                 if lhsEveryday != rhsEveryday { return lhsEveryday && !rhsEveryday }
                 return ($0.creationDate ?? .distantPast) < ($1.creationDate ?? .distantPast)
-            }.prefix(desired))
+            }
             groups.append((date: start, assets: selected))
         }
         return groups
@@ -373,41 +371,21 @@ private struct WidgetMemoryCollage: View {
 
     var body: some View {
         GeometryReader { geometry in
-            if memories.count == 1, let memory = memories.first {
-                linkedPhoto(memory, width: geometry.size.width, height: geometry.size.height)
-            } else if memories.count == 2 {
-                VStack(spacing: gap) {
-                    ForEach(memories) { memory in
-                        linkedPhoto(memory, width: geometry.size.width, height: (geometry.size.height - gap) / 2)
-                    }
-                }
-            } else if memories.count == 3 {
-                VStack(spacing: gap) {
-                    let availableHeight = max(1, geometry.size.height - gap)
-                    if let hero = memories.first {
-                        linkedPhoto(hero, width: geometry.size.width, height: availableHeight * 0.62)
-                    }
-                    HStack(spacing: gap) {
-                        ForEach(Array(memories.dropFirst()), id: \.id) { memory in
-                            linkedPhoto(memory, width: (geometry.size.width - gap) / 2, height: availableHeight * 0.38)
-                        }
-                    }
-                }
-            } else {
-                VStack(spacing: gap) {
-                    let photoHeight = max(1, geometry.size.height - gap * 2)
-                    let heroHeight = photoHeight * 0.48
-                    let tileHeight = (photoHeight - heroHeight) / 2
-                    if let hero = memories.first {
-                        linkedPhoto(hero, width: geometry.size.width, height: heroHeight)
-                    }
-                    LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: gap), count: 2), spacing: gap) {
-                        ForEach(Array(memories.dropFirst()), id: \.id) { memory in
-                            linkedPhoto(memory, width: (geometry.size.width - gap) / 2, height: tileHeight)
-                        }
-                    }
+            let layoutWidth: CGFloat = 1_000
+            let layoutHeight = WidgetMosaicLayout.height(width: layoutWidth, count: memories.count)
+            let tiles = WidgetMosaicLayout.tiles(width: layoutWidth, count: memories.count)
+            ZStack(alignment: .topLeading) {
+                ForEach(tiles) { tile in
+                    let x = tile.rect.minX / layoutWidth * geometry.size.width
+                    let y = tile.rect.minY / layoutHeight * geometry.size.height
+                    let width = tile.rect.width / layoutWidth * geometry.size.width
+                    let height = tile.rect.height / layoutHeight * geometry.size.height
+                    linkedPhoto(memories[tile.index], width: width, height: height)
+                        .frame(width: width, height: height)
+                        .position(x: x + width / 2, y: y + height / 2)
                 }
             }
+            .frame(width: geometry.size.width, height: geometry.size.height, alignment: .topLeading)
         }
         .background(Color.clear)
         .clipShape(rounded ? AnyShape(RoundedRectangle(cornerRadius: 12, style: .continuous)) : AnyShape(Rectangle()))
@@ -442,18 +420,106 @@ private struct WidgetMemoryCollage: View {
     }
 }
 
+/// Widget-local copy of the app mosaic geometry. The extension is a separate
+/// target/process, so it cannot depend on the app target's SwiftData model file.
+private enum WidgetMosaicLayout {
+    struct Tile: Identifiable {
+        let index: Int
+        let rect: CGRect
+        var id: Int { index }
+    }
+
+    static func height(width: CGFloat, count: Int) -> CGFloat {
+        guard count > 0 else { return width }
+        // The widget canvas is fixed. Each count-specific arrangement fills the
+        // same square, so the view can scale to any WidgetKit family size.
+        return width
+    }
+
+    static func tiles(width: CGFloat, count: Int) -> [Tile] {
+        guard count > 0 else { return [] }
+        if count == 1 { return [Tile(index: 0, rect: CGRect(x: 0, y: 0, width: width, height: width))] }
+        let unit = width / 3
+        if count == 2 {
+            // A full image with a small lower-right inset uses all memories
+            // without making two equal half-sized photos dominate the widget.
+            return [
+                Tile(index: 0, rect: CGRect(x: 0, y: 0, width: width, height: width)),
+                Tile(index: 1, rect: CGRect(x: unit * 2, y: unit * 2, width: unit, height: unit))
+            ]
+        }
+        if count == 3 {
+            return [
+                Tile(index: 0, rect: CGRect(x: 0, y: 0, width: unit * 2, height: width)),
+                Tile(index: 1, rect: CGRect(x: unit * 2, y: 0, width: unit, height: unit * 2)),
+                Tile(index: 2, rect: CGRect(x: unit * 2, y: unit * 2, width: unit, height: unit))
+            ]
+        }
+        if count == 4 {
+            return [
+                Tile(index: 0, rect: CGRect(x: 0, y: 0, width: unit * 2, height: unit * 2)),
+                Tile(index: 1, rect: CGRect(x: unit * 2, y: 0, width: unit, height: unit * 2)),
+                Tile(index: 2, rect: CGRect(x: 0, y: unit * 2, width: unit * 2, height: unit)),
+                Tile(index: 3, rect: CGRect(x: unit * 2, y: unit * 2, width: unit, height: unit))
+            ]
+        }
+        if count == 5 {
+            return [
+                Tile(index: 0, rect: CGRect(x: 0, y: 0, width: unit * 2, height: unit * 2)),
+                Tile(index: 1, rect: CGRect(x: unit * 2, y: 0, width: unit, height: unit * 2)),
+                Tile(index: 2, rect: CGRect(x: 0, y: unit * 2, width: unit, height: unit)),
+                Tile(index: 3, rect: CGRect(x: unit, y: unit * 2, width: unit, height: unit)),
+                Tile(index: 4, rect: CGRect(x: unit * 2, y: unit * 2, width: unit, height: unit))
+            ]
+        }
+        if count == 6 {
+            return (0..<6).map { index in
+                if index < 3 {
+                    return Tile(index: index, rect: CGRect(x: CGFloat(index) * unit, y: 0, width: unit, height: unit * 2))
+                }
+                return Tile(index: index, rect: CGRect(x: CGFloat(index - 3) * unit, y: unit * 2, width: unit, height: unit))
+            }
+        }
+        if count == 7 {
+            return [
+                Tile(index: 0, rect: CGRect(x: 0, y: 0, width: unit * 2, height: unit)),
+                Tile(index: 1, rect: CGRect(x: unit * 2, y: 0, width: unit, height: unit)),
+                Tile(index: 2, rect: CGRect(x: 0, y: unit, width: unit * 2, height: unit)),
+                Tile(index: 3, rect: CGRect(x: unit * 2, y: unit, width: unit, height: unit)),
+                Tile(index: 4, rect: CGRect(x: 0, y: unit * 2, width: unit, height: unit)),
+                Tile(index: 5, rect: CGRect(x: unit, y: unit * 2, width: unit, height: unit)),
+                Tile(index: 6, rect: CGRect(x: unit * 2, y: unit * 2, width: unit, height: unit))
+            ]
+        }
+        if count == 8 {
+            return [
+                Tile(index: 0, rect: CGRect(x: 0, y: 0, width: unit * 2, height: unit)),
+                Tile(index: 1, rect: CGRect(x: unit * 2, y: 0, width: unit, height: unit)),
+                Tile(index: 2, rect: CGRect(x: 0, y: unit, width: unit, height: unit)),
+                Tile(index: 3, rect: CGRect(x: unit, y: unit, width: unit, height: unit)),
+                Tile(index: 4, rect: CGRect(x: unit * 2, y: unit, width: unit, height: unit)),
+                Tile(index: 5, rect: CGRect(x: 0, y: unit * 2, width: unit, height: unit)),
+                Tile(index: 6, rect: CGRect(x: unit, y: unit * 2, width: unit, height: unit)),
+                Tile(index: 7, rect: CGRect(x: unit * 2, y: unit * 2, width: unit, height: unit))
+            ]
+        }
+        return (0..<9).map { index in
+            Tile(index: index, rect: CGRect(x: CGFloat(index % 3) * unit, y: CGFloat(index / 3) * unit, width: unit, height: unit))
+        }
+    }
+}
+
 private struct WidgetDateOverlay: View {
     let date: Date
     let width: CGFloat
     let height: CGFloat
     @Environment(\.locale) private var locale
 
-    private var dateBlockWidth: CGFloat { width * 2 / 3 }
+    private var dateBlockWidth: CGFloat { width / 2 }
     private var yearFontSize: CGFloat { min(68, max(14, min(dateBlockWidth * 0.34, height * 0.26))) }
-    private var inset: CGFloat { min(24, max(6, min(width, height) * 0.055)) }
 
     var body: some View {
-        ZStack(alignment: .topLeading) {
+        ZStack {
             LinearGradient(
                 colors: [.black.opacity(0.56), .black.opacity(0.18), .clear],
                 startPoint: .top,
@@ -468,8 +534,6 @@ private struct WidgetDateOverlay: View {
                 .frame(width: dateBlockWidth, height: height, alignment: .center)
                 .foregroundStyle(.white)
                 .shadow(color: .black.opacity(0.5), radius: 3, x: 0, y: 1)
-                .padding(inset)
-                .frame(width: width, height: height, alignment: .center)
         }
         .frame(width: width, height: height)
         .allowsHitTesting(false)

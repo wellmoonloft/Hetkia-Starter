@@ -9,16 +9,16 @@ Hetkia is an iOS photo-memory app centered on “On This Day.” The home screen
 ## Features
 
 - The first launch explains and requests full access to the photo library. After access is granted, the app scans today and matching dates from previous years, shows progress, and opens the home screen automatically.
-- The home screen shows only “On This Day.” Photos fill each card, with the date overlaid in white. Photo collages use layouts of 1, 3, 5, 7, or 9 images.
+- The home screen shows only “On This Day.” Photos fill each card, with the date overlaid in white. All eligible photos are shown in a dynamic-height collage built on a one-third grid; layouts avoid empty cells, including for even photo counts.
 - Journal details support photo viewing, full-screen paging, place maps, share images, journal editing, on-device AI drafts, and messages. Journal text and messages are stored separately. An AI draft appears above the message board; applying it asks for confirmation if journal text already exists. Browsing alone does not create a saved journal or JPEG preview.
 - “Saved Journals” in Settings reads only locally saved records, grouped by year and month in a two-column grid. Card images fill the available area, with dates and photo counts overlaid in white.
-- The large Home Screen widget creates a full-bleed collage from the first image of each matching-date group. It shows up to three years in a one- or three-image layout and prioritizes photos with GPS coordinates. The title and brand name overlay the image. StandBy and small widgets use an image-only collage. Each image can deep-link to its corresponding journal.
+- The large Home Screen widget creates a full-bleed collage from the first image of each matching-date group. It shows up to nine years in a one-third-grid collage and prioritizes photos with GPS coordinates. Two images use a full-size background image with a small inset image. The title and brand name overlay the image. StandBy and small widgets use an image-only collage. Each image can deep-link to its corresponding journal.
 - Personal messages can be edited or deleted. If the last message is deleted and the journal has no body text or AI draft, the empty journal and its linked photo previews are deleted as well.
 - The AI prompt can be reviewed and customized in Settings. The default asks for a 2–5 sentence entry grounded in the photos and metadata, written in the current system language without specific dates. Prompts are limited to 1,500 user-perceived characters; Save displays an alert and is blocked above the limit.
 - Photos, Live Photos, and videos can appear. Screenshots and screen recordings are excluded by default and can be enabled in Settings; when enabled, regular camera media is prioritized. Hidden items are omitted. Items in “Recently Deleted” are not included in standard PhotoKit library fetches.
 - Supported languages: Simplified Chinese, Traditional Chinese, English, Spanish, and Thai.
 
-Text over photos uses white with a subtle dark gradient for contrast. WidgetKit may adapt widget rendering to the display context, but it does not automatically choose text color based on each image’s brightness. Journal detail cards show “Keep the ordinary days in Hetkia” and the brand name above the content; the date and time appear in the navigation bar. Shared journal images use a separate layout and retain their date and time.
+Text over photos uses white with a subtle dark gradient for contrast. WidgetKit may adapt widget rendering to the display context, but it does not automatically choose text color based on each image’s brightness. Journal details and shared journal images use the same one-third-grid photo layout; detail card height adapts to the collage, while the share card retains its date and time.
 
 ## Platforms and AI
 

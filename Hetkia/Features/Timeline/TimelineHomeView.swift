@@ -337,7 +337,6 @@ private struct OnThisDayCard: View {
 
     var body: some View {
         OnThisDayPhotoGrid(assets: entry.assets, date: entry.date)
-        .aspectRatio(1, contentMode: .fit)
         .background(HetkiaPalette.paper)
         .clipShape(RoundedRectangle(cornerRadius: 19, style: .continuous))
         .contentShape(RoundedRectangle(cornerRadius: 19, style: .continuous))
@@ -347,71 +346,58 @@ private struct OnThisDayCard: View {
 private struct OnThisDayPhotoGrid: View {
     let assets: [PHAsset]
     let date: Date
-    @Environment(\.displayScale) private var displayScale
     private let gap: CGFloat = 5
+
+    private var photos: [PHAsset] { JournalPhotoSelection.displayAssets(from: assets) }
+    private var heightRatio: CGFloat {
+        PhotoMosaicLayout.height(width: 1_000, count: photos.count, gap: gap) / 1_000
+    }
 
     var body: some View {
         GeometryReader { geometry in
-            let photos = JournalPhotoSelection.selectedAssets(from: assets)
-            let count = photos.count
-            Group {
-                if count == 1, let photo = photos.first {
-                    assetTile(photo, width: geometry.size.width, height: geometry.size.height, showsDate: true)
-                } else if count == 9 {
-                    LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: gap), count: 3), spacing: gap) {
-                        ForEach(Array(photos.enumerated()), id: \.element.localIdentifier) { _, photo in
-                            let tileWidth = max(1, (geometry.size.width - gap * 2) / 3)
-                            let tileHeight = max(1, (geometry.size.height - gap * 2) / 3)
-                            assetTile(photo, width: tileWidth, height: tileHeight, showsDate: photo.localIdentifier == photos.first?.localIdentifier)
-                        }
-                    }
-                } else {
-                    let columns = count >= 7 ? 3 : 2
-                    let rows = max(1, Int(ceil(Double(max(count - 1, 0)) / Double(columns))))
-                    let heroHeight = geometry.size.height * (count == 3 ? 0.64 : 0.44)
-                    let tileHeight = max(1, (geometry.size.height - heroHeight - CGFloat(rows) * gap) / CGFloat(rows))
-                    VStack(spacing: gap) {
-                        if let hero = photos.first { assetTile(hero, width: geometry.size.width, height: heroHeight, showsDate: true) }
-                        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: gap), count: columns), spacing: gap) {
-                            ForEach(Array(photos.dropFirst().enumerated()), id: \.element.localIdentifier) { _, asset in
-                                let width = max(1, (geometry.size.width - gap * CGFloat(columns - 1)) / CGFloat(columns))
-                                assetTile(asset, width: width, height: tileHeight)
-                            }
-                        }
-                    }
+            let tiles = PhotoMosaicLayout.tiles(width: geometry.size.width, count: photos.count, gap: gap)
+            ZStack(alignment: .topLeading) {
+                ForEach(tiles) { tile in
+                    assetTile(photos[tile.index], width: tile.rect.width, height: tile.rect.height)
+                        .frame(width: tile.rect.width, height: tile.rect.height)
+                        .position(x: tile.rect.midX, y: tile.rect.midY)
                 }
+                dateOverlay(width: geometry.size.width, height: geometry.size.height, tiles: tiles)
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-            .clipped()
+            .frame(width: geometry.size.width, height: geometry.size.height, alignment: .topLeading)
         }
-        .aspectRatio(1, contentMode: .fit)
+        .aspectRatio(1 / heightRatio, contentMode: .fit)
         .background(Color.clear)
     }
 
-    private func assetTile(_ asset: PHAsset, width: CGFloat, height: CGFloat, showsDate: Bool = false) -> some View {
+    private func assetTile(_ asset: PHAsset, width: CGFloat, height: CGFloat) -> some View {
         OnThisDayAssetThumbnail(asset: asset, tileWidth: width)
             .frame(width: width, height: height)
-            .overlay(alignment: .topLeading) {
-                if showsDate {
-                    ZStack(alignment: .topLeading) {
-                        LinearGradient(
-                            colors: [.black.opacity(0.52), .black.opacity(0.12), .clear],
-                            startPoint: .top,
-                            endPoint: .bottom
-                        )
-                        Text(date.formatted(date: .long, time: .omitted))
-                            .font(.system(size: min(17, max(10, width * 0.043)), weight: .semibold, design: .serif))
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.65)
-                            .foregroundStyle(.white)
-                            .shadow(color: .black.opacity(0.4), radius: 4, x: 0, y: 1)
-                            .padding(min(16, max(8, width * 0.04)))
-                    }
-                    .frame(width: width, height: height, alignment: .topLeading)
-                    .allowsHitTesting(false)
-                }
-            }
             .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
+    }
+
+    private func dateOverlay(width: CGFloat, height: CGFloat, tiles: [PhotoMosaicLayout.Tile]) -> some View {
+        ZStack(alignment: .topLeading) {
+            LinearGradient(colors: [.black.opacity(0.52), .black.opacity(0.12), .clear], startPoint: .top, endPoint: .bottom)
+                .mask {
+                    Canvas { context, _ in
+                        for tile in tiles {
+                            let path = Path(roundedRect: tile.rect, cornerRadius: 9)
+                            context.fill(path, with: .color(.white))
+                        }
+                    }
+                }
+            Text(date.formatted(date: .long, time: .omitted))
+                .font(.system(size: min(17, max(10, width * 0.043)), weight: .semibold, design: .serif))
+                .lineLimit(1)
+                .minimumScaleFactor(0.65)
+                .foregroundStyle(.white)
+                .shadow(color: .black.opacity(0.4), radius: 4, x: 0, y: 1)
+                .padding(min(16, max(8, width * 0.04)))
+                .frame(width: width / 2, alignment: .leading)
+        }
+        .frame(width: width, height: height, alignment: .topLeading)
+        .allowsHitTesting(false)
     }
 }
 

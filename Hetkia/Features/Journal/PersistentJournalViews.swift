@@ -39,7 +39,7 @@ struct PersistentJournalDetailView: View {
     @ScaledMetric(relativeTo: .caption) private var captionFontSize: CGFloat = 12
 
     private enum InputTarget: Hashable { case diary, edit(UUID), compose }
-    private var selectedPhotos: [JournalPhotoRecord] { JournalPhotoSelection.selected(from: displayPhotos) }
+    private var selectedPhotos: [JournalPhotoRecord] { JournalPhotoSelection.displayPhotos(from: displayPhotos) }
     private var posts: [JournalMessagePost] {
         record.messagePosts
             .filter { $0.kind == .note }
@@ -109,9 +109,8 @@ struct PersistentJournalDetailView: View {
             ScrollViewReader { proxy in
                 ScrollView(.vertical) {
                     VStack(spacing: 18) {
-                        persistentPage(photoAreaHeight: pageWidth)
+                        persistentPage(photoAreaWidth: pageWidth - 24)
                             .frame(width: pageWidth)
-                            .frame(minHeight: pageWidth * 4.0 / 3.0, alignment: .top)
                             .fixedSize(horizontal: false, vertical: true)
                             .shadow(color: HetkiaPalette.ink.opacity(0.12), radius: 18, y: 8)
                         actionPanel.frame(width: pageWidth)
@@ -194,7 +193,7 @@ struct PersistentJournalDetailView: View {
         }
     }
 
-    private func persistentPage(photoAreaHeight: CGFloat) -> some View {
+    private func persistentPage(photoAreaWidth: CGFloat) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack {
                 Text("page.footer")
@@ -206,7 +205,7 @@ struct PersistentJournalDetailView: View {
             .padding(.top, 24)
             .padding(.bottom, 20)
 
-            persistentPhotoGrid(height: photoAreaHeight)
+            persistentPhotoGrid(width: photoAreaWidth)
             if !record.title.isEmpty {
                 Text(verbatim: record.title)
                     .font(.system(size: headingFontSize, design: .serif))
@@ -264,16 +263,11 @@ struct PersistentJournalDetailView: View {
                     .foregroundStyle(HetkiaPalette.secondaryInk)
                     .padding(.top, 8)
             }
-            Spacer(minLength: 10)
             if !locationCities.isEmpty {
                 VStack(alignment: .leading, spacing: 5) {
                     ForEach(locationCities) { item in
                         Button {
-                            guard let latitude = item.photo.latitude, let longitude = item.photo.longitude else { return }
-                            mapDestination = PhotoMapDestination(
-                                coordinate: CLLocationCoordinate2D(latitude: latitude, longitude: longitude),
-                                title: item.name
-                            )
+                            openMap(for: item.photo, title: item.name)
                         } label: {
                             Label(item.name, systemImage: "mappin.and.ellipse")
                                 .font(.system(size: captionFontSize)).foregroundStyle(HetkiaPalette.secondaryInk)
@@ -285,11 +279,7 @@ struct PersistentJournalDetailView: View {
             } else if let location = resolvedLocationText {
                 if let mapPhoto {
                     Button {
-                        guard let latitude = mapPhoto.latitude, let longitude = mapPhoto.longitude else { return }
-                        mapDestination = PhotoMapDestination(
-                            coordinate: CLLocationCoordinate2D(latitude: latitude, longitude: longitude),
-                            title: location
-                        )
+                        openMap(for: mapPhoto, title: location)
                     } label: {
                         Label(location, systemImage: "mappin.and.ellipse")
                             .font(.system(size: captionFontSize)).foregroundStyle(HetkiaPalette.secondaryInk)
@@ -306,41 +296,40 @@ struct PersistentJournalDetailView: View {
         .background(HetkiaPalette.page, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 
-    private func persistentPhotoGrid(height: CGFloat) -> some View {
-        GeometryReader { geometry in
-            let photos = selectedPhotos
-            let count = photos.count
+    private func persistentPhotoGrid(width: CGFloat) -> some View {
+        let photos = selectedPhotos
+        let height = PhotoMosaicLayout.height(width: max(1, width), count: photos.count, gap: 5)
+        return GeometryReader { geometry in
             let gap: CGFloat = 5
-            Group {
-                if count == 1, let photo = photos.first {
-                    photoTile(photo, index: 0, width: geometry.size.width, height: geometry.size.height)
-                } else if count == 9 {
-                    LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: gap), count: 3), spacing: gap) {
-                        ForEach(Array(photos.enumerated()), id: \.element.id) { index, photo in
-                            let tileSide = max(1, (geometry.size.width - gap * 2) / 3)
-                            photoTile(photo, index: index, width: tileSide, height: tileSide)
-                        }
-                    }
-                } else {
-                    let columns = count >= 7 ? 3 : 2
-                    let rows = max(1, Int(ceil(Double(max(count - 1, 0)) / Double(columns))))
-                    let heroHeight = geometry.size.height * (count == 3 ? 0.64 : 0.44)
-                    let tileGapHeight = CGFloat(rows) * gap
-                    let tileHeight = max(1, (geometry.size.height - heroHeight - tileGapHeight) / CGFloat(rows))
-                    VStack(spacing: gap) {
-                        if let hero = photos.first { photoTile(hero, index: 0, width: geometry.size.width, height: heroHeight) }
-                        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: gap), count: columns), spacing: gap) {
-                            ForEach(Array(photos.dropFirst().enumerated()), id: \.element.id) { offset, photo in
-                                photoTile(photo, index: offset + 1, width: max(1, (geometry.size.width - gap * CGFloat(columns - 1)) / CGFloat(columns)), height: tileHeight)
-                            }
-                        }
-                    }
+            let tiles = PhotoMosaicLayout.tiles(width: geometry.size.width, count: photos.count, gap: gap)
+            ZStack(alignment: .topLeading) {
+                ForEach(tiles) { tile in
+                    photoTile(photos[tile.index], index: tile.index, width: tile.rect.width, height: tile.rect.height)
+                        .frame(width: tile.rect.width, height: tile.rect.height)
+                        .position(x: tile.rect.midX, y: tile.rect.midY)
                 }
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .frame(width: geometry.size.width, height: geometry.size.height, alignment: .topLeading)
             .clipShape(RoundedRectangle(cornerRadius: 9))
             .contentShape(RoundedRectangle(cornerRadius: 9))
-        }.frame(height: max(1, height))
+        }
+        .frame(height: max(1, height))
+    }
+
+    @MainActor
+    private func openMap(for photo: JournalPhotoRecord, title: String) {
+        guard let latitude = photo.latitude, let longitude = photo.longitude else { return }
+        var coordinate = CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
+
+        // Prefer PhotoKit's current coordinate for this exact asset. The persisted
+        // full-precision value remains the fallback when the original is unavailable.
+        if let identifier = photo.assetLocalIdentifier,
+           let asset = PHAsset.fetchAssets(withLocalIdentifiers: [identifier], options: nil).firstObject,
+           let liveCoordinate = asset.location?.coordinate,
+           CLLocationCoordinate2DIsValid(liveCoordinate) {
+            coordinate = liveCoordinate
+        }
+        mapDestination = PhotoMapDestination(coordinate: coordinate, title: title)
     }
 
     private func photoTile(_ photo: JournalPhotoRecord, index: Int, width: CGFloat, height: CGFloat) -> some View {
@@ -395,7 +384,7 @@ struct PersistentJournalDetailView: View {
             return
         }
         var images: [CGImage] = []
-        for photo in selectedPhotos.prefix(9) {
+        for photo in selectedPhotos {
             let targetSize = CGSize(width: 1200, height: 1200)
             let image: CGImage?
             if savedOnly {
@@ -1168,7 +1157,7 @@ private struct JournalShareCard: View {
                     .foregroundStyle(HetkiaPalette.secondaryInk)
             }
             JournalSharePhotoGrid(photos: photos)
-                .frame(height: 1080)
+                .frame(height: PhotoMosaicLayout.height(width: 968, count: photos.count, gap: 10))
                 .padding(.vertical, 26)
             if !title.isEmpty {
                 Text(verbatim: title).font(.system(size: 42, design: .serif))
@@ -1207,43 +1196,15 @@ private struct JournalSharePhotoGrid: View {
         GeometryReader { geometry in
             let count = photos.count
             let gap: CGFloat = 10
-            Group {
-                if count == 1, let photo = photos.first {
-                    tile(photo, width: geometry.size.width, height: geometry.size.height)
-                } else if count == 9 {
-                    VStack(spacing: gap) {
-                        ForEach(0..<3, id: \.self) { row in
-                            HStack(spacing: gap) {
-                                ForEach(0..<3, id: \.self) { column in
-                                    let index = row * 3 + column
-                                    if photos.indices.contains(index) {
-                                        tile(photos[index], width: (geometry.size.width - 2 * gap) / 3, height: (geometry.size.height - 2 * gap) / 3)
-                                    }
-                                }
-                            }
-                        }
-                    }
-                } else if count > 1 {
-                    let columns = count >= 7 ? 3 : 2
-                    let rows = max(1, Int(ceil(Double(count - 1) / Double(columns))))
-                    let heroHeight = geometry.size.height * (count == 3 ? 0.64 : 0.44)
-                    let tileHeight = (geometry.size.height - heroHeight - CGFloat(rows) * gap) / CGFloat(rows)
-                    VStack(spacing: gap) {
-                        tile(photos[0], width: geometry.size.width, height: heroHeight)
-                        ForEach(0..<rows, id: \.self) { row in
-                            HStack(spacing: gap) {
-                                ForEach(0..<columns, id: \.self) { column in
-                                    let index = 1 + row * columns + column
-                                    if photos.indices.contains(index) {
-                                        tile(photos[index], width: (geometry.size.width - CGFloat(columns - 1) * gap) / CGFloat(columns), height: tileHeight)
-                                    }
-                                }
-                            }
-                        }
-                    }
+            let tiles = PhotoMosaicLayout.tiles(width: geometry.size.width, count: count, gap: gap)
+            ZStack(alignment: .topLeading) {
+                ForEach(tiles) { tileLayout in
+                    tile(photos[tileLayout.index], width: tileLayout.rect.width, height: tileLayout.rect.height)
+                        .frame(width: tileLayout.rect.width, height: tileLayout.rect.height)
+                        .position(x: tileLayout.rect.midX, y: tileLayout.rect.midY)
                 }
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .frame(width: geometry.size.width, height: geometry.size.height, alignment: .topLeading)
             .background(Color.clear)
             .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
         }
