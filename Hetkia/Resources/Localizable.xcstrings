@@ -6150,6 +6150,74 @@
         }
       }
     },
+    "onthisday.home.read-journal" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Read that day’s journal"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Leer el diario de ese día"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "อ่านบันทึกวันนั้น"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "阅读当天日记"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "閱讀當天日記"
+          }
+        }
+      }
+    },
+    "onthisday.home.write-journal" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Write the journal"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Escribir el diario"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ไปเขียนบันทึก"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "去写日记吧"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "去寫日記吧"
+          }
+        }
+      }
+    },
     "onthisday.scanning" : {
       "localizations" : {
         "en" : {
@@ -7715,36 +7783,35 @@
     },
     "photos.journal.empty" : {
       "comment" : "Empty journal",
-      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "No draft yet. Generate one from the photos or write it yourself."
+            "value" : "No journal for this day yet. Remember to note your thoughts or generate one with AI."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Aún no hay borrador. Puedes generarlo a partir de las fotos o escribirlo tú."
+            "value" : "Aún no hay diario para este día. Recuerda dejar tus impresiones o generarlo con IA."
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ยังไม่มีฉบับร่าง คุณสร้างจากรูปภาพหรือเขียนเองได้"
+            "value" : "วันนี้ยังไม่มีบันทึก อย่าลืมจดความรู้สึกหรือสร้างด้วย AI"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "还没有草稿。你可以根据照片生成，也可以自行撰写。"
+            "value" : "当天还没有日记，记得留下感想或者用AI生成。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "尚無草稿。你可以根據照片產生草稿，也可以自行撰寫。"
+            "value" : "當天還沒有日記，記得留下感想或者用 AI 產生。"
           }
         }
       }

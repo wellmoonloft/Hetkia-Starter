@@ -896,7 +896,7 @@ struct PersistentJournalDetailView: View {
     }
 }
 
-private struct PhotoGallerySession: Identifiable {
+struct PhotoGallerySession: Identifiable {
     let id = UUID()
     let initialIndex: Int
 }
@@ -1407,7 +1407,7 @@ private struct PhotoLocationMapView: View {
     }
 }
 
-private struct PhotoFullScreenGallery: View {
+struct PhotoFullScreenGallery: View {
     @Environment(\.dismiss) private var dismiss
     let photos: [JournalPhotoRecord]
     @State private var selection: Int

@@ -57,11 +57,12 @@ struct TimelineHomeView: View {
                             } else {
                                 LazyVGrid(columns: columns, alignment: .center, spacing: 16) {
                                     ForEach(entries) { entry in
-                                        Button { path.append(entry.id) } label: {
-                                            OnThisDayCard(entry: entry)
+                                        let saved = savedRecords
+                                            .filter { $0.dayKey == entry.id }
+                                            .max { $0.updatedAt < $1.updatedAt }
+                                        OnThisDayCard(entry: entry, savedRecord: saved) {
+                                            path.append(entry.id)
                                         }
-                                        .buttonStyle(.plain)
-                                        .accessibilityLabel(entry.date.formatted(date: .long, time: .omitted))
                                     }
                                 }
                             }
@@ -334,18 +335,90 @@ struct TimelineHomeView: View {
 
 private struct OnThisDayCard: View {
     let entry: OnThisDayEntry
+    let savedRecord: JournalRecord?
+    let onOpenDetail: () -> Void
+    @State private var photoGallery: PhotoGallerySession?
+
+    private var galleryPhotos: [JournalPhotoRecord] {
+        OnThisDayLibrary.transientPhotoRecords(for: entry.assets)
+    }
+
+    private var savedBodyText: String? {
+        guard let text = savedRecord?.bodyText.trimmingCharacters(in: .whitespacesAndNewlines), !text.isEmpty else {
+            return nil
+        }
+        return text
+    }
 
     var body: some View {
-        OnThisDayPhotoGrid(assets: entry.assets, date: entry.date)
-        .background(HetkiaPalette.paper)
-        .clipShape(RoundedRectangle(cornerRadius: 19, style: .continuous))
-        .contentShape(RoundedRectangle(cornerRadius: 19, style: .continuous))
+        VStack(alignment: .leading, spacing: 10) {
+            Button(action: onOpenDetail) {
+                Text(entry.date.formatted(date: .long, time: .omitted))
+                    .font(.system(size: 17, weight: .semibold, design: .serif))
+                    .foregroundStyle(HetkiaPalette.ink)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(entry.date.formatted(date: .long, time: .omitted))
+
+            OnThisDayPhotoGrid(assets: entry.assets) { index in
+                photoGallery = PhotoGallerySession(initialIndex: index)
+            }
+
+            Button(action: onOpenDetail) {
+                VStack(alignment: .leading, spacing: 10) {
+                    Group {
+                        if let savedBodyText {
+                            Text(verbatim: savedBodyText)
+                                .foregroundStyle(HetkiaPalette.ink)
+                        } else {
+                            Text("photos.journal.empty")
+                                .foregroundStyle(HetkiaPalette.secondaryInk)
+                        }
+                    }
+                    .font(.system(size: 14))
+                    .lineSpacing(3)
+                    .lineLimit(2)
+                    .truncationMode(.tail)
+                    .multilineTextAlignment(.leading)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                    HStack {
+                        Spacer(minLength: 0)
+                        HStack(spacing: 6) {
+                            Text(savedBodyText == nil ? "onthisday.home.write-journal" : "onthisday.home.read-journal")
+                                .font(.system(size: 14, weight: .medium))
+                            Image(systemName: "arrow.right")
+                                .font(.system(size: 13, weight: .medium))
+                        }
+                        .foregroundStyle(HetkiaPalette.ink)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+#if os(macOS)
+        .sheet(item: $photoGallery) { session in
+            PhotoFullScreenGallery(photos: galleryPhotos, initialIndex: session.initialIndex)
+                .frame(minWidth: 760, minHeight: 620)
+        }
+#else
+        .fullScreenCover(item: $photoGallery) { session in
+            PhotoFullScreenGallery(photos: galleryPhotos, initialIndex: session.initialIndex)
+        }
+#endif
     }
 }
 
 private struct OnThisDayPhotoGrid: View {
     let assets: [PHAsset]
-    let date: Date
+    let onPhotoSelected: (Int) -> Void
     private let gap: CGFloat = 5
 
     private var photos: [PHAsset] { JournalPhotoSelection.displayAssets(from: assets) }
@@ -358,11 +431,16 @@ private struct OnThisDayPhotoGrid: View {
             let tiles = PhotoMosaicLayout.tiles(width: geometry.size.width, count: photos.count, gap: gap)
             ZStack(alignment: .topLeading) {
                 ForEach(tiles) { tile in
-                    assetTile(photos[tile.index], width: tile.rect.width, height: tile.rect.height)
-                        .frame(width: tile.rect.width, height: tile.rect.height)
-                        .position(x: tile.rect.midX, y: tile.rect.midY)
+                    Button {
+                        onPhotoSelected(tile.index)
+                    } label: {
+                        assetTile(photos[tile.index], width: tile.rect.width, height: tile.rect.height)
+                    }
+                    .buttonStyle(.plain)
+                    .frame(width: tile.rect.width, height: tile.rect.height)
+                    .position(x: tile.rect.midX, y: tile.rect.midY)
+                    .accessibilityLabel(Text("photos.open.fullscreen"))
                 }
-                dateOverlay(width: geometry.size.width, height: geometry.size.height, tiles: tiles)
             }
             .frame(width: geometry.size.width, height: geometry.size.height, alignment: .topLeading)
         }
@@ -374,30 +452,7 @@ private struct OnThisDayPhotoGrid: View {
         OnThisDayAssetThumbnail(asset: asset, tileWidth: width)
             .frame(width: width, height: height)
             .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
-    }
-
-    private func dateOverlay(width: CGFloat, height: CGFloat, tiles: [PhotoMosaicLayout.Tile]) -> some View {
-        ZStack(alignment: .topLeading) {
-            LinearGradient(colors: [.black.opacity(0.52), .black.opacity(0.12), .clear], startPoint: .top, endPoint: .bottom)
-                .mask {
-                    Canvas { context, _ in
-                        for tile in tiles {
-                            let path = Path(roundedRect: tile.rect, cornerRadius: 9)
-                            context.fill(path, with: .color(.white))
-                        }
-                    }
-                }
-            Text(date.formatted(date: .long, time: .omitted))
-                .font(.system(size: min(17, max(10, width * 0.043)), weight: .semibold, design: .serif))
-                .lineLimit(1)
-                .minimumScaleFactor(0.65)
-                .foregroundStyle(.white)
-                .shadow(color: .black.opacity(0.4), radius: 4, x: 0, y: 1)
-                .padding(min(16, max(8, width * 0.04)))
-                .frame(width: width / 2, alignment: .leading)
-        }
-        .frame(width: width, height: height, alignment: .topLeading)
-        .allowsHitTesting(false)
+            .contentShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
     }
 }
 
