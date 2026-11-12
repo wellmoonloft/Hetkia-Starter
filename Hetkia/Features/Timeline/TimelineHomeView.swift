@@ -183,23 +183,55 @@ struct TimelineHomeView: View {
                 let action = url.pathComponents.dropFirst().first ?? ""
                 switch action {
                 case "moment":
-                    showMomentPublishSheet = true
+                    openMomentPublishFromDeepLink()
                 case "essay":
-                    pendingPublishEssay = true
-                    if hasResolvedInitialCache {
-                        presentEssayPublishSheet()
-                    } else {
-                        Task {
-                            await refresh(isInitialLoad: false)
-                            guard pendingPublishEssay else { return }
-                            presentEssayPublishSheet()
-                        }
-                    }
+                    openEssayPublishFromDeepLink()
                 default:
                     break
                 }
             default:
                 break
+            }
+        }
+    }
+
+    private var hasBlockingSheetForPublishDeepLink: Bool {
+        showSettings || showPublishSettings || showEssayPublishSheet || showMomentPublishSheet
+    }
+
+    private func dismissSheetsBlockingPublishDeepLink() {
+        showSettings = false
+        showPublishSettings = false
+        showEssayPublishSheet = false
+        showMomentPublishSheet = false
+    }
+
+    private func openMomentPublishFromDeepLink() {
+        rootTab = .onThisDay
+        Task { @MainActor in
+            if hasBlockingSheetForPublishDeepLink {
+                dismissSheetsBlockingPublishDeepLink()
+                try? await Task.sleep(for: .milliseconds(350))
+            }
+            showMomentPublishSheet = true
+        }
+    }
+
+    private func openEssayPublishFromDeepLink() {
+        rootTab = .onThisDay
+        pendingPublishEssay = true
+        Task { @MainActor in
+            if hasBlockingSheetForPublishDeepLink {
+                dismissSheetsBlockingPublishDeepLink()
+                try? await Task.sleep(for: .milliseconds(350))
+            }
+            guard pendingPublishEssay else { return }
+            if hasResolvedInitialCache {
+                presentEssayPublishSheet()
+            } else {
+                await refresh(isInitialLoad: false)
+                guard pendingPublishEssay else { return }
+                presentEssayPublishSheet()
             }
         }
     }
