@@ -9,15 +9,16 @@ import UIKit
 #endif
 import Combine
 
-enum TimelineBrowseMode: Equatable { case all, year, month }
-
 struct TimelineHomeView: View {
     @AppStorage(PhotoAssetEligibility.includeScreenshotsDefaultsKey, store: PhotoAssetEligibility.sharedDefaults) private var includeScreenshotsAndScreenRecordings = false
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \JournalRecord.localDay, order: .reverse) private var savedRecords: [JournalRecord]
     @State private var entries: [OnThisDayEntry] = []
-    @State private var path: [String] = []
+    @State private var path: [TimelineRootRoute] = []
+    @State private var rootTab: TimelineRootTab = .onThisDay
+    @State private var onThisDayScrollMetrics = TimelineScrollMetrics()
+    @State private var savedJournalsScrollMetrics = TimelineScrollMetrics()
     @State private var isLoading = true
     @State private var hasResolvedInitialCache = false
     @State private var progress = 0.0
@@ -47,52 +48,42 @@ struct TimelineHomeView: View {
             )
 
             NavigationStack(path: $path) {
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 18) {
-                        header
-                        if !PhotoLibraryService.hasFullReadAccess {
-                            permissionState
-                        } else if isLoading {
-                            if showsScanProgress {
-                                loadingState
-                            } else {
-                                Color.clear.frame(height: 54)
-                            }
-                        } else {
-                            if showsScanProgress {
-                                loadingState
-                            }
-                            if entries.isEmpty {
-                                emptyOnThisDayState
-                            } else {
-                                LazyVGrid(columns: columns, alignment: .center, spacing: 16) {
-                                    ForEach(entries) { entry in
-                                        let saved = savedRecords
-                                            .filter { $0.dayKey == entry.id }
-                                            .max { $0.updatedAt < $1.updatedAt }
-                                        OnThisDayCard(entry: entry, savedRecord: saved) {
-                                            path.append(entry.id)
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    .padding(.horizontal, 18)
-                    .padding(.top, 16)
-                    .padding(.bottom, 28)
-                    .frame(maxWidth: 1_100)
-                    .frame(maxWidth: .infinity)
+                ZStack {
+                    onThisDayRootScroll(columns: columns)
+                        .opacity(rootTab == .onThisDay ? 1 : 0)
+                        .allowsHitTesting(rootTab == .onThisDay)
+                    savedJournalsRootScroll
+                        .opacity(rootTab == .savedJournals ? 1 : 0)
+                        .allowsHitTesting(rootTab == .savedJournals)
                 }
                 .background(HetkiaPalette.paper.ignoresSafeArea())
-                .refreshable { await refresh(forceFullScan: true) }
-                .navigationDestination(for: String.self) { dayKey in
-                    if let entry = entries.first(where: { $0.id == dayKey }) {
-                        let existing = savedRecords.filter { $0.dayKey == dayKey }.max { $0.updatedAt < $1.updatedAt }
-                        let record = existing ?? JournalRecord(dayKey: dayKey, localDay: entry.date, source: .manual)
-                        PersistentJournalDetailView(record: record, liveAssets: entry.assets, isTransient: existing == nil)
-                    } else {
-                        ContentUnavailableView("onthisday.empty", systemImage: "calendar")
+                .overlay(alignment: .bottomLeading) {
+#if !os(macOS)
+                    if floatingBarVisible {
+                        HomeHistoryFloatingBar(rootTab: $rootTab)
+                            .padding(.leading, 12)
+                            .padding(.bottom, 10)
+                            .transition(.move(edge: .bottom).combined(with: .opacity))
+                    }
+#endif
+                }
+                .animation(.spring(response: 0.32, dampingFraction: 0.86), value: floatingBarVisible)
+                .navigationDestination(for: TimelineRootRoute.self) { route in
+                    switch route {
+                    case .onThisDay(let dayKey):
+                        if let entry = entries.first(where: { $0.id == dayKey }) {
+                            let existing = savedRecords.filter { $0.dayKey == dayKey }.max { $0.updatedAt < $1.updatedAt }
+                            let record = existing ?? JournalRecord(dayKey: dayKey, localDay: entry.date, source: .manual)
+                            PersistentJournalDetailView(record: record, liveAssets: entry.assets, isTransient: existing == nil)
+                        } else {
+                            ContentUnavailableView("onthisday.empty", systemImage: "calendar")
+                        }
+                    case .savedJournal(let dayKey):
+                        if let record = savedRecords.filter({ $0.dayKey == dayKey }).max(by: { $0.updatedAt < $1.updatedAt }) {
+                            PersistentJournalDetailView(record: record, savedOnly: true)
+                        } else {
+                            ContentUnavailableView("settings.saved-journals.empty", systemImage: "book.closed")
+                        }
                     }
                 }
                 #if !os(macOS)
@@ -182,10 +173,11 @@ struct TimelineHomeView: View {
         }
         .onOpenURL { url in
             guard url.scheme == "hetkia" else { return }
+            rootTab = .onThisDay
             switch url.host {
             case "onthisday":
                 let key = url.pathComponents.dropFirst().joined(separator: "/")
-                if entries.contains(where: { $0.id == key }) { path = [key] }
+                if entries.contains(where: { $0.id == key }) { path = [.onThisDay(dayKey: key)] }
                 else { pendingWidgetRoute = key; Task { await refresh() } }
             case "publish":
                 let action = url.pathComponents.dropFirst().first ?? ""
@@ -213,6 +205,7 @@ struct TimelineHomeView: View {
     }
 
     private func presentEssayPublishSheet() {
+        rootTab = .onThisDay
         let context = todayEssayPublishContext()
         essayPublishPhotos = context.photos
         essayPublishTitle = context.title
@@ -434,9 +427,106 @@ struct TimelineHomeView: View {
             WidgetCenter.shared.reloadTimelines(ofKind: "Hetkia.OnThisDay")
         }
         if let pendingWidgetRoute, entries.contains(where: { $0.id == pendingWidgetRoute }) {
-            path = [pendingWidgetRoute]
+            rootTab = .onThisDay
+            path = [.onThisDay(dayKey: pendingWidgetRoute)]
             self.pendingWidgetRoute = nil
         }
+    }
+
+    private var listBottomInset: CGFloat {
+#if os(macOS)
+        28
+#else
+        floatingBarVisible ? 78 : 28
+#endif
+    }
+
+    private var floatingBarVisible: Bool {
+        guard path.isEmpty else { return false }
+        guard !showSettings, !showEssayPublishSheet, !showMomentPublishSheet, !showPublishSettings else { return false }
+#if os(macOS)
+        return false
+#else
+        let metrics = rootTab == .onThisDay ? onThisDayScrollMetrics : savedJournalsScrollMetrics
+        if !metrics.contentExceedsViewport { return true }
+        return metrics.offset > 20
+#endif
+    }
+
+    @ViewBuilder
+    private func onThisDayRootScroll(columns: [GridItem]) -> some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 18) {
+                header
+                if !PhotoLibraryService.hasFullReadAccess {
+                    permissionState
+                } else if isLoading, rootTab == .onThisDay {
+                    if showsScanProgress {
+                        loadingState
+                    } else {
+                        Color.clear.frame(height: 54)
+                    }
+                } else {
+                    if showsScanProgress, rootTab == .onThisDay {
+                        loadingState
+                    }
+                    if entries.isEmpty {
+                        emptyOnThisDayState
+                    } else {
+                        LazyVGrid(columns: columns, alignment: .center, spacing: 16) {
+                            ForEach(entries) { entry in
+                                let saved = savedRecords
+                                    .filter { $0.dayKey == entry.id }
+                                    .max { $0.updatedAt < $1.updatedAt }
+                                OnThisDayCard(entry: entry, savedRecord: saved) {
+                                    path.append(.onThisDay(dayKey: entry.id))
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            .padding(.horizontal, 18)
+            .padding(.top, 16)
+            .padding(.bottom, listBottomInset)
+            .frame(maxWidth: 1_100)
+            .frame(maxWidth: .infinity)
+        }
+        .refreshable { await refresh(forceFullScan: true) }
+#if !os(macOS)
+        .timelineTracksScrollMetrics($onThisDayScrollMetrics)
+#endif
+    }
+
+    private var savedJournalsRootScroll: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 14) {
+                savedJournalsHeader
+                SavedJournalsRootContent(
+                    savedRecords: savedRecords,
+                    bottomInset: listBottomInset
+                ) { record in
+                    path.append(.savedJournal(dayKey: record.dayKey))
+                }
+            }
+            .padding(.top, 16)
+        }
+#if !os(macOS)
+        .timelineTracksScrollMetrics($savedJournalsScrollMetrics)
+#endif
+    }
+
+    private var savedJournalsHeader: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("settings.saved-journals")
+                .font(.system(size: 31, weight: .regular, design: .serif))
+                .foregroundStyle(HetkiaPalette.ink)
+            Text("timeline.tab.saved-journals.detail")
+                .font(.system(size: 13))
+                .foregroundStyle(HetkiaPalette.secondaryInk)
+        }
+        .padding(.horizontal, 18)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private func publishEntriesIfChanged(_ updatedEntries: [OnThisDayEntry]) {

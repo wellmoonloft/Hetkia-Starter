@@ -144,6 +144,8 @@ struct TimelineSectionHeading: View {
     }
 }
 
+enum TimelineBrowseMode: Equatable { case all, year, month }
+
 struct BottomNavigationBar: View {
     let selectedMode: TimelineBrowseMode
     let onSettings: () -> Void

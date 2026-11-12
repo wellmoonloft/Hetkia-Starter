@@ -49,6 +49,8 @@
 		A1000000000000000000002E /* PublishViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000002D /* PublishViews.swift */; };
 		A10000000000000000000031 /* CapturePermissions.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000002F /* CapturePermissions.swift */; };
 		A10000000000000000000032 /* InAppCameraCapture.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000030 /* InAppCameraCapture.swift */; };
+		A10000000000000000000033 /* TimelineRootRoute.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000033 /* TimelineRootRoute.swift */; };
+		A10000000000000000000034 /* HomeHistoryFloatingBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000034 /* HomeHistoryFloatingBar.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -122,6 +124,8 @@
 		A2000000000000000000002D /* PublishViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PublishViews.swift; sourceTree = "<group>"; };
 		A2000000000000000000002F /* CapturePermissions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CapturePermissions.swift; sourceTree = "<group>"; };
 		A20000000000000000000030 /* InAppCameraCapture.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InAppCameraCapture.swift; sourceTree = "<group>"; };
+		A20000000000000000000033 /* TimelineRootRoute.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelineRootRoute.swift; sourceTree = "<group>"; };
+		A20000000000000000000034 /* HomeHistoryFloatingBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeHistoryFloatingBar.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -248,6 +252,8 @@
 				A2000000000000000000000A /* JournalEntry.swift */,
 				A2000000000000000000000B /* TimelineComponents.swift */,
 				A2000000000000000000000C /* TimelineHomeView.swift */,
+				A20000000000000000000033 /* TimelineRootRoute.swift */,
+				A20000000000000000000034 /* HomeHistoryFloatingBar.swift */,
 				A2000000000000000000000D /* YearOverviewView.swift */,
 				A2000000000000000000000E /* MonthCalendarView.swift */,
 				A2000000000000000000000F /* PhotoWallView.swift */,
@@ -422,6 +428,8 @@
 				A10000000000000000000007 /* JournalEntry.swift in Sources */,
 				A10000000000000000000008 /* TimelineComponents.swift in Sources */,
 				A10000000000000000000009 /* TimelineHomeView.swift in Sources */,
+				A10000000000000000000033 /* TimelineRootRoute.swift in Sources */,
+				A10000000000000000000034 /* HomeHistoryFloatingBar.swift in Sources */,
 				A1000000000000000000000A /* YearOverviewView.swift in Sources */,
 				A1000000000000000000000B /* MonthCalendarView.swift in Sources */,
 				A1000000000000000000000C /* PhotoWallView.swift in Sources */,

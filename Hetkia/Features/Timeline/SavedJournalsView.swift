@@ -1,8 +1,10 @@
 import SwiftUI
 import SwiftData
 
-struct SavedJournalsView: View {
-    @Query(sort: \JournalRecord.localDay, order: .reverse) private var savedRecords: [JournalRecord]
+struct SavedJournalsRootContent: View {
+    let savedRecords: [JournalRecord]
+    let bottomInset: CGFloat
+    let onSelectRecord: (JournalRecord) -> Void
     @Environment(\.locale) private var locale
 
     private let columns = [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)]
@@ -27,7 +29,7 @@ struct SavedJournalsView: View {
     }
 
     var body: some View {
-        ScrollView {
+        Group {
             if monthGroups.isEmpty {
                 ContentUnavailableView("settings.saved-journals.empty", systemImage: "book.closed")
                     .padding(.top, 60)
@@ -41,8 +43,8 @@ struct SavedJournalsView: View {
 
                             LazyVGrid(columns: columns, spacing: 12) {
                                 ForEach(group.entries, id: \.persistentModelID) { record in
-                                    NavigationLink {
-                                        PersistentJournalDetailView(record: record, savedOnly: true)
+                                    Button {
+                                        onSelectRecord(record)
                                     } label: {
                                         SavedJournalCard(record: record, locale: locale)
                                     }
@@ -54,10 +56,21 @@ struct SavedJournalsView: View {
                 }
                 .padding(.horizontal, 18)
                 .padding(.top, 16)
-                .padding(.bottom, 28)
                 .frame(maxWidth: 620)
                 .frame(maxWidth: .infinity)
             }
+        }
+        .padding(.bottom, bottomInset)
+    }
+}
+
+/// Settings / previews: full-screen saved journals with system navigation chrome.
+struct SavedJournalsView: View {
+    @Query(sort: \JournalRecord.localDay, order: .reverse) private var savedRecords: [JournalRecord]
+
+    var body: some View {
+        ScrollView {
+            SavedJournalsRootContent(savedRecords: savedRecords, bottomInset: 28) { _ in }
         }
         .background(HetkiaPalette.paper.ignoresSafeArea())
         .navigationTitle(Text("settings.saved-journals"))

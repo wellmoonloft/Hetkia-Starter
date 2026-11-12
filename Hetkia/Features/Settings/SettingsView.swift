@@ -30,7 +30,6 @@ struct SettingsView: View {
                     Text("settings.title")
                         .font(.system(size: 31, weight: .regular, design: .serif))
                         .foregroundStyle(HetkiaPalette.ink)
-                    savedJournalsSection
                     publishServiceSection
 #if !os(macOS)
                     capturePermissionsSection
@@ -174,26 +173,6 @@ struct SettingsView: View {
             } label: {
                 HStack(spacing: 10) {
                     Text("publish.settings.open")
-                        .font(.system(size: 13, weight: .medium))
-                    Spacer()
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(HetkiaPalette.secondaryInk)
-                }
-                .foregroundStyle(HetkiaPalette.ink)
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-        }
-    }
-
-    private var savedJournalsSection: some View {
-        settingsCard(title: "settings.saved-journals", symbol: "book.closed") {
-            NavigationLink {
-                SavedJournalsView()
-            } label: {
-                HStack(spacing: 10) {
-                    Text("settings.saved-journals.open")
                         .font(.system(size: 13, weight: .medium))
                     Spacer()
                     Image(systemName: "chevron.right")
