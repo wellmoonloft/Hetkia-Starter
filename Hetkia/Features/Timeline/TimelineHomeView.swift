@@ -17,6 +17,10 @@ struct TimelineHomeView: View {
     @State private var entries: [OnThisDayEntry] = []
     @State private var path: [TimelineRootRoute] = []
     @State private var rootTab: TimelineRootTab = .onThisDay
+    @State private var savedJournalsBrowse: SavedJournalsBrowseMode = .all
+    @State private var savedJournalsFocusedYear: Int?
+    @State private var savedJournalsCalendarYear = Calendar.autoupdatingCurrent.component(.year, from: .now)
+    @State private var savedJournalsCalendarMonth = Calendar.autoupdatingCurrent.component(.month, from: .now)
     @State private var onThisDayScrollMetrics = TimelineScrollMetrics()
     @State private var savedJournalsScrollMetrics = TimelineScrollMetrics()
     @State private var isLoading = true
@@ -60,7 +64,7 @@ struct TimelineHomeView: View {
                 .overlay(alignment: .bottomLeading) {
 #if !os(macOS)
                     if floatingBarVisible {
-                        HomeHistoryFloatingBar(rootTab: $rootTab)
+                        HomeHistoryFloatingBar(rootTab: $rootTab, historyBrowse: $savedJournalsBrowse)
                             .padding(.leading, 12)
                             .padding(.bottom, 10)
                             .transition(.move(edge: .bottom).combined(with: .opacity))
@@ -163,6 +167,9 @@ struct TimelineHomeView: View {
         .onChange(of: includeScreenshotsAndScreenRecordings) { _, _ in
             guard path.isEmpty else { return }
             Task { await refresh() }
+        }
+        .onChange(of: savedJournalsBrowse) { _, mode in
+            if mode != .year { savedJournalsFocusedYear = nil }
         }
         .onReceive(minuteTicker) { _ in
             let newDay = PhotoDayGrouping.key(for: .now)
@@ -469,7 +476,9 @@ struct TimelineHomeView: View {
 #if os(macOS)
         28
 #else
-        floatingBarVisible ? 78 : 28
+        guard floatingBarVisible else { return 28 }
+        if rootTab == .savedJournals { return 88 }
+        return 78
 #endif
     }
 
@@ -530,22 +539,92 @@ struct TimelineHomeView: View {
 #endif
     }
 
+    private var meaningfulSavedJournalRecords: [JournalRecord] {
+        SavedJournalIndex.meaningfulRecords(from: savedRecords)
+    }
+
     private var savedJournalsRootScroll: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
                 savedJournalsHeader
-                SavedJournalsRootContent(
-                    savedRecords: savedRecords,
-                    bottomInset: listBottomInset
-                ) { record in
-                    path.append(.savedJournal(dayKey: record.dayKey))
-                }
+                savedJournalsBrowseBody
             }
             .padding(.top, 16)
+            .padding(.bottom, listBottomInset)
         }
 #if !os(macOS)
         .timelineTracksScrollMetrics($savedJournalsScrollMetrics)
 #endif
+    }
+
+    @ViewBuilder
+    private var savedJournalsBrowseBody: some View {
+        let records = meaningfulSavedJournalRecords
+        let openRecord: (JournalRecord) -> Void = { record in
+            path.append(.savedJournal(dayKey: record.dayKey))
+        }
+        switch savedJournalsBrowse {
+        case .all:
+            SavedJournalsRootContent(
+                savedRecords: savedRecords,
+                bottomInset: 0,
+                onSelectRecord: openRecord
+            )
+        case .year:
+            if let year = savedJournalsFocusedYear {
+                VStack(alignment: .leading, spacing: 12) {
+                    Button {
+                        savedJournalsFocusedYear = nil
+                    } label: {
+                        Label("common.back", systemImage: "chevron.left")
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundStyle(HetkiaPalette.amber)
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.horizontal, 18)
+                    SavedJournalsYearMonthsBrowseView(
+                        year: year,
+                        records: records,
+                        onChangeYear: { savedJournalsFocusedYear = $0 },
+                        onSelectMonth: { y, m in
+                            savedJournalsCalendarYear = y
+                            savedJournalsCalendarMonth = m
+                            savedJournalsBrowse = .month
+                            savedJournalsFocusedYear = nil
+                        }
+                    )
+                }
+            } else {
+                SavedJournalsYearsBrowseView(records: records) { year in
+                    savedJournalsFocusedYear = year
+                }
+            }
+        case .month:
+            SavedJournalsMonthCalendarBrowseView(
+                year: savedJournalsCalendarYear,
+                month: savedJournalsCalendarMonth,
+                records: records,
+                onChangeMonth: { delta in
+                    shiftSavedJournalsCalendarMonth(by: delta)
+                },
+                onSelectRecord: openRecord
+            )
+        }
+    }
+
+    private func shiftSavedJournalsCalendarMonth(by delta: Int) {
+        var components = DateComponents(
+            year: savedJournalsCalendarYear,
+            month: savedJournalsCalendarMonth,
+            day: 1,
+            hour: 12
+        )
+        guard let monthStart = Calendar.autoupdatingCurrent.date(from: components),
+              let shifted = Calendar.autoupdatingCurrent.date(byAdding: .month, value: delta, to: monthStart) else {
+            return
+        }
+        savedJournalsCalendarYear = Calendar.autoupdatingCurrent.component(.year, from: shifted)
+        savedJournalsCalendarMonth = Calendar.autoupdatingCurrent.component(.month, from: shifted)
     }
 
     private var savedJournalsHeader: some View {
