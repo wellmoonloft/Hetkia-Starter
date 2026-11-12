@@ -180,44 +180,56 @@ struct EssayPublishSheet: View {
   @Environment(\.modelContext) private var modelContext
   @StateObject private var coordinator = PublishCoordinator()
 
-  let photos: [JournalPhotoRecord]
-  let initialTitle: String
-  let initialBody: String
   let captureReferenceDate: Date
   let sourceJournalDayKey: String?
   let savedOnly: Bool
+  let allowsInAppCamera: Bool
   let openSettings: () -> Void
 
+  @Binding var publishPhotos: [JournalPhotoRecord]
   @State private var title: String
   @State private var bodyText: String
   @State private var selectedPhotoIDs: Set<UUID>
   @State private var dateMode: EssayPublishDateMode
   @State private var errorMessage: String?
+  @State private var showCameraCapture = false
 
   init(
-    photos: [JournalPhotoRecord],
+    publishPhotos: Binding<[JournalPhotoRecord]>,
     initialTitle: String,
     initialBody: String,
     captureReferenceDate: Date,
     sourceJournalDayKey: String?,
     savedOnly: Bool,
+    allowsInAppCamera: Bool,
     openSettings: @escaping () -> Void
   ) {
-    self.photos = photos
-    self.initialTitle = initialTitle
-    self.initialBody = initialBody
     self.captureReferenceDate = captureReferenceDate
     self.sourceJournalDayKey = sourceJournalDayKey
     self.savedOnly = savedOnly
+    self.allowsInAppCamera = allowsInAppCamera
     self.openSettings = openSettings
+    _publishPhotos = publishPhotos
     _title = State(initialValue: initialTitle)
     _bodyText = State(initialValue: initialBody)
-    _selectedPhotoIDs = State(initialValue: Set(photos.map(\.id)))
+    _selectedPhotoIDs = State(initialValue: Set(publishPhotos.wrappedValue.map(\.id)))
     let calendar = Calendar.autoupdatingCurrent
     let startOfToday = calendar.startOfDay(for: .now)
     let defaultMode: EssayPublishDateMode =
       captureReferenceDate < startOfToday ? .capture : .now
     _dateMode = State(initialValue: defaultMode)
+  }
+
+  private var showsInAppCamera: Bool {
+#if os(macOS)
+    false
+#else
+    allowsInAppCamera
+#endif
+  }
+
+  private var showsPhotoSection: Bool {
+    showsInAppCamera || !publishPhotos.isEmpty
   }
 
   var body: some View {
@@ -243,9 +255,14 @@ struct EssayPublishSheet: View {
           TextEditor(text: $bodyText)
             .frame(minHeight: 140)
         }
-        if !photos.isEmpty {
+        if showsPhotoSection {
           Section("publish.essay.photos.section") {
-            PublishPhotoSelectionGrid(photos: photos, selectedPhotoIDs: $selectedPhotoIDs)
+            PublishPhotoSelectionGrid(
+              photos: publishPhotos,
+              selectedPhotoIDs: $selectedPhotoIDs,
+              showsCamera: showsInAppCamera,
+              onCameraTap: { Task { await openInAppCameraIfPermitted() } }
+            )
           }
         }
         if let stage = coordinator.stage {
@@ -274,6 +291,19 @@ struct EssayPublishSheet: View {
             .disabled(coordinator.isPublishing)
         }
       }
+#if !os(macOS)
+      .fullScreenCover(isPresented: $showCameraCapture) {
+        InAppCameraCaptureView(
+          onCancel: { showCameraCapture = false },
+          onCaptured: { record in
+            publishPhotos.append(record)
+            selectedPhotoIDs.insert(record.id)
+            showCameraCapture = false
+          }
+        )
+        .ignoresSafeArea()
+      }
+#endif
     }
   }
 
@@ -283,15 +313,30 @@ struct EssayPublishSheet: View {
     return String(format: HetkiaSystemLanguage.localizedString("publish.essay.date.preview", comment: ""), formatted)
   }
 
+#if !os(macOS)
+  @MainActor
+  private func openInAppCameraIfPermitted() async {
+  guard allowsInAppCamera else { return }
+    if CapturePermissionStatus.isCameraAuthorized {
+      showCameraCapture = true
+      return
+    }
+    let granted = await CapturePermissionStatus.requestCameraAccess()
+    if granted {
+      showCameraCapture = true
+    }
+  }
+#endif
+
   private func resolvedPublishDate() -> Date {
     switch dateMode {
     case .now:
       return .now
     case .capture:
-      let selected = photos.filter { selectedPhotoIDs.contains($0.id) }
+      let selected = publishPhotos.filter { selectedPhotoIDs.contains($0.id) }
       let captureDates = selected.compactMap(\.capturedAt)
       if let earliest = captureDates.min() { return earliest }
-      if let fallback = photos.compactMap(\.capturedAt).min() { return fallback }
+      if let fallback = publishPhotos.compactMap(\.capturedAt).min() { return fallback }
       return captureReferenceDate
     }
   }
@@ -306,7 +351,7 @@ struct EssayPublishSheet: View {
       sourceJournalDayKey: sourceJournalDayKey,
       photoIDs: Array(selectedPhotoIDs)
     )
-    let map = Dictionary(uniqueKeysWithValues: photos.map { ($0.id, $0) })
+    let map = Dictionary(uniqueKeysWithValues: publishPhotos.map { ($0.id, $0) })
     Task {
       let result = await coordinator.publish(
         draft: draft,
@@ -451,11 +496,34 @@ struct MomentPublishSheet: View {
 private struct PublishPhotoSelectionGrid: View {
   let photos: [JournalPhotoRecord]
   @Binding var selectedPhotoIDs: Set<UUID>
+  var showsCamera: Bool
+  var onCameraTap: () -> Void
 
   private let columns = [GridItem(.adaptive(minimum: 100), spacing: 10)]
 
   var body: some View {
     LazyVGrid(columns: columns, spacing: 10) {
+      if showsCamera {
+        Button(action: onCameraTap) {
+          GeometryReader { proxy in
+            ZStack {
+              RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(HetkiaPalette.page)
+              VStack(spacing: 6) {
+                Image(systemName: "camera.fill")
+                  .font(.system(size: 24, weight: .medium))
+                Text("publish.essay.camera")
+                  .font(.system(size: 11, weight: .medium))
+              }
+              .foregroundStyle(HetkiaPalette.amber)
+            }
+            .frame(width: proxy.size.width, height: proxy.size.height)
+          }
+          .aspectRatio(1, contentMode: .fit)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(Text("publish.essay.camera"))
+      }
       ForEach(photos) { photo in
         let selected = selectedPhotoIDs.contains(photo.id)
         Button {

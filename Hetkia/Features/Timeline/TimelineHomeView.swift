@@ -25,6 +25,16 @@ struct TimelineHomeView: View {
     @State private var showsScanProgress = false
     @State private var didLeaveActiveState = false
     @State private var showSettings = false
+    @State private var showMomentPublishSheet = false
+    @State private var showEssayPublishSheet = false
+    @State private var essayPublishSheetToken = UUID()
+    @State private var showPublishSettings = false
+    @State private var essayPublishPhotos: [JournalPhotoRecord] = []
+    @State private var essayPublishTitle = ""
+    @State private var essayPublishBody = ""
+    @State private var essayPublishCaptureDate = Date()
+    @State private var essayPublishDayKey = ""
+    @State private var pendingPublishEssay = false
     @State private var activeCalendarDay = PhotoDayGrouping.key(for: .now)
     @State private var pendingWidgetRoute: String?
     private let minuteTicker = Timer.publish(every: 30, on: .main, in: .common).autoconnect()
@@ -92,6 +102,39 @@ struct TimelineHomeView: View {
         }
         .tint(HetkiaPalette.amber)
         .sheet(isPresented: $showSettings) { SettingsView() }
+        .sheet(isPresented: $showMomentPublishSheet) {
+            MomentPublishSheet(
+                initialBody: "",
+                contentCreatedAt: .now,
+                sourceJournalDayKey: activeCalendarDay,
+                openSettings: {
+                    showMomentPublishSheet = false
+                    showPublishSettings = true
+                }
+            )
+        }
+        .sheet(isPresented: $showEssayPublishSheet) {
+            EssayPublishSheet(
+                publishPhotos: $essayPublishPhotos,
+                initialTitle: essayPublishTitle,
+                initialBody: essayPublishBody,
+                captureReferenceDate: essayPublishCaptureDate,
+                sourceJournalDayKey: essayPublishDayKey,
+                savedOnly: false,
+                allowsInAppCamera: true,
+                openSettings: {
+                    showEssayPublishSheet = false
+                    showPublishSettings = true
+                }
+            )
+            .id(essayPublishSheetToken)
+        }
+        .sheet(isPresented: $showPublishSettings) {
+            NavigationStack {
+                PublishSettingsView()
+            }
+            .presentationDetents([.large])
+        }
         .task {
             guard !hasResolvedInitialCache else { return }
             await refresh(isInitialLoad: true)
@@ -138,11 +181,69 @@ struct TimelineHomeView: View {
             }
         }
         .onOpenURL { url in
-            guard url.scheme == "hetkia", url.host == "onthisday" else { return }
-            let key = url.pathComponents.dropFirst().joined(separator: "/")
-            if entries.contains(where: { $0.id == key }) { path = [key] }
-            else { pendingWidgetRoute = key; Task { await refresh() } }
+            guard url.scheme == "hetkia" else { return }
+            switch url.host {
+            case "onthisday":
+                let key = url.pathComponents.dropFirst().joined(separator: "/")
+                if entries.contains(where: { $0.id == key }) { path = [key] }
+                else { pendingWidgetRoute = key; Task { await refresh() } }
+            case "publish":
+                let action = url.pathComponents.dropFirst().first ?? ""
+                switch action {
+                case "moment":
+                    showMomentPublishSheet = true
+                case "essay":
+                    pendingPublishEssay = true
+                    if hasResolvedInitialCache {
+                        presentEssayPublishSheet()
+                    } else {
+                        Task {
+                            await refresh(isInitialLoad: false)
+                            guard pendingPublishEssay else { return }
+                            presentEssayPublishSheet()
+                        }
+                    }
+                default:
+                    break
+                }
+            default:
+                break
+            }
         }
+    }
+
+    private func presentEssayPublishSheet() {
+        let context = todayEssayPublishContext()
+        essayPublishPhotos = context.photos
+        essayPublishTitle = context.title
+        essayPublishBody = context.body
+        essayPublishCaptureDate = context.captureDate
+        essayPublishDayKey = context.dayKey
+        pendingPublishEssay = false
+        essayPublishSheetToken = UUID()
+        showEssayPublishSheet = true
+    }
+
+    private func todayEssayPublishContext() -> (photos: [JournalPhotoRecord], title: String, body: String, captureDate: Date, dayKey: String) {
+        let dayKey = PhotoDayGrouping.key(for: .now)
+        let saved = savedRecords.filter { $0.dayKey == dayKey }.max { $0.updatedAt < $1.updatedAt }
+        let entry = entries.first { $0.id == dayKey }
+        var photos = saved?.photos ?? []
+        let known = Set(photos.compactMap(\.assetLocalIdentifier))
+        let fresh = OnThisDayLibrary.transientPhotoRecords(for: entry?.assets ?? [])
+            .filter { record in
+                guard let identifier = record.assetLocalIdentifier else { return true }
+                return !known.contains(identifier)
+            }
+        photos.append(contentsOf: fresh)
+        let captureDate = photos.compactMap(\.capturedAt).min() ?? saved?.localDay ?? entry?.date ?? .now
+        return (
+            photos,
+            saved?.title ?? "",
+            saved?.bodyText ?? "",
+            captureDate,
+            dayKey
+        )
     }
 
     private var header: some View {
@@ -210,6 +311,32 @@ struct TimelineHomeView: View {
                 .foregroundStyle(HetkiaPalette.amber)
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
+            HStack(spacing: 10) {
+                Button {
+                    showMomentPublishSheet = true
+                } label: {
+                    Text("onthisday.empty.publish-moment")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 18)
+                        .padding(.vertical, 12)
+                        .background(HetkiaPalette.amber, in: Capsule())
+                }
+                .buttonStyle(.plain)
+                Button {
+                    presentEssayPublishSheet()
+                } label: {
+                    Text("onthisday.empty.publish-essay")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(HetkiaPalette.amber)
+                        .padding(.horizontal, 18)
+                        .padding(.vertical, 12)
+                        .background(.white.opacity(0.9), in: Capsule())
+                        .overlay(Capsule().stroke(HetkiaPalette.amber, lineWidth: 1))
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.top, 6)
             Spacer(minLength: 20)
         }
         .frame(maxWidth: .infinity)
@@ -237,6 +364,7 @@ struct TimelineHomeView: View {
         showFullScanProgress: Bool = true
     ) async {
         guard !isRefreshing else { return }
+        if showEssayPublishSheet || showMomentPublishSheet { return }
         isRefreshing = true
         showsScanProgress = forceFullScan && showFullScanProgress
         defer {

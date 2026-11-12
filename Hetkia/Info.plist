@@ -6,6 +6,10 @@
 	<array>
 		<string>com.hetkia.app.onthisday-refresh</string>
 	</array>
+	<key>NSCameraUsageDescription</key>
+	<string>Camera access lets you take photos while publishing an essay and save them to your library.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Location is used only when saving a photo you take in the app, so the library can store where it was taken.</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>

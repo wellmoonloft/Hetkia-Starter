@@ -98,6 +98,8 @@ struct PersistentJournalDetailView: View {
     @State private var showDraftReplacementConfirmation = false
     @State private var showDeleteConfirmation = false
     @State private var showEssayPublishSheet = false
+    @State private var essayPublishPhotos: [JournalPhotoRecord] = []
+    @State private var essayPublishSheetToken = UUID()
     @State private var showMomentPublishSheet = false
     @State private var showPublishSettings = false
     @FocusState private var focusedInput: InputTarget?
@@ -272,17 +274,19 @@ struct PersistentJournalDetailView: View {
         }
         .sheet(isPresented: $showEssayPublishSheet) {
             EssayPublishSheet(
-                photos: selectedPhotos,
+                publishPhotos: $essayPublishPhotos,
                 initialTitle: record.title,
                 initialBody: record.bodyText,
                 captureReferenceDate: displayedCaptureDate,
                 sourceJournalDayKey: record.dayKey,
                 savedOnly: savedOnly,
+                allowsInAppCamera: record.dayKey == PhotoDayGrouping.key(for: .now),
                 openSettings: {
                     showEssayPublishSheet = false
                     showPublishSettings = true
                 }
             )
+            .id(essayPublishSheetToken)
         }
         .sheet(isPresented: $showMomentPublishSheet) {
             MomentPublishSheet(
@@ -489,6 +493,8 @@ struct PersistentJournalDetailView: View {
                     Text("detail.share.journal-card")
                 }
                 Button {
+                    essayPublishPhotos = selectedPhotos
+                    essayPublishSheetToken = UUID()
                     showEssayPublishSheet = true
                 } label: {
                     Text("detail.share.upload-journal")

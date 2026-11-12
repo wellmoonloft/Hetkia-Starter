@@ -1,5 +1,10 @@
 import SwiftUI
 import WidgetKit
+#if !os(macOS)
+import AVFoundation
+import CoreLocation
+import UIKit
+#endif
 
 private enum JournalStorageChoice: String {
     case local
@@ -12,9 +17,11 @@ struct SettingsView: View {
     @AppStorage(JournalDraftService.promptDefaultsKey) private var journalPrompt = JournalDraftService.defaultPrompt
     @AppStorage(HetkiaSystemLanguage.defaultsKey) private var languageSelection = HetkiaSystemLanguage.systemIdentifier
     @AppStorage(MapCoordinateSystemPreference.defaultsKey) private var mapCoordinateSystem = MapCoordinateSystemPreference.system.rawValue
+    @AppStorage(CapturePreferences.writeLocationToLibraryKey) private var writeLocationToSavedPhotos = true
     @State private var showICloudNotice = false
     @State private var showPromptEditor = false
     @State private var showPublishSettings = false
+    @State private var capturePermissionRefresh = 0
 
     var body: some View {
         NavigationStack {
@@ -25,6 +32,9 @@ struct SettingsView: View {
                         .foregroundStyle(HetkiaPalette.ink)
                     savedJournalsSection
                     publishServiceSection
+#if !os(macOS)
+                    capturePermissionsSection
+#endif
                     photoSelectionSection
                     mapCoordinateSection
                     storageSection
@@ -64,6 +74,97 @@ struct SettingsView: View {
             Divider().overlay(HetkiaPalette.line)
             storageChoiceRow(.iCloud, title: "settings.storage.icloud", detail: "settings.storage.icloud.detail", isAvailable: false)
         }
+    }
+
+    private var capturePermissionsSection: some View {
+        let _ = capturePermissionRefresh
+        return settingsCard(title: "settings.capture.title", symbol: "camera") {
+            Text("settings.capture.request-hint")
+                .font(.system(size: 11))
+                .foregroundStyle(HetkiaPalette.secondaryInk)
+                .fixedSize(horizontal: false, vertical: true)
+            capturePermissionRow(
+                title: "settings.capture.camera",
+                granted: CapturePermissionStatus.isCameraAuthorized,
+                denied: CapturePermissionStatus.isCameraDeniedOrRestricted
+            ) {
+                Task {
+                    _ = await CapturePermissionStatus.requestCameraAccess()
+                    capturePermissionRefresh += 1
+                }
+            }
+            Divider().overlay(HetkiaPalette.line)
+            capturePermissionRow(
+                title: "settings.capture.location",
+                granted: CapturePermissionStatus.isLocationAuthorized,
+                denied: CapturePermissionStatus.isLocationDeniedOrRestricted
+            ) {
+                Task {
+                    _ = await CapturePermissionStatus.requestLocationAccess()
+                    capturePermissionRefresh += 1
+                }
+            }
+            Divider().overlay(HetkiaPalette.line)
+            Toggle(isOn: $writeLocationToSavedPhotos) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("settings.capture.write-location")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(HetkiaPalette.ink)
+                    Text("settings.capture.write-location.detail")
+                        .font(.system(size: 11))
+                        .foregroundStyle(HetkiaPalette.secondaryInk)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .disabled(!CapturePermissionStatus.isLocationAuthorized)
+            .tint(HetkiaPalette.amber)
+        }
+        .onAppear { capturePermissionRefresh += 1 }
+    }
+
+    private func capturePermissionDetail(granted: Bool, denied: Bool) -> LocalizedStringKey {
+        if granted { return "settings.capture.status.granted" }
+        if denied { return "settings.capture.status.denied" }
+        return "settings.capture.status.prompt"
+    }
+
+    private func capturePermissionRow(
+        title: LocalizedStringKey,
+        granted: Bool,
+        denied: Bool,
+        requestInApp: @escaping () -> Void
+    ) -> some View {
+        HStack(alignment: .top, spacing: 10) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(HetkiaPalette.ink)
+                Text(capturePermissionDetail(granted: granted, denied: denied))
+                    .font(.system(size: 11))
+                    .foregroundStyle(HetkiaPalette.secondaryInk)
+            }
+            Spacer(minLength: 4)
+            if granted {
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundStyle(HetkiaPalette.amber)
+            } else if denied {
+                Button("settings.capture.open-system") { openSystemSettings() }
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(HetkiaPalette.amber)
+            } else {
+                Button("settings.capture.enable", action: requestInApp)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(HetkiaPalette.amber)
+            }
+        }
+    }
+
+    private func openSystemSettings() {
+#if !os(macOS)
+        if let url = URL(string: UIApplication.openSettingsURLString) {
+            UIApplication.shared.open(url)
+        }
+#endif
     }
 
     private var publishServiceSection: some View {

@@ -1,2 +1,4 @@
 "CFBundleDisplayName" = "时光";
 "NSPhotoLibraryUsageDescription" = "时光需要完整照片权限，才能查找历年同月同日的照片。浏览时只读取照片用于展示；只有生成或修改日记、添加评论时，才会保存日记和照片预览。";
+"NSCameraUsageDescription" = "用于在发布随笔时拍照，并将照片保存到系统相册。";
+"NSLocationWhenInUseUsageDescription" = "仅在你用应用内相机拍照并保存时，用于把拍摄位置写入相册。";

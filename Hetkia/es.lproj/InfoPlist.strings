@@ -1,2 +1,4 @@
 "CFBundleDisplayName" = "Hetkia";
 "NSPhotoLibraryUsageDescription" = "Hetkia necesita acceso completo a Fotos para encontrar esta fecha en todos los años. Solo lee las fotos para mostrar recuerdos; guarda el diario y las vistas previas únicamente cuando lo generas, editas o añades un comentario.";
+"NSCameraUsageDescription" = "Permite tomar fotos al publicar un ensayo y guardarlas en tu biblioteca.";
+"NSLocationWhenInUseUsageDescription" = "Se usa solo al guardar una foto tomada en la app, para registrar dónde se hizo.";

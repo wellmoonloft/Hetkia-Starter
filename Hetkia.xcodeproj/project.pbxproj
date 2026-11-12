@@ -47,6 +47,8 @@
 		A1000000000000000000002C /* R2S3Client.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000002B /* R2S3Client.swift */; };
 		A1000000000000000000002D /* PublishCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000002C /* PublishCoordinator.swift */; };
 		A1000000000000000000002E /* PublishViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000002D /* PublishViews.swift */; };
+		A10000000000000000000031 /* CapturePermissions.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000002F /* CapturePermissions.swift */; };
+		A10000000000000000000032 /* InAppCameraCapture.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000030 /* InAppCameraCapture.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -118,6 +120,8 @@
 		A2000000000000000000002B /* R2S3Client.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = R2S3Client.swift; sourceTree = "<group>"; };
 		A2000000000000000000002C /* PublishCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PublishCoordinator.swift; sourceTree = "<group>"; };
 		A2000000000000000000002D /* PublishViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PublishViews.swift; sourceTree = "<group>"; };
+		A2000000000000000000002F /* CapturePermissions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CapturePermissions.swift; sourceTree = "<group>"; };
+		A20000000000000000000030 /* InAppCameraCapture.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InAppCameraCapture.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -203,6 +207,8 @@
 				A2000000000000000000002B /* R2S3Client.swift */,
 				A2000000000000000000002C /* PublishCoordinator.swift */,
 				A2000000000000000000002D /* PublishViews.swift */,
+				A2000000000000000000002F /* CapturePermissions.swift */,
+				A20000000000000000000030 /* InAppCameraCapture.swift */,
 			);
 			path = Publishing;
 			sourceTree = "<group>";
@@ -443,6 +449,8 @@
 				A1000000000000000000002C /* R2S3Client.swift in Sources */,
 				A1000000000000000000002D /* PublishCoordinator.swift in Sources */,
 				A1000000000000000000002E /* PublishViews.swift in Sources */,
+				A10000000000000000000031 /* CapturePermissions.swift in Sources */,
+				A10000000000000000000032 /* InAppCameraCapture.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -580,8 +588,9 @@
 				INFOPLIST_FILE = Hetkia/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Hetkia;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.lifestyle";
-				INFOPLIST_KEY_NSLocationUsageDescription = "Location is used only to add a nearby place to a journal when you choose to allow it.";
-				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Location is used only to add a nearby place to a journal when you choose to allow it.";
+				INFOPLIST_KEY_NSCameraUsageDescription = "Camera access lets you take photos while publishing an essay and save them to your library.";
+				INFOPLIST_KEY_NSLocationUsageDescription = "Location is used only when saving a photo you take in the app, so the library can store where it was taken.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Location is used only when saving a photo you take in the app, so the library can store where it was taken.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Full Photos access lets Hetkia find this date across your library. It reads photos only to display memories; it saves diary content and photo previews only when you generate or edit a diary or add a comment.";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = UIInterfaceOrientationPortrait;
@@ -611,8 +620,9 @@
 				INFOPLIST_FILE = Hetkia/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Hetkia;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.lifestyle";
-				INFOPLIST_KEY_NSLocationUsageDescription = "Location is used only to add a nearby place to a journal when you choose to allow it.";
-				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Location is used only to add a nearby place to a journal when you choose to allow it.";
+				INFOPLIST_KEY_NSCameraUsageDescription = "Camera access lets you take photos while publishing an essay and save them to your library.";
+				INFOPLIST_KEY_NSLocationUsageDescription = "Location is used only when saving a photo you take in the app, so the library can store where it was taken.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Location is used only when saving a photo you take in the app, so the library can store where it was taken.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Full Photos access lets Hetkia find this date across your library. It reads photos only to display memories; it saves diary content and photo previews only when you generate or edit a diary or add a comment.";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = UIInterfaceOrientationPortrait;

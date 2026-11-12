@@ -52,10 +52,74 @@ struct OnboardingFlowView: View {
             .padding(15).background(.white.opacity(0.74), in: RoundedRectangle(cornerRadius: 15))
             .padding(.vertical, 10)
             footnote("onboarding.photos.permission-note")
+            if photoLibrary.canReadLibrary {
+#if !os(macOS)
+                if photoLibrary.authorizationStatus == .authorized {
+                    optionalCapturePermissionsCard
+                }
+#endif
+                action("onboarding.capture.continue") { model.continueFromPhotoAccess() }
+            }
         }
         .onAppear {
             photoLibrary.refreshAuthorization()
-            if photoLibrary.canReadLibrary { advancePastPhotoAccess() }
+        }
+    }
+
+    private var optionalCapturePermissionsCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("onboarding.capture.title")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(HetkiaPalette.ink)
+            Text("onboarding.capture.detail")
+                .font(.system(size: 12))
+                .lineSpacing(3)
+                .foregroundStyle(HetkiaPalette.secondaryInk)
+                .fixedSize(horizontal: false, vertical: true)
+            capturePermissionRow(
+                title: "onboarding.capture.camera",
+                detail: CapturePermissionStatus.isCameraAuthorized ? "onboarding.capture.status.granted" : "onboarding.capture.status.optional",
+                granted: CapturePermissionStatus.isCameraAuthorized
+            ) {
+                Task { _ = await CapturePermissionStatus.requestCameraAccess() }
+            }
+            capturePermissionRow(
+                title: "onboarding.capture.location",
+                detail: CapturePermissionStatus.isLocationAuthorized ? "onboarding.capture.status.granted" : "onboarding.capture.status.optional",
+                granted: CapturePermissionStatus.isLocationAuthorized
+            ) {
+                Task { _ = await CapturePermissionStatus.requestLocationAccess() }
+            }
+        }
+        .padding(15)
+        .background(.white.opacity(0.74), in: RoundedRectangle(cornerRadius: 15))
+        .padding(.top, 4)
+    }
+
+    private func capturePermissionRow(
+        title: LocalizedStringKey,
+        detail: LocalizedStringKey,
+        granted: Bool,
+        action: @escaping () -> Void
+    ) -> some View {
+        HStack(alignment: .top, spacing: 10) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title)
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(HetkiaPalette.ink)
+                Text(detail)
+                    .font(.system(size: 11))
+                    .foregroundStyle(HetkiaPalette.secondaryInk)
+            }
+            Spacer(minLength: 4)
+            if granted {
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundStyle(HetkiaPalette.amber)
+            } else {
+                Button("onboarding.capture.enable", action: action)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(HetkiaPalette.amber)
+            }
         }
     }
 
@@ -187,13 +251,6 @@ struct OnboardingFlowView: View {
     private func requestPhotoAccessAndAdvance() async {
         let status = await photoLibrary.requestAuthorization()
         model.choosePhotoAccess(status == .authorized ? .full : status == .limited ? .limited : .denied)
-        if status == .authorized { model.continueFromPhotoAccess() }
-    }
-
-    private func advancePastPhotoAccess() {
-        let status = photoLibrary.authorizationStatus
-        model.choosePhotoAccess(status == .authorized ? .full : status == .limited ? .limited : .denied)
-        if status == .authorized { model.continueFromPhotoAccess() }
     }
 
     private func openSystemSettings() {

@@ -544,9 +544,77 @@ private struct WidgetDateOverlay: View {
     }
 }
 
+private struct PublishQuickEntry: TimelineEntry {
+    let date: Date
+}
+
+private struct PublishQuickProvider: TimelineProvider {
+    func placeholder(in context: Context) -> PublishQuickEntry { PublishQuickEntry(date: .now) }
+
+    func getSnapshot(in context: Context, completion: @escaping (PublishQuickEntry) -> Void) {
+        completion(PublishQuickEntry(date: .now))
+    }
+
+    func getTimeline(in context: Context, completion: @escaping (Timeline<PublishQuickEntry>) -> Void) {
+        let entry = PublishQuickEntry(date: .now)
+        let refresh = Calendar.autoupdatingCurrent.date(byAdding: .day, value: 1, to: .now) ?? .now.addingTimeInterval(86_400)
+        completion(Timeline(entries: [entry], policy: .after(refresh)))
+    }
+}
+
+private struct PublishQuickWidgetView: View {
+    private let accent = Color(red: 0.75, green: 0.52, blue: 0.27)
+
+    var body: some View {
+        VStack(spacing: 10) {
+            Link(destination: URL(string: "hetkia://publish/moment")!) {
+                publishButtonLabel("detail.share.post-moment", symbol: "text.bubble")
+            }
+            Link(destination: URL(string: "hetkia://publish/essay")!) {
+                publishButtonLabel("detail.share.upload-journal", symbol: "square.and.pencil")
+            }
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .containerBackground(for: .widget) {
+            Color(red: 0.97, green: 0.95, blue: 0.91)
+        }
+    }
+
+    private func publishButtonLabel(_ titleKey: LocalizedStringKey, symbol: String) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: symbol)
+                .font(.system(size: 14, weight: .semibold))
+            Text(titleKey)
+                .font(.system(size: 13, weight: .semibold))
+                .lineLimit(1)
+                .minimumScaleFactor(0.85)
+        }
+        .foregroundStyle(.white)
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 11)
+        .background(accent, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+    }
+}
+
+private struct PublishQuickWidget: Widget {
+    var body: some WidgetConfiguration {
+        StaticConfiguration(kind: "Hetkia.PublishQuick", provider: PublishQuickProvider()) { _ in
+            PublishQuickWidgetView()
+        }
+        .configurationDisplayName("widget.publish.displayName")
+        .description("widget.publish.description")
+        .supportedFamilies([.systemSmall])
+        .contentMarginsDisabled()
+    }
+}
+
 @main
 struct HetkiaWidgetBundle: WidgetBundle {
-    var body: some Widget { OnThisDayWidget() }
+    var body: some Widget {
+        OnThisDayWidget()
+        PublishQuickWidget()
+    }
 }
 
 private struct OnThisDayWidget: Widget {

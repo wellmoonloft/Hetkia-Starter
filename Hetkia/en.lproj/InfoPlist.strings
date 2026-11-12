@@ -1,2 +1,4 @@
 "CFBundleDisplayName" = "Hetkia";
 "NSPhotoLibraryUsageDescription" = "Full Photos access lets Hetkia find this date across your library. It reads photos only to display memories; it saves diary content and photo previews only when you generate or edit a diary or add a comment.";
+"NSCameraUsageDescription" = "Camera access lets you take photos while publishing an essay and save them to your library.";
+"NSLocationWhenInUseUsageDescription" = "Location is used only when saving a photo you take in the app, so the library can store where it was taken.";

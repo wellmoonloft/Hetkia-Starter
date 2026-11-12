@@ -12,21 +12,21 @@ enum PublishImageEncoder {
     } else {
       image = await PhotoAssetResolver.displayImage(for: photo, targetSize: targetSize)
     }
-    guard let image, let data = encodeJPEG(image) else {
+    guard let image, let data = privacySafeJPEG(from: image) else {
       throw PublishError.imageEncoding(localized("publish.error.image.encode"))
     }
     return data
   }
 
-  private static func encodeJPEG(_ image: CGImage) -> Data? {
+  private static func privacySafeJPEG(from image: CGImage, quality: CGFloat = 0.85) -> Data? {
     let data = NSMutableData()
     guard let destination = CGImageDestinationCreateWithData(
       data, UTType.jpeg.identifier as CFString, 1, nil
     ) else { return nil }
-    let options: [CFString: Any] = [
-      kCGImageDestinationLossyCompressionQuality: 0.85
+    let properties: [CFString: Any] = [
+      kCGImageDestinationLossyCompressionQuality: quality
     ]
-    CGImageDestinationAddImage(destination, image, options as CFDictionary)
+    CGImageDestinationAddImage(destination, image, properties as CFDictionary)
     guard CGImageDestinationFinalize(destination) else { return nil }
     return data as Data
   }
