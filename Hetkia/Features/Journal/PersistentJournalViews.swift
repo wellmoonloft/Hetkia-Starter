@@ -97,6 +97,9 @@ struct PersistentJournalDetailView: View {
     @State private var isPreparingShare = false
     @State private var showDraftReplacementConfirmation = false
     @State private var showDeleteConfirmation = false
+    @State private var showEssayPublishSheet = false
+    @State private var showMomentPublishSheet = false
+    @State private var showPublishSettings = false
     @FocusState private var focusedInput: InputTarget?
     @ScaledMetric(relativeTo: .body) private var bodyFontSize: CGFloat = 16
     @ScaledMetric(relativeTo: .headline) private var headingFontSize: CGFloat = 18
@@ -267,6 +270,37 @@ struct PersistentJournalDetailView: View {
         } message: {
             Text("journal.delete.confirm-detail")
         }
+        .sheet(isPresented: $showEssayPublishSheet) {
+            EssayPublishSheet(
+                photos: selectedPhotos,
+                initialTitle: record.title,
+                initialBody: record.bodyText,
+                captureReferenceDate: displayedCaptureDate,
+                sourceJournalDayKey: record.dayKey,
+                savedOnly: savedOnly,
+                openSettings: {
+                    showEssayPublishSheet = false
+                    showPublishSettings = true
+                }
+            )
+        }
+        .sheet(isPresented: $showMomentPublishSheet) {
+            MomentPublishSheet(
+                initialBody: record.bodyText,
+                contentCreatedAt: record.createdAt,
+                sourceJournalDayKey: record.dayKey,
+                openSettings: {
+                    showMomentPublishSheet = false
+                    showPublishSettings = true
+                }
+            )
+        }
+        .sheet(isPresented: $showPublishSettings) {
+            NavigationStack {
+                PublishSettingsView()
+            }
+            .presentationDetents([.large])
+        }
     }
 
     private func persistentPage(photoAreaWidth: CGFloat) -> some View {
@@ -316,8 +350,19 @@ struct PersistentJournalDetailView: View {
                             .foregroundStyle(HetkiaPalette.secondaryInk)
                             .fixedSize(horizontal: false, vertical: true)
                             .frame(maxWidth: .infinity, alignment: .leading)
-                        HStack {
-                            Spacer()
+                        HStack(spacing: 10) {
+                            Spacer(minLength: 0)
+                            Button {
+                                Task { await generateDraft() }
+                            } label: {
+                                Label(isGenerating ? "photos.generating" : "journal.ai-draft", systemImage: "sparkles")
+                                    .font(.system(size: 11, weight: .medium))
+                            }
+                            .foregroundStyle(HetkiaPalette.secondaryInk)
+                            .disabled(isGenerating || record.generationStatus == .processing || selectedPhotos.isEmpty)
+                            Text(verbatim: "·")
+                                .font(.system(size: 11, weight: .medium))
+                                .foregroundStyle(HetkiaPalette.secondaryInk.opacity(0.55))
                             Button {
                                 editDraft = diaryText ?? ""
                                 isEditingDiary = true
@@ -435,27 +480,50 @@ struct PersistentJournalDetailView: View {
     }
 
     private var actionPanel: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 10) {
+        HStack {
+            Spacer(minLength: 0)
+            Menu {
                 Button {
-                    guard !selectedPhotos.isEmpty else {
-                        notice = HetkiaSystemLanguage.localizedString("photos.generate.needs-photos", comment: "")
-                        return
-                    }
-                    sharePhotoIDs = Set(selectedPhotos.map(\.id))
-                    showsSharePhotoPicker = true
+                    beginShareJournalCard()
                 } label: {
-                    Label(isPreparingShare ? "photos.generating" : "detail.share", systemImage: isPreparingShare ? "hourglass" : "square.and.arrow.up")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundStyle(HetkiaPalette.ink).frame(maxWidth: .infinity).frame(height: 48)
-                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    Text("detail.share.journal-card")
                 }
-                .buttonStyle(.plain)
-                .disabled(isPreparingShare)
-                actionButton(isGenerating ? "photos.generating" : "photos.generate", symbol: "sparkles") { Task { await generateDraft() } }
-                    .disabled(isGenerating || record.generationStatus == .processing)
+                Button {
+                    showEssayPublishSheet = true
+                } label: {
+                    Text("detail.share.upload-journal")
+                }
+                Button {
+                    showMomentPublishSheet = true
+                } label: {
+                    Text("detail.share.post-moment")
+                }
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: isPreparingShare ? "hourglass" : "square.and.arrow.up")
+                    Text(isPreparingShare ? "photos.generating" : "detail.share.menu")
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 11, weight: .semibold))
+                }
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(HetkiaPalette.ink)
+                .padding(.horizontal, 20)
+                .padding(.vertical, 13)
+                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
             }
-        }.frame(maxWidth: 520)
+            .disabled(isPreparingShare)
+            Spacer(minLength: 0)
+        }
+        .frame(maxWidth: 520)
+    }
+
+    private func beginShareJournalCard() {
+        guard !selectedPhotos.isEmpty else {
+            notice = HetkiaSystemLanguage.localizedString("photos.generate.needs-photos", comment: "")
+            return
+        }
+        sharePhotoIDs = Set(selectedPhotos.map(\.id))
+        showsSharePhotoPicker = true
     }
 
     @MainActor

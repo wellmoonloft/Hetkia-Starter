@@ -69,12 +69,12 @@ struct HetkiaApp: App {
             PersistentAppRootView(onboarding: onboarding)
         }
         .defaultSize(width: 620, height: 1000)
-        .modelContainer(for: [JournalRecord.self, JournalPhotoRecord.self, JournalGenerationTask.self])
+        .modelContainer(for: [JournalRecord.self, JournalPhotoRecord.self, JournalGenerationTask.self, PublishTask.self])
         #else
         WindowGroup {
             PersistentAppRootView(onboarding: onboarding)
         }
-        .modelContainer(for: [JournalRecord.self, JournalPhotoRecord.self, JournalGenerationTask.self])
+        .modelContainer(for: [JournalRecord.self, JournalPhotoRecord.self, JournalGenerationTask.self, PublishTask.self])
         #endif
     }
 }

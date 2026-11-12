@@ -14,6 +14,7 @@ struct SettingsView: View {
     @AppStorage(MapCoordinateSystemPreference.defaultsKey) private var mapCoordinateSystem = MapCoordinateSystemPreference.system.rawValue
     @State private var showICloudNotice = false
     @State private var showPromptEditor = false
+    @State private var showPublishSettings = false
 
     var body: some View {
         NavigationStack {
@@ -23,6 +24,7 @@ struct SettingsView: View {
                         .font(.system(size: 31, weight: .regular, design: .serif))
                         .foregroundStyle(HetkiaPalette.ink)
                     savedJournalsSection
+                    publishServiceSection
                     photoSelectionSection
                     mapCoordinateSection
                     storageSection
@@ -46,6 +48,9 @@ struct SettingsView: View {
                     journalPrompt = updatedPrompt
                 }
             }
+            .navigationDestination(isPresented: $showPublishSettings) {
+                PublishSettingsView()
+            }
         }
         .tint(HetkiaPalette.amber)
         .onChange(of: includeScreenshotsAndScreenRecordings) { _, _ in
@@ -58,6 +63,26 @@ struct SettingsView: View {
             storageChoiceRow(.local, title: "settings.storage.local", detail: "settings.storage.local.detail", isAvailable: true)
             Divider().overlay(HetkiaPalette.line)
             storageChoiceRow(.iCloud, title: "settings.storage.icloud", detail: "settings.storage.icloud.detail", isAvailable: false)
+        }
+    }
+
+    private var publishServiceSection: some View {
+        settingsCard(title: "publish.settings.title", symbol: "square.and.arrow.up.on.square") {
+            Button {
+                showPublishSettings = true
+            } label: {
+                HStack(spacing: 10) {
+                    Text("publish.settings.open")
+                        .font(.system(size: 13, weight: .medium))
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(HetkiaPalette.secondaryInk)
+                }
+                .foregroundStyle(HetkiaPalette.ink)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
         }
     }
 

@@ -4,13 +4,48 @@ English | [简体中文](README_CN.MD)
 
 This project is licensed under the [MIT License](LICENSE).
 
-Hetkia is an iOS photo-memory app centered on “On This Day.” The home screen shows photo groups captured on the same month and day in previous years, using the device’s local date. Browsing reads PhotoKit and displays system-provided images as needed. A journal, photo links, and JPEG previews are saved locally only when the user generates a journal, edits and saves its text, or posts a message.
+The screenshots below are a bit out of date—I’ll refresh them when I get around to it. They predate Hugo integration and the image CDN.
+
+### Why I built this
+
+When messaging apps started leaning harder into personal data—for training models and other uses—long-time users who rarely post publicly felt the squeeze. I’ve run a personal site on Hexo and Hugo for years, so I extended Hugo with short “moment” posts for quick venting.
+
+In practice, sharing falls into a few buckets:
+
+1. **Moments** — a line or paragraph, usually without images  
+2. **Essays** — journal-style text, sometimes with photos  
+3. **Experience** — knowledge you want to keep on the site long term  
+4. **Fiction** — a personal hobby category  
+
+Publishing habits differ too:
+
+- Moments should be fast from the phone—no formatting ceremony.  
+- Essays are similar: optional photos, mostly phone, sometimes desktop.  
+- Experience posts and fiction are still desktop-first.  
+
+Both Hexo and Hugo expect a `git push`. That’s awkward on a phone, but a small dedicated app makes the workflow much simpler.
+
+I always liked a “On This Day” style feature in another app: it groups photos taken on the same calendar day across years. I wanted that for my own library. Eventually I revoked broad photo access there and only exposed a few albums, so that feature was gone for me.
+
+**Hetkia** is the app I wrote to fill that gap.
+
+Hetkia is an iOS photo-memory app focused on **“On This Day.”** The home screen shows photos from the same month and day in past years, using the device’s local calendar. Browsing only reads PhotoKit and loads images from the system when needed. Journals, photo links, and JPEG previews are saved on device only when you generate a journal, edit and save text, or post a message.
+
+### Privacy layers
+
+- **Most private:** full journals stay on your iPhone. I don’t sync them via iCloud; iPad is mostly layout adaptation (e.g. two columns on the home screen).  
+- **Sharing:** pick a few photos from a day, compose a nice collage with your words, export an image card, and send it to someone.  
+- **Publishing:** push an essay (with optional images) or a text-only moment to your Hugo repo via GitHub; CI can deploy the site. In this project, essays map to Hugo “essays”; you can point paths at your own layout.  
+- **No images:** publish a plain-text moment—a quick rant without extra steps.  
+
+GitHub Pages and Cloudflare R2 settings are built in. If you use the same stack, you can plug in your values; other hosts or CDNs need code changes. For anything else, a good LLM and the docs usually get you there.
 
 ## Features
 
 - The first launch explains and requests full access to the photo library. After access is granted, the app scans today and matching dates from previous years, shows progress, and opens the home screen automatically.
 - The home screen shows only “On This Day.” Photos fill each card, with the date overlaid in white. All eligible photos are shown in a dynamic-height collage built on a one-third grid; layouts avoid empty cells, including for even photo counts.
-- Journal details support photo viewing, full-screen paging, place maps, share images, journal editing, on-device AI drafts, and messages. Journal text and messages are stored separately. An AI draft appears above the message board; applying it asks for confirmation if journal text already exists. Browsing alone does not create a saved journal or JPEG preview.
+- Journal details support photo viewing, full-screen paging, place maps, share images, journal editing, on-device AI drafts, messages, and optional **remote publishing** (Hugo essays with optional images, or text-only moments). Essays can use **now** or **photo capture date** as the published `date`. Publishing does not auto-save the journal locally. GitHub tokens and R2 keys stay in the device Keychain; repo paths and CDN domain are configured in Settings → Publish service. Success closes the publish sheet; connection tests show results under each settings card.
+- Journal text and messages are stored separately. An AI draft appears above the message board; applying it asks for confirmation if journal text already exists. Browsing alone does not create a saved journal or JPEG preview.
 - “Saved Journals” in Settings reads only locally saved records, grouped by year and month in a two-column grid. Card images fill the available area, with dates and photo counts overlaid in white.
 - The large Home Screen widget creates a full-bleed collage from the first image of each matching-date group. It shows up to nine years in a one-third-grid collage and prioritizes photos with GPS coordinates. Two images use a full-size background image with a small inset image. The title and brand name overlay the image. StandBy and small widgets use an image-only collage. Each image can deep-link to its corresponding journal.
 - Personal messages can be edited or deleted. If the last message is deleted and the journal has no body text or AI draft, the empty journal and its linked photo previews are deleted as well.
@@ -60,12 +95,14 @@ xcodebuild -project Hetkia.xcodeproj -scheme Hetkia -configuration Debug -destin
 
 See the [product requirements](docs/PRODUCT_REQUIREMENTS.md) for the complete product behavior and the [development guide](docs/DEVELOPMENT.md) for implementation details and verification notes.
 
+The repository does not contain API keys or deploy secrets. Configure GitHub and R2 credentials only on the device.
+
 ## Repository layout
 
 ```text
 Hetkia-Starter/
 ├── Hetkia.xcodeproj/            # App and WidgetKit extension targets
-├── Hetkia/                      # SwiftUI app, onboarding, details, PhotoKit, settings, and localization
+├── Hetkia/                      # SwiftUI app, onboarding, details, PhotoKit, settings, publishing, and localization
 ├── HetkiaWidget/                # On This Day WidgetKit extension
 ├── Design/                      # Design source files
 ├── screenshot/                  # Compressed reference screenshots named by content

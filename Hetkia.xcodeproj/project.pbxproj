@@ -38,6 +38,15 @@
 		A10000000000000000000023 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000006 /* Localizable.xcstrings */; };
 		A10000000000000000000024 /* SavedJournalsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000023 /* SavedJournalsView.swift */; };
 		A10000000000000000000025 /* Assets.xcassets in Widget Resources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000024 /* Assets.xcassets */; };
+		A10000000000000000000026 /* PublishConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000025 /* PublishConfiguration.swift */; };
+		A10000000000000000000027 /* PublishSecretsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000026 /* PublishSecretsStore.swift */; };
+		A10000000000000000000028 /* PublishModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000027 /* PublishModels.swift */; };
+		A10000000000000000000029 /* HugoMarkdownBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000028 /* HugoMarkdownBuilder.swift */; };
+		A1000000000000000000002A /* PublishConnectivityProbe.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000029 /* PublishConnectivityProbe.swift */; };
+		A1000000000000000000002B /* GitHubPublishClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000002A /* GitHubPublishClient.swift */; };
+		A1000000000000000000002C /* R2S3Client.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000002B /* R2S3Client.swift */; };
+		A1000000000000000000002D /* PublishCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000002C /* PublishCoordinator.swift */; };
+		A1000000000000000000002E /* PublishViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000002D /* PublishViews.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -100,6 +109,15 @@
 		A20000000000000000000022 /* HetkiaWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = HetkiaWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		A20000000000000000000023 /* SavedJournalsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavedJournalsView.swift; sourceTree = "<group>"; };
 		A20000000000000000000024 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		A20000000000000000000025 /* PublishConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PublishConfiguration.swift; sourceTree = "<group>"; };
+		A20000000000000000000026 /* PublishSecretsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PublishSecretsStore.swift; sourceTree = "<group>"; };
+		A20000000000000000000027 /* PublishModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PublishModels.swift; sourceTree = "<group>"; };
+		A20000000000000000000028 /* HugoMarkdownBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HugoMarkdownBuilder.swift; sourceTree = "<group>"; };
+		A20000000000000000000029 /* PublishConnectivityProbe.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PublishConnectivityProbe.swift; sourceTree = "<group>"; };
+		A2000000000000000000002A /* GitHubPublishClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitHubPublishClient.swift; sourceTree = "<group>"; };
+		A2000000000000000000002B /* R2S3Client.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = R2S3Client.swift; sourceTree = "<group>"; };
+		A2000000000000000000002C /* PublishCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PublishCoordinator.swift; sourceTree = "<group>"; };
+		A2000000000000000000002D /* PublishViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PublishViews.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -168,8 +186,25 @@
 				A4000000000000000000000D /* Onboarding */,
 				A4000000000000000000000E /* Photos */,
 				A4000000000000000000000F /* AI */,
+				A40000000000000000000011 /* Publishing */,
 			);
 			path = Features;
+			sourceTree = "<group>";
+		};
+		A40000000000000000000011 /* Publishing */ = {
+			isa = PBXGroup;
+			children = (
+				A20000000000000000000025 /* PublishConfiguration.swift */,
+				A20000000000000000000026 /* PublishSecretsStore.swift */,
+				A20000000000000000000027 /* PublishModels.swift */,
+				A20000000000000000000028 /* HugoMarkdownBuilder.swift */,
+				A20000000000000000000029 /* PublishConnectivityProbe.swift */,
+				A2000000000000000000002A /* GitHubPublishClient.swift */,
+				A2000000000000000000002B /* R2S3Client.swift */,
+				A2000000000000000000002C /* PublishCoordinator.swift */,
+				A2000000000000000000002D /* PublishViews.swift */,
+			);
+			path = Publishing;
 			sourceTree = "<group>";
 		};
 		A40000000000000000000006 /* Resources */ = {
@@ -399,6 +434,15 @@
 				A10000000000000000000019 /* FilteredPhotoPicker.swift in Sources */,
 				A10000000000000000000020 /* OnThisDayLibrary.swift in Sources */,
 				A10000000000000000000024 /* SavedJournalsView.swift in Sources */,
+				A10000000000000000000026 /* PublishConfiguration.swift in Sources */,
+				A10000000000000000000027 /* PublishSecretsStore.swift in Sources */,
+				A10000000000000000000028 /* PublishModels.swift in Sources */,
+				A10000000000000000000029 /* HugoMarkdownBuilder.swift in Sources */,
+				A1000000000000000000002A /* PublishConnectivityProbe.swift in Sources */,
+				A1000000000000000000002B /* GitHubPublishClient.swift in Sources */,
+				A1000000000000000000002C /* R2S3Client.swift in Sources */,
+				A1000000000000000000002D /* PublishCoordinator.swift in Sources */,
+				A1000000000000000000002E /* PublishViews.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

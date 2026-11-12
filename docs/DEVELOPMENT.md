@@ -1,7 +1,7 @@
 # 时光 · Hetkia 开发文档
 
-版本：2.6（扫描协调与性能边界）
-更新日期：2026-10-27
+版本：2.7（远程发布）
+更新日期：2026-11-12
 
 ## 1. 工程与平台
 
@@ -45,8 +45,20 @@
 
 - `OnboardingFlowView` 将原欢迎页和照片权限页合并为首屏，请求 PhotoKit `.readWrite` 完整授权；只在 `.authorized` 状态前进。拒绝/有限授权展示系统设置入口。
 - 授权成功后展示扫描进度；扫描完成即进入首页，没有用户确认步骤。
-- 设置不再展示照片权限卡片、“每日生成时间”或全图库导入/生成任务。设置提供已保存历史日记入口、存储选项、设备端 AI 状态和语言说明。App 启动及回到前台时检查完整照片授权；授权被撤销后回到合并后的照片授权引导页。
+- 设置不再展示照片权限卡片、“每日生成时间”或全图库导入/生成任务。设置提供已保存历史日记入口、存储选项、设备端 AI 状态、**发布服务**（`PublishSettingsView`）和语言说明。App 启动及回到前台时检查完整照片授权；授权被撤销后回到合并后的照片授权引导页。
 - 旧版导入、历史索引、自动队列及年份/月视图源文件仍在 target 内作为历史实现，但新首页和设置主流程不再调用它们；如后续清理，需先确认 SwiftData 旧数据兼容范围。
+
+### 远程发布（Hugo + GitHub + R2）
+
+- 实现位于 `Hetkia/Features/Publishing/`：`PublishCoordinator` 串行执行连通性探测 → GitHub/R2 校验 →（随笔）R2 上传 JPEG → 生成 Markdown → GitHub Contents API `PUT` 提交。
+- `PublishSecretsStore` 将 GitHub PAT 与 R2 Access Key / Secret 写入 Keychain（`UserDefaults` 仅保存非敏感配置）。仓库内不包含任何真实令牌或密钥。
+- `PublishConfiguration` 保存 owner、repository、branch、`essayDirectory`、`momentsDirectory`、R2 account、bucket、CDN 域名；多语言 Hugo 站点需配置带语言前缀的路径（例如 `content/cn/essay`）。
+- `GitHubPublishClient` 使用 Contents API 创建/更新单文件，不实现 Git Database 七步流。
+- `R2S3Client` 使用 SigV4 向 `https://{account}.r2.cloudflarestorage.com` 上传；`publicCDNURL(forStorageKey:)` 生成公开图片 URL 时去掉桶名及 CDN 域名中多余的 `/{bucket}` 前缀，使 Markdown 中的地址与自定义域名根路径一致（例如 `https://images.example.com/essay/…`）。
+- `HugoMarkdownBuilder` 输出随笔/说说 Front Matter（`categories`、`date` 等）。随笔文件名 `essay-{yyyyMMddHHmmss}-{uuid8}.md`，说说 `moment-{…}.md`；时间戳来自 `RemotePublishDraft.contentCreatedAt`。
+- `EssayPublishSheet` 提供「现在 / 当年」日期模式：现在使用提交时刻；当年取已勾选照片中最早的 `capturedAt`，否则回退详情页的 `displayedCaptureDate`。`MomentPublishSheet` 仅正文，不得带图。
+- 发布成功自动 `dismiss` 发布 sheet；设置页 GitHub/R2「测试连接」在各自卡片下方展示结果（成功文案含「设置已保存」），测试前会先 `persist`。
+- `PublishTask`（SwiftData）记录任务状态与错误；成功发布不调用 `commitJournalForUserAction()`。
 
 ### 后台刷新和 WidgetKit
 
@@ -60,6 +72,7 @@
 
 ## 3. 权限与隐私
 
+- 远程发布仅向用户配置的 GitHub 与 Cloudflare R2 端点发起 HTTPS 请求；凭证仅存本机 Keychain。日志与仓库代码中不得硬编码 PAT、R2 密钥或部署私钥。
 - `Hetkia/Info.plist` 声明 `NSPhotoLibraryUsageDescription`、`NSPhotoLibraryAddUsageDescription`、后台任务标识及 URL scheme。权限说明在五种语言 `InfoPlist.strings` 中提供。
 - `.limited` 不足以满足“整个图库历史上的今天”，主功能要求 `.authorized`。用户拒绝时只展示系统设置入口/受限页面，不以代码强制退出 App。
 - GPS 从照片元数据读取，不因照片位置而申请 Core Location 权限。打开详情后，坐标异步进入反向地理编码队列；短暂失败会重试，未解析记录在 App 回到前台時再次排队。位置名缓存复用，浏览查询不会持久化日记或照片预览。
