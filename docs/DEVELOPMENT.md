@@ -1,6 +1,6 @@
 # 时光 · Hetkia 开发文档
 
-版本：2.7（远程发布）
+版本：2.8（首页历史双 tab 与手札浏览）
 更新日期：2026-11-12
 
 ## 1. 工程与平台
@@ -26,10 +26,12 @@
 ### 首页与详情
 
 - `OnThisDayScanCoordinator` 是仅限主 App 进程的 actor。键包含本地日期、时区、截图/录屏筛选设置和扫描范围；同键并发请求共用一份进行中的结果。完整扫描可满足较窄的当年刷新，但当年刷新不能代替完整扫描。扫描结果带生成序号；提交时再次检查序号和日期，并串行写入缓存，防止迟到的旧结果覆盖新结果。进度通过订阅流送给调用方，取消一个界面的订阅不会取消共享的扫描任务。
-- `Hetkia/Features/Timeline/TimelineHomeView.swift`：只显示历年同月同日卡片。首次读取有效缓存后先显示卡片；热启动/回到前台时保留当前内存中的卡片，只刷新今年的照片集合，不因从详情返回而重新查询。`publishEntriesIfChanged` 比较日期 ID 和有序 PhotoKit `localIdentifier`，只有内容变化才替换 `entries`，避免相同查询结果触发全网格重绘。首次全量查询和下拉强制全量查询显示进度；热启动的增量查询不显示进度。缓存缺失或本地日期跨日时完整查询。强制扫描完成后即使 SwiftUI 刷新任务被取消，也要发布查询结果并清除加载状态，避免进度完成后旧页面卡住。
+- `Hetkia/Features/Timeline/TimelineHomeView.swift`：根层叠放「历史上的今天」与「历史手札」两套 `ScrollView`，`NavigationStack(path:)` 统一承载 `TimelineRootRoute`（今日详情与已保存日记详情）。`HomeHistoryFloatingBar` 绑定 `TimelineRootTab` 与历史浏览模式；`path` 非空或 blocking sheet 时隐藏浮动条。历史浏览状态：`SavedJournalsBrowseMode`（all/year/month）+ `SavedJournalsMonthScope`（`.monthsInYear` / `.entries`）；底栏回调 `selectSavedJournalsMonth/Year/All` 与 `resetSavedJournalsBrowseToAll`（点历史 tab）实现产品约定的月·年·全部状态机，不依赖右滑。历史上的今天部分：首次读取有效缓存后先显示卡片；热启动/回到前台时保留当前内存中的卡片，只刷新今年的照片集合，不因从详情返回而重新查询。`publishEntriesIfChanged` 比较日期 ID 和有序 PhotoKit `localIdentifier`，只有内容变化才替换 `entries`。强制扫描完成后即使 SwiftUI 刷新任务被取消，也要发布查询结果并清除加载状态。
+- `Hetkia/Features/Timeline/HomeHistoryFloatingBar.swift`：左侧胶囊「首页｜历史」，历史 tab 激活时右侧「月｜年｜全部」；高亮与 `SavedJournalsBrowseMode` 一致（月度列表与月内手札双列均为 `.month`）。
+- `Hetkia/Features/Timeline/SavedJournalsBrowseViews.swift`：`SavedJournalsYearsBrowseView` 年度双列；`SavedJournalsMonthsInYearWaterfallView` 月度双列（卡片标题 `.year().month(.wide)`，无顶栏年份）；`SavedJournalsMonthEntriesWaterfallView` 月内手札双列（无返回、无换月 chevron）。`SavedJournalIndex` 提供有意义记录、按年/月筛选与默认年推导。
 - 首页卡片由 `OnThisDayCard` 和 `OnThisDayPhotoGrid` 组成：展示当天符合条件的全部照片，拼贴几何使用 `PhotoMosaicLayout` 的三等分网格，按数量计算卡片高度并避免空格；日期白字浮在图片顶部，渐层不覆盖透明拼接缝。照片预览由 PhotoKit 提供，不保存文件。Widget timeline 仅在索引指纹变化或用户强制刷新时请求更新。
-- `Hetkia/Features/Timeline/SavedJournalsView.swift`：设置内的本地历史日记页。`@Query` 只查询 SwiftData，按 `dayKey` 合并为每天一篇并按年月分组，两列展示；`PersistedJournalThumbnail` 只读取 `thumbnailRelativePath` 对应的 Application Support JPEG，不调用 PhotoKit。导航到详情时传入 `savedOnly: true`，常规详情、分享和 AI 图像输入不扩展图库照片集合；用户点开单张静态照片查看大图时，仍按资源 ID 优先请求原图，找不到原图才用本地压缩 JPEG。
-- 历史手札卡片使用本地保存的首图铺满正方形卡片，白字显示日期与照片数；以暗色渐层提高对比。无封面时使用占位背景。
+- `Hetkia/Features/Timeline/SavedJournalsView.swift`：`SavedJournalsRootContent` 供「全部」总列表复用（按 `dayKey` 合并、双列、`PersistedJournalThumbnail` 只读 Application Support JPEG）。独立 `SavedJournalsView` 仍可用于预览/调试；主流程入口在 `TimelineHomeView`。已保存详情经 `TimelineRootRoute.savedJournal` 打开，`savedOnly: true`，不扩展 PhotoKit 照片集合。
+- 历史手札卡片（全部/年度/月度/月内）使用本地封面铺满，白字叠年月或日期与篇数；暗色渐层保证对比。无封面时占位图。
 - `OnThisDayCacheStore` 在 Application Support 原子写入当天的年月日上下文、时区及按日排序的 PhotoKit `localIdentifier` 索引。启动先按标识向当前图库恢复 `PHAsset` 并立即显示；同一天普通刷新只查询今年并替换该年份条目，下拉刷新执行 `OnThisDayLibrary.performFullScan` 完整重查。缓存不含照片位图/JPEG 或手札数据，只保留单个 JSON 快照。日期、年份或时区变化/旧 schema 时，在新查询前删除旧快照并完整建立当天索引。午夜后台刷新、引导首次查询和首页请求经过进程内协调器复用兼容的完整扫描结果。
 - 完整媒体查询与展示筛选应保持分离：索引卡片可用 `JournalPhotoSelection` 选择首页展示的优先集合；用户触发日记持久化时仍须获得该日期需要的完整照片集合。不能因为已有 `JournalRecord` 或命中展示缓存就省略照片查询、照片关系更新、JPEG 预览生成或 AI 任务。
 - Widget Extension 不使用主 App 的 actor，也不连接 SwiftData 容器。主 App 与 Widget Extension 通过 App Group 的 `on-this-day-widget-index.json` 传递轻量元数据快照；Widget 依据 PhotoKit 标识恢复代表图，验证日期、时区、筛选上下文和资源可用性，失败时执行自己的查询并重建快照。Widget 时间线由系统调度，主 App 仅在内容指纹变化或强制刷新时请求重新加载。
@@ -45,7 +47,7 @@
 
 - `OnboardingFlowView` 将原欢迎页和照片权限页合并为首屏，请求 PhotoKit `.readWrite` 完整授权；只在 `.authorized` 状态前进。拒绝/有限授权展示系统设置入口。
 - 授权成功后展示扫描进度；扫描完成即进入首页，没有用户确认步骤。
-- 设置不再展示照片权限卡片、“每日生成时间”或全图库导入/生成任务。设置提供已保存历史日记入口、存储选项、设备端 AI 状态、**发布服务**（`PublishSettingsView`）和语言说明。App 启动及回到前台时检查完整照片授权；授权被撤销后回到合并后的照片授权引导页。
+- 设置不再展示照片权限卡片、“每日生成时间”、全图库导入/生成任务或独立「历史手札」入口（改由首页浮动条 **历史** 进入）。设置提供存储选项、设备端 AI 状态、**相机与定位**（iOS）、**发布服务**（`PublishSettingsView`）和语言说明。App 启动及回到前台时检查完整照片授权；授权被撤销后回到合并后的照片授权引导页。
 - 旧版导入、历史索引、自动队列及年份/月视图源文件仍在 target 内作为历史实现，但新首页和设置主流程不再调用它们；如后续清理，需先确认 SwiftData 旧数据兼容范围。
 
 ### 远程发布（Hugo + GitHub + R2）

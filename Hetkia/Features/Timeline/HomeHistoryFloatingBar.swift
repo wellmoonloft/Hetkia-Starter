@@ -2,7 +2,11 @@ import SwiftUI
 
 struct HomeHistoryFloatingBar: View {
   @Binding var rootTab: TimelineRootTab
-  var historyBrowse: Binding<SavedJournalsBrowseMode>?
+  var historyBrowse: SavedJournalsBrowseMode?
+  var onSelectMonth: (() -> Void)?
+  var onSelectYear: (() -> Void)?
+  var onSelectAll: (() -> Void)?
+  var onSelectSavedJournalsTab: (() -> Void)?
 
   var body: some View {
     HStack(spacing: 8) {
@@ -12,7 +16,7 @@ struct HomeHistoryFloatingBar: View {
       }
     }
     .animation(.spring(response: 0.32, dampingFraction: 0.86), value: rootTab)
-    .animation(.spring(response: 0.32, dampingFraction: 0.86), value: historyBrowse?.wrappedValue)
+    .animation(.spring(response: 0.32, dampingFraction: 0.86), value: historyBrowse)
   }
 
   private var homeHistoryCapsule: some View {
@@ -21,6 +25,7 @@ struct HomeHistoryFloatingBar: View {
         rootTab = .onThisDay
       }
       segment("timeline.tab.saved-journals", isSelected: rootTab == .savedJournals) {
+        onSelectSavedJournalsTab?()
         rootTab = .savedJournals
       }
     }
@@ -31,16 +36,16 @@ struct HomeHistoryFloatingBar: View {
     .shadow(color: HetkiaPalette.ink.opacity(0.12), radius: 12, x: 0, y: 5)
   }
 
-  private func historyBrowseCapsule(_ selection: Binding<SavedJournalsBrowseMode>) -> some View {
+  private func historyBrowseCapsule(_ mode: SavedJournalsBrowseMode) -> some View {
     HStack(spacing: 0) {
-      segment("bottom.year", isSelected: selection.wrappedValue == .year) {
-        selection.wrappedValue = .year
+      segment("bottom.month", isSelected: mode == .month) {
+        onSelectMonth?()
       }
-      segment("bottom.month", isSelected: selection.wrappedValue == .month) {
-        selection.wrappedValue = .month
+      segment("bottom.year", isSelected: mode == .year) {
+        onSelectYear?()
       }
-      segment("bottom.all", isSelected: selection.wrappedValue == .all) {
-        selection.wrappedValue = .all
+      segment("bottom.all", isSelected: mode == .all) {
+        onSelectAll?()
       }
     }
     .padding(.horizontal, 5)

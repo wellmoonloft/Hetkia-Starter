@@ -79,13 +79,13 @@ struct SavedJournalsView: View {
     }
 }
 
-private struct SavedJournalMonthGroup: Identifiable {
+struct SavedJournalMonthGroup: Identifiable {
     let id: Int
     let date: Date
     let entries: [JournalRecord]
 }
 
-private struct SavedJournalCard: View {
+struct SavedJournalCard: View {
     let record: JournalRecord
     let locale: Locale
 
