@@ -109,7 +109,7 @@ struct TimelineEntryCard: View {
                         }
                     }
                     Spacer(minLength: 0)
-                    Text(String(format: NSLocalizedString("timeline.photo-count", comment: "Number of sample photos"), entry.photoCount))
+                    Text(String(format: HetkiaSystemLanguage.localizedString("timeline.photo-count", comment: "Number of sample photos"), entry.photoCount))
                 }
                 .font(.system(size: 9))
                 .foregroundStyle(HetkiaPalette.secondaryInk)

@@ -95,7 +95,7 @@ struct PhotoImportView: View {
                         }
                         VStack(alignment: .leading, spacing: 5) {
                             Text(journal.localDay.formatted(date: .long, time: .omitted)).font(.system(size: 13, weight: .medium, design: .serif))
-                            Text(journal.bodyText.isEmpty ? NSLocalizedString("photos.journal.pending", comment: "") : journal.bodyText)
+                            Text(journal.bodyText.isEmpty ? HetkiaSystemLanguage.localizedString("photos.journal.pending", comment: "") : journal.bodyText)
                                 .font(.system(size: 11)).lineLimit(2).foregroundStyle(HetkiaPalette.secondaryInk)
                             Text(generationStatusText(journal.generationStatus))
                                 .font(.system(size: 10, weight: .medium)).foregroundStyle(HetkiaPalette.amber)
@@ -115,7 +115,7 @@ struct PhotoImportView: View {
 
     private var undatedDateGroup: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Label(String(format: NSLocalizedString("photos.undated.title", comment: "Undated photo count"), undatedPhotos.count), systemImage: "calendar.badge.exclamationmark")
+            Label(String(format: HetkiaSystemLanguage.localizedString("photos.undated.title", comment: "Undated photo count"), undatedPhotos.count), systemImage: "calendar.badge.exclamationmark")
                 .font(.system(size: 14, weight: .medium, design: .serif)).foregroundStyle(HetkiaPalette.ink)
             Text("photos.undated.detail").font(.system(size: 11)).foregroundStyle(HetkiaPalette.secondaryInk)
             DatePicker("photos.undated.assign-date", selection: $dateForUndatedPhotos, displayedComponents: .date)
@@ -134,7 +134,7 @@ struct PhotoImportView: View {
         defer { isImporting = false; isGeneratingJournals = false }
         do {
             let summary = try await library.importAssets(assets, into: modelContext)
-            statusMessage = String(format: NSLocalizedString("photos.import.summary", comment: "Photo import summary"), summary.photoCount, summary.journalCount, summary.undatedCount, summary.excludedCount)
+            statusMessage = String(format: HetkiaSystemLanguage.localizedString("photos.import.summary", comment: "Photo import summary"), summary.photoCount, summary.journalCount, summary.undatedCount, summary.excludedCount)
             isImporting = false
             isGeneratingJournals = true
             await JournalAutomationCoordinator.shared.catchUp(context: modelContext)
@@ -168,7 +168,7 @@ struct PhotoImportView: View {
         }
         if journal.bodyText.isEmpty { journal.generationStatus = .pending }
         try? modelContext.save()
-        statusMessage = NSLocalizedString("photos.undated.assigned", comment: "")
+        statusMessage = HetkiaSystemLanguage.localizedString("photos.undated.assigned", comment: "")
     }
 
     private func generationStatusText(_ status: JournalGenerationStatus) -> String {
@@ -181,7 +181,7 @@ struct PhotoImportView: View {
         case .skipped: key = "photos.status.skipped"
         case .cancelled: key = "photos.status.cancelled"
         }
-        return NSLocalizedString(key, comment: "")
+        return HetkiaSystemLanguage.localizedString(key, comment: "")
     }
 }
 

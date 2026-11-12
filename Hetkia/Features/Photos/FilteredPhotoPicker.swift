@@ -38,7 +38,7 @@ struct FilteredPhotoPicker: View {
                                         .aspectRatio(0.92, contentMode: .fit)
                                 }
                                 .buttonStyle(.plain)
-                                .accessibilityLabel(asset.creationDate?.formatted(date: .long, time: .omitted) ?? NSLocalizedString("photos.undated.title", comment: "Undated photo"))
+                                .accessibilityLabel(asset.creationDate?.formatted(date: .long, time: .omitted) ?? HetkiaSystemLanguage.localizedString("photos.undated.title", comment: "Undated photo"))
                             }
                         }
                         .padding(12)

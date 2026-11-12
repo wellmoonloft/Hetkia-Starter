@@ -16,9 +16,9 @@ struct JournalDetailView: View {
     init(entry: JournalEntry) {
         self.entry = entry
         _photoCount = State(initialValue: entry.photoCount)
-        _bodyText = State(initialValue: NSLocalizedString(entry.bodyKey, comment: "Sample journal body"))
-        _locationText = State(initialValue: entry.locationKey.map { NSLocalizedString($0, comment: "Sample journal location") } ?? "")
-        _moodText = State(initialValue: entry.moodKey.map { NSLocalizedString($0, comment: "Sample journal mood") } ?? "")
+        _bodyText = State(initialValue: HetkiaSystemLanguage.localizedString(entry.bodyKey, comment: "Sample journal body"))
+        _locationText = State(initialValue: entry.locationKey.map { HetkiaSystemLanguage.localizedString($0, comment: "Sample journal location") } ?? "")
+        _moodText = State(initialValue: entry.moodKey.map { HetkiaSystemLanguage.localizedString($0, comment: "Sample journal mood") } ?? "")
     }
 
     var body: some View {
@@ -77,7 +77,7 @@ struct JournalDetailView: View {
         .sheet(isPresented: $showEditor) { editorSheet }
         .confirmationDialog("detail.photo-layout", isPresented: $showPhotoOptions, titleVisibility: .visible) {
             ForEach([1, 3, 5, 7, 9], id: \.self) { count in
-                Button(String(format: NSLocalizedString("detail.photo-count", comment: "Photo count option"), count)) {
+                Button(String(format: HetkiaSystemLanguage.localizedString("detail.photo-count", comment: "Photo count option"), count)) {
                     withAnimation(.easeInOut(duration: 0.2)) { photoCount = count }
                 }
             }
@@ -140,6 +140,6 @@ struct JournalDetailView: View {
     }
 
     private var shareText: String {
-        "\(entry.date.formatted(date: .long, time: .omitted))\n\(NSLocalizedString(entry.titleKey, comment: "Sample journal title"))\n\n\(bodyText)"
+        "\(entry.date.formatted(date: .long, time: .omitted))\n\(HetkiaSystemLanguage.localizedString(entry.titleKey, comment: "Sample journal title"))\n\n\(bodyText)"
     }
 }

@@ -10,6 +10,8 @@ struct SettingsView: View {
     @AppStorage("hetkia.storageChoice") private var storageChoice = JournalStorageChoice.local.rawValue
     @AppStorage(PhotoAssetEligibility.includeScreenshotsDefaultsKey, store: PhotoAssetEligibility.sharedDefaults) private var includeScreenshotsAndScreenRecordings = false
     @AppStorage(JournalDraftService.promptDefaultsKey) private var journalPrompt = JournalDraftService.defaultPrompt
+    @AppStorage(HetkiaSystemLanguage.defaultsKey) private var languageSelection = HetkiaSystemLanguage.systemIdentifier
+    @AppStorage(MapCoordinateSystemPreference.defaultsKey) private var mapCoordinateSystem = MapCoordinateSystemPreference.system.rawValue
     @State private var showICloudNotice = false
     @State private var showPromptEditor = false
 
@@ -22,6 +24,7 @@ struct SettingsView: View {
                         .foregroundStyle(HetkiaPalette.ink)
                     savedJournalsSection
                     photoSelectionSection
+                    mapCoordinateSection
                     storageSection
                     aiSection
                     aiPromptSection
@@ -95,6 +98,21 @@ struct SettingsView: View {
         }
     }
 
+    private var mapCoordinateSection: some View {
+        settingsCard(title: "settings.map-coordinate.title", symbol: "map") {
+            Picker("settings.map-coordinate.title", selection: $mapCoordinateSystem) {
+                mapCoordinateOption("settings.map-coordinate.system").tag(MapCoordinateSystemPreference.system.rawValue)
+                mapCoordinateOption("settings.map-coordinate.wgs84").tag(MapCoordinateSystemPreference.wgs84.rawValue)
+                mapCoordinateOption("settings.map-coordinate.gcj02").tag(MapCoordinateSystemPreference.gcj02.rawValue)
+            }
+            .tint(HetkiaPalette.amber)
+            Text("settings.map-coordinate.detail")
+                .font(.system(size: 11))
+                .foregroundStyle(HetkiaPalette.secondaryInk)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
     private var aiSection: some View {
         settingsCard(title: "settings.ai", symbol: "sparkles") {
             HStack(alignment: .top, spacing: 12) {
@@ -146,15 +164,31 @@ struct SettingsView: View {
     }
 
     private var languageSection: some View {
-        HStack(spacing: 10) {
-            Image(systemName: "globe.asia.australia")
-                .foregroundStyle(HetkiaPalette.amber)
-            Text("settings.language-note")
-                .font(.system(size: 12))
+        settingsCard(title: "settings.language.title", symbol: "globe.asia.australia") {
+            Picker("settings.language.title", selection: $languageSelection) {
+                languageOption("settings.language.system").tag(HetkiaSystemLanguage.systemIdentifier)
+                languageOption("settings.language.english").tag("en")
+                languageOption("settings.language.spanish").tag("es")
+                languageOption("settings.language.thai").tag("th")
+                languageOption("settings.language.zh-hans").tag("zh-Hans")
+                languageOption("settings.language.zh-hant").tag("zh-Hant")
+            }
+            .tint(HetkiaPalette.amber)
+            Text("settings.language.detail")
+                .font(.system(size: 11))
                 .foregroundStyle(HetkiaPalette.secondaryInk)
-            Spacer(minLength: 0)
+                .fixedSize(horizontal: false, vertical: true)
         }
-        .padding(.horizontal, 3)
+    }
+
+    private func languageOption(_ key: String) -> some View {
+        let effectiveLanguage = HetkiaSystemLanguage.resolvedIdentifier(for: languageSelection)
+        return Text(verbatim: HetkiaSystemLanguage.localizedString(key, language: effectiveLanguage))
+    }
+
+    private func mapCoordinateOption(_ key: String) -> some View {
+        let effectiveLanguage = HetkiaSystemLanguage.resolvedIdentifier(for: languageSelection)
+        return Text(verbatim: HetkiaSystemLanguage.localizedString(key, language: effectiveLanguage))
     }
 
     private func settingsCard<Content: View>(
@@ -168,6 +202,7 @@ struct SettingsView: View {
                 .foregroundStyle(HetkiaPalette.ink)
             content()
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(16)
         .background(.white.opacity(0.78), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).strokeBorder(HetkiaPalette.line.opacity(0.65), lineWidth: 0.7))

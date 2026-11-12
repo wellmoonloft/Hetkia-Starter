@@ -47,7 +47,7 @@ struct JournalPageView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .padding(.top, 13)
                     .padding(.bottom, 13)
-                    .accessibilityLabel(String(format: NSLocalizedString("page.photo-layout.accessibility", comment: "Photo layout accessibility label"), photoCount ?? entry.photoCount))
+                    .accessibilityLabel(String(format: HetkiaSystemLanguage.localizedString("page.photo-layout.accessibility", comment: "Photo layout accessibility label"), photoCount ?? entry.photoCount))
 
                 Text(LocalizedStringKey(entry.titleKey))
                     .font(.system(size: 13, weight: .regular, design: .serif))

@@ -73,7 +73,7 @@ struct JournalSearchView: View {
                                 .font(.system(size: 13)).lineLimit(2)
                             HStack(spacing: 5) {
                                 Image(systemName: "photo")
-                                Text(String(format: NSLocalizedString("timeline.photo-count", comment: "Number of sample photos"), entry.photoCount))
+                                Text(String(format: HetkiaSystemLanguage.localizedString("timeline.photo-count", comment: "Number of sample photos"), entry.photoCount))
                             }
                             .font(.system(size: 10)).foregroundStyle(HetkiaPalette.secondaryInk)
                         }

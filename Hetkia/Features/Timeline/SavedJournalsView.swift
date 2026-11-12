@@ -107,7 +107,7 @@ private struct SavedJournalCard: View {
                         .font(.system(size: 14, weight: .semibold, design: .serif))
                         .lineLimit(1)
                         .minimumScaleFactor(0.75)
-                    Text(String(format: NSLocalizedString("timeline.photo-count", comment: "Saved journal photo count"), record.photos.count))
+                    Text(String(format: HetkiaSystemLanguage.localizedString("timeline.photo-count", comment: "Saved journal photo count"), record.photos.count))
                         .font(.system(size: 11, weight: .medium))
                 }
                 .foregroundStyle(.white)

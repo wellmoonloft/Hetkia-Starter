@@ -23,7 +23,7 @@ struct YearsOverviewView: View {
                                     LinearGradient(colors: [.clear, .black.opacity(0.60)], startPoint: .center, endPoint: .bottom)
                                     VStack(alignment: .leading, spacing: 3) {
                                         Text(String(year)).font(.system(size: 15, weight: .medium, design: .serif))
-                                        Text(String(format: NSLocalizedString("timeline.entry-count", comment: "Number of journal entries in a year"), entries.count))
+                                        Text(String(format: HetkiaSystemLanguage.localizedString("timeline.entry-count", comment: "Number of journal entries in a year"), entries.count))
                                             .font(.system(size: 10))
                                     }
                                     .foregroundStyle(.white)
@@ -76,7 +76,7 @@ struct YearOverviewView: View {
             .buttonStyle(.plain)
             .foregroundStyle(HetkiaPalette.secondaryInk)
 
-            Text(String(format: NSLocalizedString("browse.months.in-year", comment: "Months in selected year"), year))
+            Text(String(format: HetkiaSystemLanguage.localizedString("browse.months.in-year", comment: "Months in selected year"), year))
                 .font(.system(size: 12))
                 .foregroundStyle(HetkiaPalette.secondaryInk)
 
@@ -109,7 +109,7 @@ struct YearOverviewView: View {
                             .overlay(alignment: .bottomLeading) {
                                 LinearGradient(colors: [.clear, .black.opacity(0.38)], startPoint: .center, endPoint: .bottom)
                                     .overlay(alignment: .bottomLeading) {
-                                        Text(String(format: NSLocalizedString("timeline.entry-count", comment: "Number of journal entries in a month"), entries.count))
+                                        Text(String(format: HetkiaSystemLanguage.localizedString("timeline.entry-count", comment: "Number of journal entries in a month"), entries.count))
                                             .font(.system(size: 8, weight: .medium))
                                             .foregroundStyle(.white)
                                             .padding(6)

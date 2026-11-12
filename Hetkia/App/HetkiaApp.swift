@@ -82,6 +82,7 @@ struct HetkiaApp: App {
 private struct PersistentAppRootView: View {
     @ObservedObject var onboarding: OnboardingFlowModel
     @Environment(\.scenePhase) private var scenePhase
+    @AppStorage(HetkiaSystemLanguage.defaultsKey) private var languageSelection = HetkiaSystemLanguage.systemIdentifier
     @State private var hasRequiredPhotoAccess = PhotoLibraryService.hasFullReadAccess
 
     var body: some View {
@@ -92,7 +93,7 @@ private struct PersistentAppRootView: View {
                 OnboardingFlowView(model: onboarding)
             }
         }
-        .environment(\.locale, HetkiaSystemLanguage.locale)
+        .environment(\.locale, HetkiaSystemLanguage.locale(for: languageSelection))
         .task { refreshPhotoAuthorization() }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active { refreshPhotoAuthorization() }
@@ -107,7 +108,18 @@ private struct PersistentAppRootView: View {
 }
 
 enum HetkiaSystemLanguage {
-    static let identifier: String = {
+    static let defaultsKey = "hetkia.languageOverride"
+    static let systemIdentifier = "system"
+    static let supportedIdentifiers = ["en", "es", "th", "zh-Hans", "zh-Hant"]
+
+    static var identifier: String {
+        resolvedIdentifier(for: UserDefaults.standard.string(forKey: defaultsKey) ?? systemIdentifier)
+    }
+
+    static func resolvedIdentifier(for selection: String) -> String {
+        guard selection == systemIdentifier else {
+            return supportedIdentifiers.contains(selection) ? selection : "en"
+        }
         guard let preferred = Locale.preferredLanguages.first?.lowercased() else { return "en" }
         if preferred.hasPrefix("zh") {
             if preferred.contains("hant") || preferred.contains("-tw") || preferred.contains("-hk") || preferred.contains("-mo") {
@@ -119,8 +131,33 @@ enum HetkiaSystemLanguage {
         if preferred.hasPrefix("th") { return "th" }
         if preferred.hasPrefix("en") { return "en" }
         return "en"
-    }()
+    }
 
-    static let locale = Locale(identifier: identifier)
-    static let displayName = locale.localizedString(forIdentifier: identifier) ?? "English"
+    static var locale: Locale { locale(for: identifier) }
+    static func locale(for selection: String) -> Locale {
+        Locale(identifier: resolvedIdentifier(for: selection))
+    }
+    static var displayName: String { locale.localizedString(forIdentifier: identifier) ?? "English" }
+
+    static func localizedString(_ key: String, language: String? = nil, comment: String = "") -> String {
+        let language = language.map(normalizedLanguageIdentifier) ?? identifier
+        if let path = Bundle.main.path(forResource: language, ofType: "lproj"),
+           let localizedBundle = Bundle(path: path) {
+            return localizedBundle.localizedString(forKey: key, value: nil, table: nil)
+        }
+        return Bundle.main.localizedString(forKey: key, value: nil, table: nil)
+    }
+
+    private static func normalizedLanguageIdentifier(_ identifier: String) -> String {
+        let lowercased = identifier.lowercased()
+        if lowercased.hasPrefix("zh") {
+            return lowercased.contains("hant") || lowercased.contains("tw") || lowercased.contains("hk") || lowercased.contains("mo")
+                ? "zh-Hant"
+                : "zh-Hans"
+        }
+        if lowercased.hasPrefix("es") { return "es" }
+        if lowercased.hasPrefix("th") { return "th" }
+        if lowercased.hasPrefix("en") { return "en" }
+        return "en"
+    }
 }

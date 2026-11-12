@@ -473,19 +473,23 @@ private enum WidgetMosaicLayout {
             ]
         }
         if count == 6 {
-            return (0..<6).map { index in
-                if index < 3 {
-                    return Tile(index: index, rect: CGRect(x: CGFloat(index) * unit, y: 0, width: unit, height: unit * 2))
-                }
-                return Tile(index: index, rect: CGRect(x: CGFloat(index - 3) * unit, y: unit * 2, width: unit, height: unit))
-            }
+            // Mix one horizontal and two separated vertical double tiles.
+            // The remaining single cells fill every part of the 3×3 canvas.
+            return [
+                Tile(index: 0, rect: CGRect(x: 0, y: 0, width: unit * 2, height: unit)),
+                Tile(index: 1, rect: CGRect(x: 0, y: unit, width: unit, height: unit * 2)),
+                Tile(index: 2, rect: CGRect(x: unit * 2, y: unit, width: unit, height: unit * 2)),
+                Tile(index: 3, rect: CGRect(x: unit * 2, y: 0, width: unit, height: unit)),
+                Tile(index: 4, rect: CGRect(x: unit, y: unit, width: unit, height: unit)),
+                Tile(index: 5, rect: CGRect(x: unit, y: unit * 2, width: unit, height: unit))
+            ]
         }
         if count == 7 {
             return [
-                Tile(index: 0, rect: CGRect(x: 0, y: 0, width: unit * 2, height: unit)),
-                Tile(index: 1, rect: CGRect(x: unit * 2, y: 0, width: unit, height: unit)),
-                Tile(index: 2, rect: CGRect(x: 0, y: unit, width: unit * 2, height: unit)),
-                Tile(index: 3, rect: CGRect(x: unit * 2, y: unit, width: unit, height: unit)),
+                Tile(index: 0, rect: CGRect(x: 0, y: 0, width: unit, height: unit * 2)),
+                Tile(index: 1, rect: CGRect(x: unit, y: 0, width: unit, height: unit)),
+                Tile(index: 2, rect: CGRect(x: unit * 2, y: 0, width: unit, height: unit)),
+                Tile(index: 3, rect: CGRect(x: unit, y: unit, width: unit * 2, height: unit)),
                 Tile(index: 4, rect: CGRect(x: 0, y: unit * 2, width: unit, height: unit)),
                 Tile(index: 5, rect: CGRect(x: unit, y: unit * 2, width: unit, height: unit)),
                 Tile(index: 6, rect: CGRect(x: unit * 2, y: unit * 2, width: unit, height: unit))

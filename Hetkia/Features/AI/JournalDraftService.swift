@@ -55,14 +55,14 @@ enum JournalDraftService {
 
     static var availabilityDescription: String {
         guard #available(iOS 26, macOS 26, *) else {
-            return NSLocalizedString("photos.ai.os-unsupported", comment: "")
+            return HetkiaSystemLanguage.localizedString("photos.ai.os-unsupported", comment: "")
         }
         return switch SystemLanguageModel.default.availability {
-        case .available: NSLocalizedString("photos.ai.available", comment: "")
-        case .unavailable(.deviceNotEligible): NSLocalizedString("photos.ai.device-unsupported", comment: "")
-        case .unavailable(.appleIntelligenceNotEnabled): NSLocalizedString("photos.ai.disabled", comment: "")
-        case .unavailable(.modelNotReady): NSLocalizedString("photos.ai.model-preparing", comment: "")
-        case .unavailable: NSLocalizedString("photos.ai.unavailable", comment: "")
+        case .available: HetkiaSystemLanguage.localizedString("photos.ai.available", comment: "")
+        case .unavailable(.deviceNotEligible): HetkiaSystemLanguage.localizedString("photos.ai.device-unsupported", comment: "")
+        case .unavailable(.appleIntelligenceNotEnabled): HetkiaSystemLanguage.localizedString("photos.ai.disabled", comment: "")
+        case .unavailable(.modelNotReady): HetkiaSystemLanguage.localizedString("photos.ai.model-preparing", comment: "")
+        case .unavailable: HetkiaSystemLanguage.localizedString("photos.ai.unavailable", comment: "")
         }
     }
 

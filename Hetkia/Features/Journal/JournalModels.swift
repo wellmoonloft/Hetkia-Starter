@@ -189,6 +189,18 @@ enum PhotoMosaicLayout {
                 Tile(index: 2, rect: CGRect(x: 2 * step, y: step, width: unit, height: unit))
             ]
         }
+        if count == 6 {
+            // Fill a 3×3 block with one horizontal and two separated vertical
+            // double tiles. This avoids a rigid row of three portrait tiles.
+            return [
+                Tile(index: 0, rect: CGRect(x: 0, y: 0, width: wide, height: unit)),
+                Tile(index: 1, rect: CGRect(x: 0, y: step, width: unit, height: wide)),
+                Tile(index: 2, rect: CGRect(x: 2 * step, y: step, width: unit, height: wide)),
+                Tile(index: 3, rect: CGRect(x: 2 * step, y: 0, width: unit, height: unit)),
+                Tile(index: 4, rect: CGRect(x: step, y: step, width: unit, height: unit)),
+                Tile(index: 5, rect: CGRect(x: step, y: 2 * step, width: unit, height: unit))
+            ]
+        }
         let tailCount = count % 3 == 1 ? 4 : (count % 3 == 2 ? 5 : 0)
         let fullCount = count - tailCount
         var result: [Tile] = []
@@ -212,11 +224,13 @@ enum PhotoMosaicLayout {
         let y2 = y1 + step
 
         if tailCount == 4 {
-            // Fill a 3×3 block with one 2×2, one 1×2, one 2×1, and one 1×1 tile.
+            // Separate the vertical and horizontal double tiles instead of
+            // stacking all oversized tiles together on the same edge.
+            // The final 3×3 block remains completely covered.
             result.append(Tile(index: baseIndex, rect: CGRect(x: x0, y: y0, width: wide, height: wide)))
-            result.append(Tile(index: baseIndex + 1, rect: CGRect(x: x2, y: y0, width: unit, height: wide)))
-            result.append(Tile(index: baseIndex + 2, rect: CGRect(x: x0, y: y2, width: wide, height: unit)))
-            result.append(Tile(index: baseIndex + 3, rect: CGRect(x: x2, y: y2, width: unit, height: unit)))
+            result.append(Tile(index: baseIndex + 1, rect: CGRect(x: x2, y: y0, width: unit, height: unit)))
+            result.append(Tile(index: baseIndex + 2, rect: CGRect(x: x2, y: y1, width: unit, height: wide)))
+            result.append(Tile(index: baseIndex + 3, rect: CGRect(x: x0, y: y2, width: wide, height: unit)))
         } else {
             // Fill a 3×2 block with one 2×1 tile and four single cells.
             result.append(Tile(index: baseIndex, rect: CGRect(x: x0, y: y0, width: wide, height: unit)))
@@ -232,6 +246,7 @@ enum PhotoMosaicLayout {
         guard count > 0 else { return 0 }
         if count == 1 { return 3 }
         if count == 2 || count == 3 { return 2 }
+        if count == 6 { return 3 }
         let tailCount = count % 3 == 1 ? 4 : (count % 3 == 2 ? 5 : 0)
         let fullCount = count - tailCount
         let fullRows = fullCount / 3

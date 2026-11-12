@@ -276,7 +276,7 @@ struct BackfillFlowView: View {
     private var confirmationScreen: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Text(String(format: NSLocalizedString("onboarding.backfill.selected-count", comment: ""), model.selectedDateCount))
+                Text(String(format: HetkiaSystemLanguage.localizedString("onboarding.backfill.selected-count", comment: ""), model.selectedDateCount))
                     .font(.system(size: 12, weight: .medium)).foregroundStyle(HetkiaPalette.secondaryInk)
                 Spacer()
                 Button("onboarding.backfill.select-all") { model.setAllDatesSelected(true) }.font(.system(size: 12))
@@ -291,7 +291,7 @@ struct BackfillFlowView: View {
                                 .foregroundStyle(group.hasExistingJournal || group.isSelected ? HetkiaPalette.amber : HetkiaPalette.line)
                             VStack(alignment: .leading, spacing: 3) {
                                 Text(group.date.formatted(date: .long, time: .omitted)).font(.system(size: 13, weight: .medium)).foregroundStyle(HetkiaPalette.ink)
-                                Text(String(format: NSLocalizedString("onboarding.backfill.photo-count", comment: ""), group.photoCount)).font(.system(size: 10)).foregroundStyle(HetkiaPalette.secondaryInk)
+                                Text(String(format: HetkiaSystemLanguage.localizedString("onboarding.backfill.photo-count", comment: ""), group.photoCount)).font(.system(size: 10)).foregroundStyle(HetkiaPalette.secondaryInk)
                             }
                             Spacer()
                             if group.hasExistingJournal { Text("onboarding.backfill.existing").font(.system(size: 10)).foregroundStyle(HetkiaPalette.secondaryInk) }
@@ -307,7 +307,7 @@ struct BackfillFlowView: View {
     private var queueScreen: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Label(String(format: NSLocalizedString("onboarding.backfill.completed-count", comment: ""), model.completedCount, model.queueItems.count), systemImage: "checkmark.circle")
+                Label(String(format: HetkiaSystemLanguage.localizedString("onboarding.backfill.completed-count", comment: ""), model.completedCount, model.queueItems.count), systemImage: "checkmark.circle")
                     .font(.system(size: 12, weight: .medium)).foregroundStyle(HetkiaPalette.secondaryInk)
                 Spacer()
                 if model.isQueuePaused {
@@ -342,7 +342,7 @@ struct BackfillFlowView: View {
             Spacer()
             Image(systemName: "checkmark.seal").font(.system(size: 48, weight: .light)).foregroundStyle(HetkiaPalette.amber)
             Text("onboarding.backfill.complete.title").font(.system(size: 25, weight: .regular, design: .serif)).foregroundStyle(HetkiaPalette.ink)
-            Text(String(format: NSLocalizedString("onboarding.backfill.complete.summary", comment: ""), model.completedCount, model.failedCount, model.skippedCount))
+            Text(String(format: HetkiaSystemLanguage.localizedString("onboarding.backfill.complete.summary", comment: ""), model.completedCount, model.failedCount, model.skippedCount))
                 .font(.system(size: 13)).foregroundStyle(HetkiaPalette.secondaryInk).multilineTextAlignment(.center)
             Spacer()
             primaryAction("onboarding.backfill.done") { if isOnboarding { model.finishFlow() } else { dismiss() } }

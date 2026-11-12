@@ -13,6 +13,67 @@ import UIKit
 import AppKit
 #endif
 
+enum MapCoordinateSystemPreference: String, CaseIterable {
+    case system
+    case wgs84
+    case gcj02
+
+    static let defaultsKey = "hetkia.mapCoordinateSystem"
+
+    var convertsWGS84ToGCJ02: Bool {
+        switch self {
+        case .system:
+            Locale.autoupdatingCurrent.region?.identifier.uppercased() == "CN"
+        case .wgs84:
+            false
+        case .gcj02:
+            true
+        }
+    }
+}
+
+private enum MapCoordinateConverter {
+    static func displayCoordinate(for coordinate: CLLocationCoordinate2D) -> CLLocationCoordinate2D {
+        let rawValue = UserDefaults.standard.string(forKey: MapCoordinateSystemPreference.defaultsKey)
+        let preference = rawValue.flatMap(MapCoordinateSystemPreference.init(rawValue:)) ?? .system
+        guard CLLocationCoordinate2DIsValid(coordinate),
+              preference.convertsWGS84ToGCJ02,
+              (0.8293...55.8271).contains(coordinate.latitude),
+              (72.004...137.8347).contains(coordinate.longitude) else {
+            return coordinate
+        }
+
+        let a = 6_378_245.0
+        let eccentricitySquared = 0.00669342162296594323
+        let latitude = coordinate.latitude
+        let longitude = coordinate.longitude
+        let latitudeDelta = transformLatitude(longitude - 105.0, latitude - 35.0)
+        let longitudeDelta = transformLongitude(longitude - 105.0, latitude - 35.0)
+        let radians = latitude / 180.0 * .pi
+        let magic = 1.0 - eccentricitySquared * sin(radians) * sin(radians)
+        let rootMagic = sqrt(magic)
+        let adjustedLatitude = latitudeDelta * 180.0 / ((a * (1.0 - eccentricitySquared)) / (magic * rootMagic) * .pi)
+        let adjustedLongitude = longitudeDelta * 180.0 / (a / rootMagic * cos(radians) * .pi)
+        return CLLocationCoordinate2D(latitude: latitude + adjustedLatitude, longitude: longitude + adjustedLongitude)
+    }
+
+    private static func transformLatitude(_ x: Double, _ y: Double) -> Double {
+        var value = -100.0 + 2.0 * x + 3.0 * y + 0.2 * y * y + 0.1 * x * y + 0.2 * sqrt(abs(x))
+        value += (20.0 * sin(6.0 * x * .pi) + 20.0 * sin(2.0 * x * .pi)) * 2.0 / 3.0
+        value += (20.0 * sin(y * .pi) + 40.0 * sin(y / 3.0 * .pi)) * 2.0 / 3.0
+        value += (160.0 * sin(y / 12.0 * .pi) + 320.0 * sin(y * .pi / 30.0)) * 2.0 / 3.0
+        return value
+    }
+
+    private static func transformLongitude(_ x: Double, _ y: Double) -> Double {
+        var value = 300.0 + x + 2.0 * y + 0.1 * x * x + 0.1 * x * y + 0.1 * sqrt(abs(x))
+        value += (20.0 * sin(6.0 * x * .pi) + 20.0 * sin(2.0 * x * .pi)) * 2.0 / 3.0
+        value += (20.0 * sin(x * .pi) + 40.0 * sin(x / 3.0 * .pi)) * 2.0 / 3.0
+        value += (150.0 * sin(x / 12.0 * .pi) + 300.0 * sin(x / 30.0 * .pi)) * 2.0 / 3.0
+        return value
+    }
+}
+
 struct PersistentJournalDetailView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
@@ -30,6 +91,9 @@ struct PersistentJournalDetailView: View {
     @State private var photoGallery: PhotoGallerySession?
     @State private var mapDestination: PhotoMapDestination?
     @State private var sharePayload: ShareImagePayload?
+    @State private var showsSharePhotoPicker = false
+    @State private var sharePhotoIDs = Set<UUID>()
+    @State private var pendingGeneratedDraft: String?
     @State private var isPreparingShare = false
     @State private var showDraftReplacementConfirmation = false
     @State private var showDeleteConfirmation = false
@@ -51,9 +115,6 @@ struct PersistentJournalDetailView: View {
     private var diaryText: String? {
         if !record.bodyText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             return record.bodyText
-        }
-        if let draft = record.aiDraftBody?.trimmingCharacters(in: .whitespacesAndNewlines), !draft.isEmpty {
-            return draft
         }
         return record.messagePosts.last(where: { $0.kind == .automatic })?.text
     }
@@ -114,7 +175,7 @@ struct PersistentJournalDetailView: View {
                             .fixedSize(horizontal: false, vertical: true)
                             .shadow(color: HetkiaPalette.ink.opacity(0.12), radius: 18, y: 8)
                         actionPanel.frame(width: pageWidth)
-                        if record.bodyWasEdited, let draft = record.aiDraftBody, draft != record.bodyText {
+                        if let draft = pendingGeneratedDraft {
                             generatedDraftCard(draft).frame(width: pageWidth)
                         }
                         messageBoard.frame(width: pageWidth)
@@ -137,7 +198,10 @@ struct PersistentJournalDetailView: View {
             }
         }
         .background(HetkiaPalette.paper.ignoresSafeArea())
-        .task { resolvePhotoLocations() }
+        .task {
+            discardUnappliedLegacyDraft()
+            resolvePhotoLocations()
+        }
         .navigationTitle(Text(displayedCaptureDate.formatted(.dateTime.year().month(.wide).day().hour().minute())))
         .toolbar {
             if hasPersistedRecord {
@@ -168,6 +232,18 @@ struct PersistentJournalDetailView: View {
 #else
                 .presentationDetents([.medium, .large])
 #endif
+        }
+        .sheet(isPresented: $showsSharePhotoPicker) {
+            SharePhotoSelectionView(
+                photos: selectedPhotos,
+                selectedPhotoIDs: $sharePhotoIDs,
+                onCancel: { showsSharePhotoPicker = false },
+                onCreate: {
+                    let photos = selectedPhotos.filter { sharePhotoIDs.contains($0.id) }
+                    showsSharePhotoPicker = false
+                    Task { await prepareShareImage(using: photos) }
+                }
+            )
         }
 #if os(iOS)
         .sheet(item: $sharePayload) { payload in
@@ -234,7 +310,7 @@ struct PersistentJournalDetailView: View {
                     }
                 } else {
                     VStack(alignment: .leading, spacing: 7) {
-                        Text(verbatim: diaryText ?? NSLocalizedString("photos.journal.empty", comment: "Empty journal"))
+                        Text(verbatim: diaryText ?? HetkiaSystemLanguage.localizedString("photos.journal.empty", comment: "Empty journal"))
                             .font(.system(size: bodyFontSize))
                             .lineSpacing(4)
                             .foregroundStyle(HetkiaPalette.secondaryInk)
@@ -329,7 +405,10 @@ struct PersistentJournalDetailView: View {
            CLLocationCoordinate2DIsValid(liveCoordinate) {
             coordinate = liveCoordinate
         }
-        mapDestination = PhotoMapDestination(coordinate: coordinate, title: title)
+        mapDestination = PhotoMapDestination(
+            coordinate: MapCoordinateConverter.displayCoordinate(for: coordinate),
+            title: title
+        )
     }
 
     private func photoTile(_ photo: JournalPhotoRecord, index: Int, width: CGFloat, height: CGFloat) -> some View {
@@ -359,7 +438,12 @@ struct PersistentJournalDetailView: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 10) {
                 Button {
-                    Task { await prepareShareImage() }
+                    guard !selectedPhotos.isEmpty else {
+                        notice = HetkiaSystemLanguage.localizedString("photos.generate.needs-photos", comment: "")
+                        return
+                    }
+                    sharePhotoIDs = Set(selectedPhotos.map(\.id))
+                    showsSharePhotoPicker = true
                 } label: {
                     Label(isPreparingShare ? "photos.generating" : "detail.share", systemImage: isPreparingShare ? "hourglass" : "square.and.arrow.up")
                         .font(.system(size: 12, weight: .medium))
@@ -375,16 +459,16 @@ struct PersistentJournalDetailView: View {
     }
 
     @MainActor
-    private func prepareShareImage() async {
+    private func prepareShareImage(using photos: [JournalPhotoRecord]) async {
         guard !isPreparingShare else { return }
         isPreparingShare = true
         defer { isPreparingShare = false }
-        guard !selectedPhotos.isEmpty else {
-            notice = NSLocalizedString("photos.generate.needs-photos", comment: "")
+        guard !photos.isEmpty else {
+            notice = HetkiaSystemLanguage.localizedString("photos.generate.needs-photos", comment: "")
             return
         }
         var images: [CGImage] = []
-        for photo in selectedPhotos {
+        for photo in photos {
             let targetSize = CGSize(width: 1200, height: 1200)
             let image: CGImage?
             if savedOnly {
@@ -397,7 +481,7 @@ struct PersistentJournalDetailView: View {
             }
         }
         guard !images.isEmpty else {
-            notice = NSLocalizedString("detail.share.failed", comment: "Could not create share image")
+            notice = HetkiaSystemLanguage.localizedString("detail.share.failed", comment: "Could not create share image")
             return
         }
 
@@ -405,28 +489,38 @@ struct PersistentJournalDetailView: View {
             date: displayedCaptureDate.formatted(.dateTime.year().month(.wide).day().hour().minute()),
             title: record.title,
             diaryText: shareBody,
-            locations: locationCities.map(\.name),
+            locations: uniqueLocationNames(in: photos),
             photos: images
         )
         let renderer = ImageRenderer(content: card)
         renderer.proposedSize = ProposedViewSize(width: 1080, height: nil)
         renderer.scale = 3
         guard let image = renderer.cgImage else {
-            notice = NSLocalizedString("detail.share.failed", comment: "Could not create share image")
+            notice = HetkiaSystemLanguage.localizedString("detail.share.failed", comment: "Could not create share image")
             return
         }
         let imageURL = FileManager.default.temporaryDirectory
             .appendingPathComponent("Hetkia-\(UUID().uuidString).png")
         guard let destination = CGImageDestinationCreateWithURL(imageURL as CFURL, "public.png" as CFString, 1, nil) else {
-            notice = NSLocalizedString("detail.share.failed", comment: "Could not create share image")
+            notice = HetkiaSystemLanguage.localizedString("detail.share.failed", comment: "Could not create share image")
             return
         }
         CGImageDestinationAddImage(destination, image, nil)
         guard CGImageDestinationFinalize(destination) else {
-            notice = NSLocalizedString("detail.share.failed", comment: "Could not create share image")
+            notice = HetkiaSystemLanguage.localizedString("detail.share.failed", comment: "Could not create share image")
             return
         }
         sharePayload = ShareImagePayload(image: image, url: imageURL)
+    }
+
+    private func uniqueLocationNames(in photos: [JournalPhotoRecord]) -> [String] {
+        var seen = Set<String>()
+        return photos.compactMap { photo in
+            guard let name = photo.placeName?.trimmingCharacters(in: .whitespacesAndNewlines), !name.isEmpty,
+                  seen.insert(name.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)).inserted
+            else { return nil }
+            return name
+        }
     }
 
     private var messageBoard: some View {
@@ -558,6 +652,8 @@ struct PersistentJournalDetailView: View {
             await commitJournalForUserAction()
             record.bodyText = draft
             record.bodyWasEdited = false
+            record.aiDraftBody = nil
+            pendingGeneratedDraft = nil
             record.updatedAt = .now
             try? modelContext.save()
         }
@@ -737,7 +833,7 @@ struct PersistentJournalDetailView: View {
     private func cancelEditing() { editingPostID = nil; focusedInput = nil; editDraft = "" }
 
     private func generateDraft() async {
-        guard !selectedPhotos.isEmpty else { notice = NSLocalizedString("photos.generate.needs-photos", comment: ""); return }
+        guard !selectedPhotos.isEmpty else { notice = HetkiaSystemLanguage.localizedString("photos.generate.needs-photos", comment: ""); return }
         guard #available(iOS 26, macOS 26, *) else {
             notice = JournalDraftService.availabilityDescription
             return
@@ -746,18 +842,8 @@ struct PersistentJournalDetailView: View {
             notice = JournalDraftService.availabilityDescription
             return
         }
-        await commitJournalForUserAction()
-        if record.bodyText.isEmpty { record.source = .automatic }
         isGenerating = true
-        let allTasks = (try? modelContext.fetch(FetchDescriptor<JournalGenerationTask>())) ?? []
-        for pending in allTasks where pending.dayKey == record.dayKey && pending.status == .pending { pending.status = .skipped }
-        let task = JournalGenerationTask(dayKey: record.dayKey, journal: record, type: .manual)
-        task.status = .processing
-        task.attempts += 1
-        record.generationStatus = .processing
-        record.generationError = nil
-        modelContext.insert(task)
-        try? modelContext.save()
+        defer { isGenerating = false }
         do {
             var images: [CGImage] = []
             if #available(iOS 27, macOS 27, *) {
@@ -795,21 +881,18 @@ struct PersistentJournalDetailView: View {
                 locationContext: locationContext,
                 photoMetadata: photoMetadata
             )
-            record.aiDraftBody = result.body
-            if !record.bodyWasEdited { record.bodyText = result.body }
-            record.generationStatus = .completed
-            task.status = .completed
-            task.lastError = nil
-            try modelContext.save()
+            pendingGeneratedDraft = result.body
         } catch {
-            record.generationStatus = .failed
-            record.generationError = error.localizedDescription
-            task.status = .failed
-            task.lastError = error.localizedDescription
             notice = error.localizedDescription
-            try? modelContext.save()
         }
-        isGenerating = false
+    }
+
+    private func discardUnappliedLegacyDraft() {
+        // Older builds persisted generated text before the user tapped Apply.
+        // Treat those drafts as abandoned when reopening the journal.
+        guard record.aiDraftBody != nil else { return }
+        record.aiDraftBody = nil
+        try? modelContext.save()
     }
 }
 
@@ -834,6 +917,85 @@ private struct ShareImagePayload: Identifiable {
     let id = UUID()
     let image: CGImage
     let url: URL
+}
+
+private struct SharePhotoSelectionView: View {
+    @Environment(\.dismiss) private var dismiss
+    let photos: [JournalPhotoRecord]
+    @Binding var selectedPhotoIDs: Set<UUID>
+    let onCancel: () -> Void
+    let onCreate: () -> Void
+
+    private let columns = [GridItem(.adaptive(minimum: 112), spacing: 10)]
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                LazyVGrid(columns: columns, spacing: 10) {
+                    ForEach(photos) { photo in
+                        let isSelected = selectedPhotoIDs.contains(photo.id)
+                        Button {
+                            if isSelected { selectedPhotoIDs.remove(photo.id) }
+                            else { selectedPhotoIDs.insert(photo.id) }
+                        } label: {
+                            GeometryReader { proxy in
+                                ZStack(alignment: .topTrailing) {
+                                    PhotoFallbackThumbnail(
+                                        photo: photo,
+                                        width: proxy.size.width,
+                                        height: proxy.size.height,
+                                        showsVideoIndicator: true
+                                    )
+                                    Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                                        .font(.system(size: 23, weight: .semibold))
+                                        .symbolRenderingMode(.palette)
+                                        .foregroundStyle(.white, isSelected ? HetkiaPalette.amber : .black.opacity(0.35))
+                                        .padding(8)
+                                }
+                                .overlay {
+                                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                        .strokeBorder(isSelected ? HetkiaPalette.amber : .clear, lineWidth: 3)
+                                }
+                                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                            }
+                            .aspectRatio(1, contentMode: .fit)
+                            .buttonStyle(.plain)
+                            .accessibilityLabel(Text(isSelected ? "share.photos.selected" : "share.photos.unselected"))
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(16)
+            }
+            .background(HetkiaPalette.paper.ignoresSafeArea())
+            .navigationTitle(Text("share.photos.title"))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("common.cancel", action: onCancel)
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("share.photos.select-all") {
+                        selectedPhotoIDs = Set(photos.map(\.id))
+                    }
+                }
+            }
+            .safeAreaInset(edge: .bottom) {
+                HStack(spacing: 12) {
+                    Button("share.photos.select-none") { selectedPhotoIDs.removeAll() }
+                        .buttonStyle(.bordered)
+                    Button("share.photos.create", action: onCreate)
+                        .buttonStyle(.borderedProminent)
+                        .tint(HetkiaPalette.amber)
+                        .disabled(selectedPhotoIDs.isEmpty)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(16)
+                .background(.regularMaterial)
+            }
+        }
+        .tint(HetkiaPalette.amber)
+    }
 }
 
 /// Resolves photo coordinates independently of the detail view lifecycle. Requests are
@@ -1249,6 +1411,7 @@ private struct PhotoFullScreenGallery: View {
     @Environment(\.dismiss) private var dismiss
     let photos: [JournalPhotoRecord]
     @State private var selection: Int
+    @State private var zoomedIndex: Int?
 
     init(photos: [JournalPhotoRecord], initialIndex: Int) {
         self.photos = photos
@@ -1260,7 +1423,10 @@ private struct PhotoFullScreenGallery: View {
             Color.black.ignoresSafeArea()
             TabView(selection: $selection) {
                 ForEach(Array(photos.enumerated()), id: \.element.id) { index, photo in
-                    PhotoGalleryPage(photo: photo).tag(index)
+                    PhotoGalleryPage(photo: photo) { isZoomed in
+                        zoomedIndex = isZoomed ? index : (zoomedIndex == index ? nil : zoomedIndex)
+                    }
+                    .tag(index)
                 }
             }
 #if os(macOS)
@@ -1268,6 +1434,7 @@ private struct PhotoFullScreenGallery: View {
 #else
             .tabViewStyle(.page(indexDisplayMode: photos.count > 1 ? .automatic : .never))
 #endif
+            .onChange(of: selection) { _, _ in zoomedIndex = nil }
             VStack {
                 HStack {
                     Spacer()
@@ -1300,7 +1467,8 @@ private struct PhotoFullScreenGallery: View {
             DragGesture(minimumDistance: 30)
                 .onEnded { value in
                     let translation = value.translation
-                    guard translation.height > 100,
+                    guard zoomedIndex == nil,
+                          translation.height > 100,
                           translation.height > abs(translation.width) * 1.25 else { return }
                     dismiss()
                 }
@@ -1314,7 +1482,7 @@ private struct PhotoFullScreenGallery: View {
 
 private struct PhotoGalleryPage: View {
     let photo: JournalPhotoRecord
-    @Environment(\.dismiss) private var dismiss
+    let onZoomChanged: (Bool) -> Void
     @State private var image: CGImage?
     @State private var player: AVPlayer?
     @State private var isLoadingVideo = false
@@ -1327,7 +1495,7 @@ private struct PhotoGalleryPage: View {
                         .onDisappear { player.pause() }
                 } else if let image {
                     ZStack {
-                        Image(decorative: image, scale: 1).resizable().scaledToFit()
+                        ZoomableGalleryImage(image: image, onZoomChanged: onZoomChanged)
                         if photo.mediaType == "video" {
                             Button {
                                 Task { await loadAndPlayVideo() }
@@ -1348,9 +1516,6 @@ private struct PhotoGalleryPage: View {
                             .buttonStyle(.plain)
                             .disabled(isLoadingVideo)
                             .accessibilityLabel(Text("photos.open.fullscreen"))
-                        } else {
-                            Color.clear.contentShape(Rectangle())
-                                .onTapGesture { dismiss() }
                         }
                     }
                 } else {
@@ -1382,5 +1547,84 @@ private struct PhotoGalleryPage: View {
         let videoPlayer = AVPlayer(playerItem: AVPlayerItem(asset: videoAsset))
         player = videoPlayer
         videoPlayer.play()
+    }
+}
+
+private struct ZoomableGalleryImage: View {
+    let image: CGImage
+    let onZoomChanged: (Bool) -> Void
+    @State private var scale: CGFloat = 1
+    @State private var committedScale: CGFloat = 1
+    @State private var offset: CGSize = .zero
+    @State private var committedOffset: CGSize = .zero
+
+    var body: some View {
+        GeometryReader { geometry in
+            let imageView = Image(decorative: image, scale: 1)
+                .resizable()
+                .scaledToFit()
+                .scaleEffect(scale)
+                .offset(offset)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .contentShape(Rectangle())
+                .simultaneousGesture(
+                    MagnifyGesture()
+                        .onChanged { value in
+                            scale = min(max(committedScale * value.magnification, 1), 5)
+                        }
+                        .onEnded { _ in
+                            committedScale = scale
+                            if committedScale <= 1.02 {
+                                resetZoom()
+                            } else {
+                                onZoomChanged(true)
+                                offset = clamped(offset, in: geometry.size, scale: committedScale)
+                                committedOffset = offset
+                            }
+                        }
+                )
+
+            if committedScale > 1.02 {
+                imageView.simultaneousGesture(
+                    DragGesture(minimumDistance: 2)
+                        .onChanged { value in
+                            // Let the enclosing TabView own horizontal swipes so
+                            // paging remains reliable while an image is zoomed.
+                            guard abs(value.translation.height) > abs(value.translation.width) else { return }
+                            offset = clamped(
+                                CGSize(width: committedOffset.width + value.translation.width,
+                                       height: committedOffset.height + value.translation.height),
+                                in: geometry.size,
+                                scale: committedScale
+                            )
+                        }
+                        .onEnded { _ in committedOffset = offset }
+                )
+                .onTapGesture(count: 2) {
+                    resetZoom()
+                }
+            } else {
+                imageView.onTapGesture(count: 2) {
+                    committedScale = 2
+                    scale = 2
+                    onZoomChanged(true)
+                }
+            }
+        }
+    }
+
+    private func clamped(_ value: CGSize, in size: CGSize, scale: CGFloat) -> CGSize {
+        CGSize(
+            width: min(max(value.width, -size.width * (scale - 1) / 2), size.width * (scale - 1) / 2),
+            height: min(max(value.height, -size.height * (scale - 1) / 2), size.height * (scale - 1) / 2)
+        )
+    }
+
+    private func resetZoom() {
+        scale = 1
+        committedScale = 1
+        offset = .zero
+        committedOffset = .zero
+        onZoomChanged(false)
     }
 }
