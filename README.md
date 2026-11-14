@@ -1,6 +1,6 @@
 # Hetkia / 时光
 
-[English](README.md) \| 简体中文
+English \| [简体中文](README_CN.MD)
 
 This project is licensed under the [MIT License](LICENSE).
 
