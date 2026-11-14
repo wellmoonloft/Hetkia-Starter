@@ -33,6 +33,7 @@
 		A10000000000000000000018 /* JournalAutomationCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000001D /* JournalAutomationCoordinator.swift */; };
 		A10000000000000000000019 /* FilteredPhotoPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000001E /* FilteredPhotoPicker.swift */; };
 		A10000000000000000000020 /* OnThisDayLibrary.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000020 /* OnThisDayLibrary.swift */; };
+		A10000000000000000000036 /* HetkiaWidgetTimelineReloader.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000036 /* HetkiaWidgetTimelineReloader.swift */; };
 		A10000000000000000000021 /* HetkiaWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000021 /* HetkiaWidget.swift */; };
 		A10000000000000000000022 /* HetkiaWidgetExtension.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = A20000000000000000000022 /* HetkiaWidgetExtension.appex */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		A10000000000000000000023 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000006 /* Localizable.xcstrings */; };
@@ -110,6 +111,7 @@
 		A2000000000000000000001D /* JournalAutomationCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JournalAutomationCoordinator.swift; sourceTree = "<group>"; };
 		A2000000000000000000001E /* FilteredPhotoPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilteredPhotoPicker.swift; sourceTree = "<group>"; };
 		A20000000000000000000020 /* OnThisDayLibrary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnThisDayLibrary.swift; sourceTree = "<group>"; };
+		A20000000000000000000036 /* HetkiaWidgetTimelineReloader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HetkiaWidgetTimelineReloader.swift; sourceTree = "<group>"; };
 		A20000000000000000000021 /* HetkiaWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HetkiaWidget.swift; sourceTree = "<group>"; };
 		A20000000000000000000022 /* HetkiaWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = HetkiaWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		A20000000000000000000023 /* SavedJournalsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavedJournalsView.swift; sourceTree = "<group>"; };
@@ -298,6 +300,7 @@
 				A2000000000000000000001B /* PhotoImportView.swift */,
 				A2000000000000000000001E /* FilteredPhotoPicker.swift */,
 				A20000000000000000000020 /* OnThisDayLibrary.swift */,
+				A20000000000000000000036 /* HetkiaWidgetTimelineReloader.swift */,
 			);
 			path = Photos;
 			sourceTree = "<group>";
@@ -451,6 +454,7 @@
 				A10000000000000000000018 /* JournalAutomationCoordinator.swift in Sources */,
 				A10000000000000000000019 /* FilteredPhotoPicker.swift in Sources */,
 				A10000000000000000000020 /* OnThisDayLibrary.swift in Sources */,
+				A10000000000000000000036 /* HetkiaWidgetTimelineReloader.swift in Sources */,
 				A10000000000000000000024 /* SavedJournalsView.swift in Sources */,
 				A10000000000000000000026 /* PublishConfiguration.swift in Sources */,
 				A10000000000000000000027 /* PublishSecretsStore.swift in Sources */,

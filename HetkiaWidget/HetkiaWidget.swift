@@ -23,6 +23,16 @@ private struct HetkiaWidgetEntry: TimelineEntry {
     let date: Date
     let memories: [WidgetMemory]
     let hasPhotoAccess: Bool
+    let totalPhotoCount: Int
+    let anniversaryYearCount: Int
+    let calendarMonth: Int
+    let calendarDay: Int
+}
+
+private struct WidgetIndexSummary: Codable, Equatable {
+    let totalPhotoCount: Int
+    let anniversaryYearCount: Int
+    let heroAssetIdentifier: String?
 }
 
 private struct WidgetIndexSnapshot: Codable {
@@ -40,14 +50,219 @@ private struct WidgetIndexSnapshot: Codable {
     let includesScreenshotsAndScreenRecordings: Bool
     let refreshedAt: Date
     let entries: [Item]
+    let totalPhotoCount: Int?
+    let anniversaryYearCount: Int?
+    let heroAssetIdentifier: String?
     let contentFingerprint: String
+
+    var summary: WidgetIndexSummary {
+        WidgetIndexSummary(
+            totalPhotoCount: totalPhotoCount ?? 0,
+            anniversaryYearCount: anniversaryYearCount ?? entries.count,
+            heroAssetIdentifier: heroAssetIdentifier
+        )
+    }
+}
+
+private struct PublishQuickEntry: TimelineEntry {
+    let date: Date
+    let heroImageData: Data?
+    let totalPhotoCount: Int
+    let anniversaryYearCount: Int
+    let calendarMonth: Int
+    let calendarDay: Int
+    let hasPhotoAccess: Bool
+}
+
+private enum WidgetSnapshotStore {
+    private static let schemaVersion = 2
+    private static let fileName = "on-this-day-widget-index.json"
+    private static let appGroup = "group.com.hetkia.app"
+    private static let settingsDefaults = UserDefaults(suiteName: appGroup)
+
+    @MainActor
+    static func read() -> WidgetIndexSnapshot? {
+        guard let url = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroup)?
+            .appendingPathComponent(fileName),
+              let data = try? Data(contentsOf: url),
+              let snapshot = try? JSONDecoder().decode(WidgetIndexSnapshot.self, from: data),
+              isCurrent(snapshot),
+              snapshot.contentFingerprint == fingerprint(snapshot) else {
+            return nil
+        }
+        recordWidgetFingerprint(snapshot.contentFingerprint)
+        return snapshot
+    }
+
+    @MainActor
+    static func groups(from snapshot: WidgetIndexSnapshot) -> [(date: Date, assets: [PHAsset])]? {
+        let identifiers = snapshot.entries.map(\.assetIdentifier)
+        guard !identifiers.isEmpty else { return [] }
+
+        let fetched = PHAsset.fetchAssets(withLocalIdentifiers: identifiers, options: nil)
+        var assetsByIdentifier: [String: PHAsset] = [:]
+        fetched.enumerateObjects { asset, _, _ in
+            let includesScreenshots = settingsDefaults?.bool(forKey: "hetkia.includeScreenshotsAndScreenRecordings") ?? false
+            let isVisibleMedia = !asset.isHidden && (asset.mediaType == .image || asset.mediaType == .video)
+            let isPriority = !asset.mediaSubtypes.contains(.photoScreenshot)
+                && !asset.mediaSubtypes.contains(.videoScreenRecording)
+            if isVisibleMedia && (includesScreenshots || isPriority) {
+                assetsByIdentifier[asset.localIdentifier] = asset
+            }
+        }
+        guard assetsByIdentifier.count == Set(identifiers).count else { return nil }
+
+        return snapshot.entries.compactMap { item in
+            guard let asset = assetsByIdentifier[item.assetIdentifier] else { return nil }
+            return (date: item.date, assets: [asset])
+        }
+    }
+
+    @MainActor
+    private static func isCurrent(_ snapshot: WidgetIndexSnapshot) -> Bool {
+        let calendar = Calendar.autoupdatingCurrent
+        let parts = calendar.dateComponents([.year, .month, .day], from: .now)
+        let includesScreenshots = settingsDefaults?.bool(forKey: "hetkia.includeScreenshotsAndScreenRecordings") ?? false
+        return snapshot.schemaVersion == schemaVersion
+            && snapshot.year == parts.year
+            && snapshot.month == parts.month
+            && snapshot.day == parts.day
+            && snapshot.timeZoneIdentifier == calendar.timeZone.identifier
+            && snapshot.includesScreenshotsAndScreenRecordings == includesScreenshots
+    }
+
+    static func fingerprint(_ snapshot: WidgetIndexSnapshot) -> String {
+        fingerprint(for: snapshot.entries, summary: snapshot.summary)
+    }
+
+    private static func fingerprint(for entries: [WidgetIndexSnapshot.Item], summary: WidgetIndexSummary) -> String {
+        let calendar = Calendar.autoupdatingCurrent
+        let parts = calendar.dateComponents([.year, .month, .day], from: .now)
+        let includesScreenshots = settingsDefaults?.bool(forKey: "hetkia.includeScreenshotsAndScreenRecordings") ?? false
+        let summaryLine = "photos:\(summary.totalPhotoCount):years:\(summary.anniversaryYearCount):hero:\(summary.heroAssetIdentifier ?? "none")"
+        let canonical = ([
+            "\(parts.year ?? 0)-\(parts.month ?? 0)-\(parts.day ?? 0)",
+            calendar.timeZone.identifier,
+            includesScreenshots ? "1" : "0",
+            summaryLine
+        ] + entries.sorted { $0.date > $1.date }.map { item in
+            let modification = item.assetModificationDate.map { String($0.timeIntervalSinceReferenceDate.bitPattern) } ?? "none"
+            return "\(calendar.component(.year, from: item.date)):\(item.assetIdentifier):\(modification)"
+        }).joined(separator: "\n")
+        return SHA256.hash(data: Data(canonical.utf8)).map { String(format: "%02x", $0) }.joined()
+    }
+
+    @MainActor
+    static func writeFallback(from groups: [(date: Date, assets: [PHAsset])]) {
+        let calendar = Calendar.autoupdatingCurrent
+        let parts = calendar.dateComponents([.year, .month, .day], from: .now)
+        guard let year = parts.year, let month = parts.month, let day = parts.day,
+              let url = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroup)?
+            .appendingPathComponent(fileName) else { return }
+        let items = groups.compactMap { group -> WidgetIndexSnapshot.Item? in
+            guard let first = group.assets.first else { return nil }
+            return WidgetIndexSnapshot.Item(
+                date: group.date,
+                assetIdentifier: first.localIdentifier,
+                assetModificationDate: first.modificationDate
+            )
+        }.sorted { $0.date > $1.date }
+        let includesScreenshots = settingsDefaults?.bool(forKey: "hetkia.includeScreenshotsAndScreenRecordings") ?? false
+        let currentYear = year
+        let heroID = items.first { calendar.component(.year, from: $0.date) == currentYear }?.assetIdentifier
+            ?? items.first?.assetIdentifier
+        let summary = WidgetIndexSummary(
+            totalPhotoCount: items.count,
+            anniversaryYearCount: items.count,
+            heroAssetIdentifier: heroID
+        )
+        let fingerprint = fingerprint(for: items, summary: summary)
+        let snapshot = WidgetIndexSnapshot(
+            schemaVersion: schemaVersion,
+            year: year,
+            month: month,
+            day: day,
+            timeZoneIdentifier: calendar.timeZone.identifier,
+            includesScreenshotsAndScreenRecordings: includesScreenshots,
+            refreshedAt: .now,
+            entries: items,
+            totalPhotoCount: summary.totalPhotoCount,
+            anniversaryYearCount: summary.anniversaryYearCount,
+            heroAssetIdentifier: summary.heroAssetIdentifier,
+            contentFingerprint: fingerprint
+        )
+        guard let data = try? JSONEncoder().encode(snapshot) else { return }
+        try? data.write(to: url, options: .atomic)
+        recordWidgetFingerprint(fingerprint)
+    }
+
+    private static func recordWidgetFingerprint(_ fingerprint: String) {
+        settingsDefaults?.set(fingerprint, forKey: "hetkia.widget.lastReloadedFingerprint")
+    }
+}
+
+private enum WidgetPhotoKitRenderer {
+    @MainActor
+    static func preview(for asset: PHAsset, targetSize: CGFloat) async -> CGImage? {
+        if asset.mediaType == .video {
+            let options = PHVideoRequestOptions()
+            options.isNetworkAccessAllowed = true
+            let video: AVAsset? = await withCheckedContinuation { continuation in
+                PHImageManager.default().requestAVAsset(forVideo: asset, options: options) { video, _, _ in
+                    continuation.resume(returning: video)
+                }
+            }
+            guard let video else { return nil }
+            let generator = AVAssetImageGenerator(asset: video)
+            generator.appliesPreferredTrackTransform = true
+            generator.maximumSize = CGSize(width: targetSize, height: targetSize)
+            return try? await generator.image(at: .zero).image
+        }
+
+        return await withCheckedContinuation { continuation in
+            let options = PHImageRequestOptions()
+            options.deliveryMode = .highQualityFormat
+            options.resizeMode = .fast
+            options.isNetworkAccessAllowed = true
+            PHImageManager.default().requestImage(
+                for: asset,
+                targetSize: CGSize(width: targetSize, height: targetSize),
+                contentMode: .aspectFill,
+                options: options
+            ) { image, info in
+                if (info?[PHImageResultIsDegradedKey] as? Bool) == true { return }
+                #if os(macOS)
+                continuation.resume(returning: image?.cgImage(forProposedRect: nil, context: nil, hints: nil))
+                #else
+                continuation.resume(returning: image?.cgImage)
+                #endif
+            }
+        }
+    }
+
+    static func jpegData(from image: CGImage) -> Data? {
+        #if os(macOS)
+        NSBitmapImageRep(cgImage: image).representation(using: .jpeg, properties: [.compressionFactor: 0.76])
+        #else
+        UIImage(cgImage: image).jpegData(compressionQuality: 0.76)
+        #endif
+    }
 }
 
 private struct HetkiaWidgetProvider: TimelineProvider {
     private let settingsDefaults = UserDefaults(suiteName: "group.com.hetkia.app")
 
     func placeholder(in context: Context) -> HetkiaWidgetEntry {
-        HetkiaWidgetEntry(date: .now, memories: [], hasPhotoAccess: false)
+        let parts = Calendar.autoupdatingCurrent.dateComponents([.month, .day], from: .now)
+        return HetkiaWidgetEntry(
+            date: .now,
+            memories: [],
+            hasPhotoAccess: false,
+            totalPhotoCount: 0,
+            anniversaryYearCount: 0,
+            calendarMonth: parts.month ?? 1,
+            calendarDay: parts.day ?? 1
+        )
     }
 
     func getSnapshot(in context: Context, completion: @escaping (HetkiaWidgetEntry) -> Void) {
@@ -70,17 +285,35 @@ private struct HetkiaWidgetProvider: TimelineProvider {
 
     @MainActor
     private func loadEntry(imageSize: CGFloat) async -> HetkiaWidgetEntry {
+        let calendar = Calendar.autoupdatingCurrent
+        let parts = calendar.dateComponents([.month, .day], from: .now)
+        let defaultMonth = parts.month ?? 1
+        let defaultDay = parts.day ?? 1
+
         guard PHPhotoLibrary.authorizationStatus(for: .readWrite) == .authorized else {
-            return HetkiaWidgetEntry(date: .now, memories: [], hasPhotoAccess: false)
+            return HetkiaWidgetEntry(
+                date: .now,
+                memories: [],
+                hasPhotoAccess: false,
+                totalPhotoCount: 0,
+                anniversaryYearCount: 0,
+                calendarMonth: defaultMonth,
+                calendarDay: defaultDay
+            )
         }
 
+        let sharedSnapshot = WidgetSnapshotStore.read()
         let groups: [(date: Date, assets: [PHAsset])]
-        if let cachedGroups = groupsFromSharedSnapshot() {
+        if let snapshot = sharedSnapshot, let cachedGroups = WidgetSnapshotStore.groups(from: snapshot) {
             groups = cachedGroups
         } else {
             groups = matchingPhotoGroups()
-            writeSharedSnapshot(from: groups)
+            WidgetSnapshotStore.writeFallback(from: groups)
         }
+
+        let summary = sharedSnapshot?.summary
+        let calendarMonth = sharedSnapshot?.month ?? defaultMonth
+        let calendarDay = sharedSnapshot?.day ?? defaultDay
         // Keep up to nine anniversary memories. The fixed widget canvas has
         // dedicated layouts for every count, including the two-photo inset.
         // Groups are reversed so the collage reads oldest anniversary to today.
@@ -90,11 +323,19 @@ private struct HetkiaWidgetProvider: TimelineProvider {
         var memories: [WidgetMemory] = []
         for group in chosenGroups {
             guard let firstAsset = group.assets.first,
-                  let image = await preview(for: firstAsset, targetSize: imageSize),
-                  let data = jpegData(from: image) else { continue }
+                  let image = await WidgetPhotoKitRenderer.preview(for: firstAsset, targetSize: imageSize),
+                  let data = WidgetPhotoKitRenderer.jpegData(from: image) else { continue }
             memories.append(WidgetMemory(date: group.date, imageData: data))
         }
-        return HetkiaWidgetEntry(date: .now, memories: memories, hasPhotoAccess: true)
+        return HetkiaWidgetEntry(
+            date: .now,
+            memories: memories,
+            hasPhotoAccess: true,
+            totalPhotoCount: summary?.totalPhotoCount ?? memories.count,
+            anniversaryYearCount: summary?.anniversaryYearCount ?? memories.count,
+            calendarMonth: calendarMonth,
+            calendarDay: calendarDay
+        )
     }
 
     @MainActor
@@ -140,159 +381,280 @@ private struct HetkiaWidgetProvider: TimelineProvider {
         return groups
     }
 
-    /// Reads the app's widget-specific index so WidgetKit doesn't repeat the
-    /// historical year-by-year PhotoKit queries during normal timeline loads.
-    /// A missing, stale, incompatible, or partially deleted snapshot falls back
-    /// to the established PhotoKit scan below.
-    @MainActor
-    private func groupsFromSharedSnapshot() -> [(date: Date, assets: [PHAsset])]? {
-        guard let url = FileManager.default.containerURL(
-            forSecurityApplicationGroupIdentifier: "group.com.hetkia.app"
-        )?.appendingPathComponent("on-this-day-widget-index.json"),
-              let data = try? Data(contentsOf: url),
-              let snapshot = try? JSONDecoder().decode(WidgetIndexSnapshot.self, from: data),
-              isCurrent(snapshot),
-              snapshot.contentFingerprint == fingerprint(for: snapshot.entries) else { return nil }
+}
 
-        let identifiers = snapshot.entries.map(\.assetIdentifier)
-        guard !identifiers.isEmpty else {
-            recordWidgetFingerprint(snapshot.contentFingerprint)
-            return []
-        }
+private struct WidgetFrostedCapsule<Content: View>: View {
+    var fillOpacity: CGFloat = 0.65
+    @ViewBuilder var content: () -> Content
 
-        let fetched = PHAsset.fetchAssets(withLocalIdentifiers: identifiers, options: nil)
-        var assetsByIdentifier: [String: PHAsset] = [:]
-        fetched.enumerateObjects { asset, _, _ in
-            let includesScreenshots = settingsDefaults?.bool(forKey: "hetkia.includeScreenshotsAndScreenRecordings") ?? false
-            let isVisibleMedia = !asset.isHidden && (asset.mediaType == .image || asset.mediaType == .video)
-            let isPriority = !asset.mediaSubtypes.contains(.photoScreenshot)
-                && !asset.mediaSubtypes.contains(.videoScreenRecording)
-            if isVisibleMedia && (includesScreenshots || isPriority) {
-                assetsByIdentifier[asset.localIdentifier] = asset
+    var body: some View {
+        content()
+            .background {
+                Capsule(style: .continuous)
+                    .fill(Color.black.opacity(0.16))
+                    .background {
+                        Capsule(style: .continuous)
+                            .fill(.ultraThinMaterial)
+                            .opacity(fillOpacity)
+                    }
             }
-        }
-        guard assetsByIdentifier.count == Set(identifiers).count else { return nil }
-
-        recordWidgetFingerprint(snapshot.contentFingerprint)
-        return snapshot.entries.compactMap { item in
-            guard let asset = assetsByIdentifier[item.assetIdentifier] else { return nil }
-            return (date: item.date, assets: [asset])
-        }
+            .overlay(Capsule(style: .continuous).strokeBorder(.white.opacity(0.22), lineWidth: 0.5))
     }
+}
 
-    @MainActor
-    private func isCurrent(_ snapshot: WidgetIndexSnapshot) -> Bool {
-        let calendar = Calendar.autoupdatingCurrent
-        let parts = calendar.dateComponents([.year, .month, .day], from: .now)
-        let includesScreenshots = settingsDefaults?.bool(forKey: "hetkia.includeScreenshotsAndScreenRecordings") ?? false
-        return snapshot.schemaVersion == 1
-            && snapshot.year == parts.year
-            && snapshot.month == parts.month
-            && snapshot.day == parts.day
-            && snapshot.timeZoneIdentifier == calendar.timeZone.identifier
-            && snapshot.includesScreenshotsAndScreenRecordings == includesScreenshots
-    }
+private struct WidgetFrostedPanel<Content: View>: View {
+    var cornerRadius: CGFloat = 16
+    var fillOpacity: CGFloat = 0.65
+    @ViewBuilder var content: () -> Content
 
-    private func fingerprint(for entries: [WidgetIndexSnapshot.Item]) -> String {
-        let calendar = Calendar.autoupdatingCurrent
-        let parts = calendar.dateComponents([.year, .month, .day], from: .now)
-        let includesScreenshots = settingsDefaults?.bool(forKey: "hetkia.includeScreenshotsAndScreenRecordings") ?? false
-        let canonical = ([
-            "\(parts.year ?? 0)-\(parts.month ?? 0)-\(parts.day ?? 0)",
-            calendar.timeZone.identifier,
-            includesScreenshots ? "1" : "0"
-        ] + entries.sorted { $0.date > $1.date }.map { item in
-            let modification = item.assetModificationDate.map { String($0.timeIntervalSinceReferenceDate.bitPattern) } ?? "none"
-            return "\(calendar.component(.year, from: item.date)):\(item.assetIdentifier):\(modification)"
-        }).joined(separator: "\n")
-        return SHA256.hash(data: Data(canonical.utf8)).map { String(format: "%02x", $0) }.joined()
-    }
-
-    @MainActor
-    private func writeSharedSnapshot(from groups: [(date: Date, assets: [PHAsset])]) {
-        let calendar = Calendar.autoupdatingCurrent
-        let parts = calendar.dateComponents([.year, .month, .day], from: .now)
-        guard let year = parts.year, let month = parts.month, let day = parts.day,
-              let url = FileManager.default.containerURL(
-                forSecurityApplicationGroupIdentifier: "group.com.hetkia.app"
-              )?.appendingPathComponent("on-this-day-widget-index.json") else { return }
-        let items = groups.compactMap { group -> WidgetIndexSnapshot.Item? in
-            guard let first = group.assets.first else { return nil }
-            return WidgetIndexSnapshot.Item(
-                date: group.date,
-                assetIdentifier: first.localIdentifier,
-                assetModificationDate: first.modificationDate
+    var body: some View {
+        content()
+            .background {
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .fill(Color.black.opacity(0.16))
+                    .background(
+                        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                            .fill(.ultraThinMaterial)
+                            .opacity(fillOpacity)
+                    )
+            }
+            .overlay(
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .strokeBorder(.white.opacity(0.22), lineWidth: 0.5)
             )
-        }.sorted { $0.date > $1.date }
-        let includesScreenshots = settingsDefaults?.bool(forKey: "hetkia.includeScreenshotsAndScreenRecordings") ?? false
-        let snapshot = WidgetIndexSnapshot(
-            schemaVersion: 1,
-            year: year,
-            month: month,
-            day: day,
-            timeZoneIdentifier: calendar.timeZone.identifier,
-            includesScreenshotsAndScreenRecordings: includesScreenshots,
-            refreshedAt: .now,
-            entries: items,
-            contentFingerprint: fingerprint(for: items)
+    }
+}
+
+private struct WidgetGlassPublishButton: View {
+    let titleKey: LocalizedStringKey
+    let symbol: String
+    let destination: String
+    var expands: Bool = false
+    var compact: Bool = false
+
+    var body: some View {
+        Link(destination: URL(string: destination)!) {
+            HStack(spacing: 5) {
+                Image(systemName: symbol)
+                    .font(.system(size: compact ? 10 : 12, weight: .semibold))
+                Text(titleKey)
+                    .font(.system(size: compact ? 10 : 12, weight: .semibold))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
+            }
+            .foregroundStyle(.white)
+            .shadow(color: .black.opacity(0.25), radius: 1, x: 0, y: 1)
+            .padding(.horizontal, compact ? 10 : 12)
+            .padding(.vertical, compact ? 0 : 8)
+            .frame(maxWidth: expands ? .infinity : nil)
+            .frame(height: compact ? 26 : nil)
+            .background {
+                Capsule(style: .continuous)
+                    .fill(Color.black.opacity(0.1))
+                    .background {
+                        Capsule(style: .continuous)
+                            .fill(.ultraThinMaterial)
+                            .opacity(0.55)
+                    }
+            }
+            .overlay(Capsule(style: .continuous).strokeBorder(.white.opacity(0.32), lineWidth: 0.5))
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+private struct WidgetDashboardLargeHeader: View {
+    let month: Int
+    let day: Int
+
+    private var dateSubtitle: String {
+        String(
+            format: Bundle.main.localizedString(forKey: "widget.dashboard.date", value: nil, table: nil),
+            month,
+            day
         )
-        guard let data = try? JSONEncoder().encode(snapshot) else { return }
-        do {
-            try data.write(to: url, options: .atomic)
-            recordWidgetFingerprint(snapshot.contentFingerprint)
-        } catch {
-            // A later WidgetKit request can retry the legacy PhotoKit path.
+    }
+
+    var body: some View {
+        WidgetFrostedCapsule(fillOpacity: 0.65) {
+            HStack(spacing: 4) {
+                Image(systemName: "photo.on.rectangle.angled")
+                    .font(.system(size: 11, weight: .semibold))
+                Text("widget.dashboard.brand")
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
+                Text("|")
+                    .opacity(0.85)
+                Text(verbatim: dateSubtitle)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
+            }
+            .font(.system(size: 11, weight: .semibold))
+            .foregroundStyle(.white)
+            .shadow(color: .black.opacity(0.35), radius: 2, x: 0, y: 1)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 7)
         }
     }
+}
 
-    private func recordWidgetFingerprint(_ fingerprint: String) {
-        settingsDefaults?.set(fingerprint, forKey: "hetkia.widget.lastReloadedFingerprint")
+private struct WidgetDashboardSmallTitleRow: View {
+    private var titleText: String {
+        let brand = Bundle.main.localizedString(forKey: "widget.dashboard.brand", value: nil, table: nil)
+        let album = Bundle.main.localizedString(forKey: "widget.dashboard.album", value: nil, table: nil)
+        return "\(brand) | \(album)"
     }
 
-    @MainActor
-    private func preview(for asset: PHAsset, targetSize: CGFloat) async -> CGImage? {
-        if asset.mediaType == .video {
-            let options = PHVideoRequestOptions()
-            options.isNetworkAccessAllowed = true
-            let video: AVAsset? = await withCheckedContinuation { continuation in
-                PHImageManager.default().requestAVAsset(forVideo: asset, options: options) { video, _, _ in
-                    continuation.resume(returning: video)
+    var body: some View {
+        HStack(spacing: 3) {
+            Image(systemName: "calendar")
+                .font(.caption2.weight(.semibold))
+            Text(verbatim: titleText)
+                .font(.system(size: 11, weight: .semibold))
+                .lineLimit(1)
+                .minimumScaleFactor(0.5)
+        }
+        .foregroundStyle(.white)
+        .shadow(color: .black.opacity(0.4), radius: 2, x: 0, y: 1)
+    }
+}
+
+private struct WidgetStatsInlineRow: View {
+    let totalPhotoCount: Int
+    let anniversaryYearCount: Int
+    var emphasizeNumbers: Bool
+    var showsChevron: Bool
+
+    private var photosUnit: String {
+        Bundle.main.localizedString(forKey: "widget.dashboard.photos-unit", value: nil, table: nil)
+    }
+
+    private var yearsUnit: String {
+        Bundle.main.localizedString(forKey: "widget.dashboard.years-unit", value: nil, table: nil)
+    }
+
+    private var countFontSize: CGFloat { emphasizeNumbers ? 14 : 11 }
+    private var unitFontSize: CGFloat { emphasizeNumbers ? 9 : 9 }
+
+    var body: some View {
+        HStack(spacing: 6) {
+            metricGroup(icon: "photo.on.rectangle", count: totalPhotoCount, unit: photosUnit)
+            Text("|")
+                .font(.system(size: unitFontSize, weight: .medium))
+                .opacity(0.7)
+            metricGroup(icon: "clock.arrow.circlepath", count: anniversaryYearCount, unit: yearsUnit)
+            if showsChevron {
+                Spacer(minLength: 2)
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 10, weight: .semibold))
+                    .opacity(0.85)
+            }
+        }
+        .foregroundStyle(.white)
+        .shadow(color: .black.opacity(0.35), radius: 1, x: 0, y: 1)
+        .lineLimit(1)
+        .minimumScaleFactor(0.45)
+        .allowsTightening(true)
+    }
+
+    private func metricGroup(icon: String, count: Int, unit: String) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 2) {
+            Image(systemName: icon)
+                .font(.system(size: unitFontSize, weight: .semibold))
+            Text("\(count)")
+                .font(.system(size: countFontSize, weight: .bold, design: .rounded))
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+            Text(verbatim: unit)
+                .font(.system(size: unitFontSize, weight: .medium))
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+        }
+        .fixedSize(horizontal: true, vertical: false)
+    }
+}
+
+private struct WidgetSmallBottomActions: View {
+    var body: some View {
+        VStack(spacing: 4) {
+            WidgetGlassPublishButton(
+                titleKey: "detail.share.post-moment",
+                symbol: "text.bubble",
+                destination: "hetkia://publish/moment",
+                expands: true,
+                compact: true
+            )
+            WidgetGlassPublishButton(
+                titleKey: "detail.share.upload-journal",
+                symbol: "square.and.pencil",
+                destination: "hetkia://publish/essay",
+                expands: true,
+                compact: true
+            )
+        }
+    }
+}
+
+private struct WidgetDashboardSmallLayout: View {
+    let totalPhotoCount: Int
+    let anniversaryYearCount: Int
+
+    var body: some View {
+        ZStack {
+            VStack(alignment: .leading, spacing: 4) {
+                WidgetDashboardSmallTitleRow()
+                WidgetStatsInlineRow(
+                    totalPhotoCount: totalPhotoCount,
+                    anniversaryYearCount: anniversaryYearCount,
+                    emphasizeNumbers: true,
+                    showsChevron: true
+                )
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+
+            WidgetSmallBottomActions()
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}
+
+private struct WidgetDashboardLargeFooter: View {
+    let totalPhotoCount: Int
+    let anniversaryYearCount: Int
+
+    var body: some View {
+        WidgetFrostedPanel(cornerRadius: 18, fillOpacity: 0.65) {
+            HStack(alignment: .center, spacing: 6) {
+                WidgetStatsInlineRow(
+                    totalPhotoCount: totalPhotoCount,
+                    anniversaryYearCount: anniversaryYearCount,
+                    emphasizeNumbers: false,
+                    showsChevron: false
+                )
+                .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
+                .layoutPriority(1)
+
+                HStack(spacing: 6) {
+                    WidgetGlassPublishButton(
+                        titleKey: "detail.share.post-moment",
+                        symbol: "text.bubble",
+                        destination: "hetkia://publish/moment",
+                        compact: true
+                    )
+                    WidgetGlassPublishButton(
+                        titleKey: "detail.share.upload-journal",
+                        symbol: "square.and.pencil",
+                        destination: "hetkia://publish/essay",
+                        compact: true
+                    )
                 }
+                .fixedSize(horizontal: true, vertical: false)
+                .layoutPriority(0)
             }
-            guard let video else { return nil }
-            let generator = AVAssetImageGenerator(asset: video)
-            generator.appliesPreferredTrackTransform = true
-            generator.maximumSize = CGSize(width: targetSize, height: targetSize)
-            return try? await generator.image(at: .zero).image
+            .padding(.horizontal, 10)
+            .padding(.vertical, 9)
         }
-
-        return await withCheckedContinuation { continuation in
-            let options = PHImageRequestOptions()
-            options.deliveryMode = .highQualityFormat
-            options.resizeMode = .fast
-            options.isNetworkAccessAllowed = true
-            PHImageManager.default().requestImage(
-                for: asset,
-                targetSize: CGSize(width: targetSize, height: targetSize),
-                contentMode: .aspectFill,
-                options: options
-            ) { image, info in
-                if (info?[PHImageResultIsDegradedKey] as? Bool) == true { return }
-                #if os(macOS)
-                continuation.resume(returning: image?.cgImage(forProposedRect: nil, context: nil, hints: nil))
-                #else
-                continuation.resume(returning: image?.cgImage)
-                #endif
-            }
-        }
-    }
-
-    private func jpegData(from image: CGImage) -> Data? {
-        #if os(macOS)
-        NSBitmapImageRep(cgImage: image).representation(using: .jpeg, properties: [.compressionFactor: 0.76])
-        #else
-        UIImage(cgImage: image).jpegData(compressionQuality: 0.76)
-        #endif
     }
 }
 
@@ -310,18 +672,35 @@ private struct HetkiaWidgetView: View {
                     WidgetMemoryCollage(memories: entry.memories, rounded: false, showsDates: true)
                 }
             } else {
-                if entry.memories.isEmpty {
-                    emptyState
-                } else {
-                    WidgetMemoryCollage(memories: entry.memories, rounded: false, showsDates: true)
-                }
+                largeDashboard
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        // Keep collage gaps transparent; WidgetKit can still remove or tint
-        // the container background for contexts such as StandBy and Clear mode.
         .containerBackground(for: .widget) {
             Color.clear
+        }
+    }
+
+    private var largeDashboard: some View {
+        ZStack(alignment: .topLeading) {
+            if entry.memories.isEmpty {
+                emptyState
+            } else {
+                WidgetMemoryCollage(memories: entry.memories, rounded: false, showsDates: true)
+            }
+
+            VStack(alignment: .leading, spacing: 0) {
+                WidgetDashboardLargeHeader(month: entry.calendarMonth, day: entry.calendarDay)
+                    .padding(10)
+
+                Spacer(minLength: 0)
+
+                WidgetDashboardLargeFooter(
+                    totalPhotoCount: entry.totalPhotoCount,
+                    anniversaryYearCount: entry.anniversaryYearCount
+                )
+                .padding(10)
+            }
         }
     }
 
@@ -544,68 +923,140 @@ private struct WidgetDateOverlay: View {
     }
 }
 
-private struct PublishQuickEntry: TimelineEntry {
-    let date: Date
-}
-
 private struct PublishQuickProvider: TimelineProvider {
-    func placeholder(in context: Context) -> PublishQuickEntry { PublishQuickEntry(date: .now) }
+    func placeholder(in context: Context) -> PublishQuickEntry {
+        let parts = Calendar.autoupdatingCurrent.dateComponents([.month, .day], from: .now)
+        return PublishQuickEntry(
+            date: .now,
+            heroImageData: nil,
+            totalPhotoCount: 0,
+            anniversaryYearCount: 0,
+            calendarMonth: parts.month ?? 1,
+            calendarDay: parts.day ?? 1,
+            hasPhotoAccess: false
+        )
+    }
 
     func getSnapshot(in context: Context, completion: @escaping (PublishQuickEntry) -> Void) {
-        completion(PublishQuickEntry(date: .now))
+        Task { completion(await loadEntry()) }
     }
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<PublishQuickEntry>) -> Void) {
-        let entry = PublishQuickEntry(date: .now)
-        let refresh = Calendar.autoupdatingCurrent.date(byAdding: .day, value: 1, to: .now) ?? .now.addingTimeInterval(86_400)
-        completion(Timeline(entries: [entry], policy: .after(refresh)))
+        Task {
+            let entry = await loadEntry()
+            let refresh = Calendar.autoupdatingCurrent.nextDate(
+                after: .now,
+                matching: DateComponents(hour: 0, minute: 0),
+                matchingPolicy: .nextTime
+            ) ?? .now.addingTimeInterval(86_400)
+            completion(Timeline(entries: [entry], policy: .after(refresh)))
+        }
+    }
+
+    @MainActor
+    private func loadEntry() async -> PublishQuickEntry {
+        let calendar = Calendar.autoupdatingCurrent
+        let parts = calendar.dateComponents([.month, .day], from: .now)
+        let defaultMonth = parts.month ?? 1
+        let defaultDay = parts.day ?? 1
+
+        guard PHPhotoLibrary.authorizationStatus(for: .readWrite) == .authorized else {
+            return PublishQuickEntry(
+                date: .now,
+                heroImageData: nil,
+                totalPhotoCount: 0,
+                anniversaryYearCount: 0,
+                calendarMonth: defaultMonth,
+                calendarDay: defaultDay,
+                hasPhotoAccess: false
+            )
+        }
+
+        guard let snapshot = WidgetSnapshotStore.read() else {
+            return PublishQuickEntry(
+                date: .now,
+                heroImageData: nil,
+                totalPhotoCount: 0,
+                anniversaryYearCount: 0,
+                calendarMonth: defaultMonth,
+                calendarDay: defaultDay,
+                hasPhotoAccess: true
+            )
+        }
+
+        var heroData: Data?
+        if let heroID = snapshot.summary.heroAssetIdentifier {
+            let fetched = PHAsset.fetchAssets(withLocalIdentifiers: [heroID], options: nil)
+            if let asset = fetched.firstObject,
+               let image = await WidgetPhotoKitRenderer.preview(for: asset, targetSize: 480),
+               let data = WidgetPhotoKitRenderer.jpegData(from: image) {
+                heroData = data
+            }
+        }
+
+        return PublishQuickEntry(
+            date: .now,
+            heroImageData: heroData,
+            totalPhotoCount: snapshot.summary.totalPhotoCount,
+            anniversaryYearCount: snapshot.summary.anniversaryYearCount,
+            calendarMonth: snapshot.month,
+            calendarDay: snapshot.day,
+            hasPhotoAccess: true
+        )
     }
 }
 
 private struct PublishQuickWidgetView: View {
-    private let accent = Color(red: 0.75, green: 0.52, blue: 0.27)
+    let entry: PublishQuickEntry
 
     var body: some View {
-        VStack(spacing: 10) {
-            Link(destination: URL(string: "hetkia://publish/moment")!) {
-                publishButtonLabel("detail.share.post-moment", symbol: "text.bubble")
-            }
-            Link(destination: URL(string: "hetkia://publish/essay")!) {
-                publishButtonLabel("detail.share.upload-journal", symbol: "square.and.pencil")
-            }
-        }
-        .padding(12)
+        WidgetDashboardSmallLayout(
+            totalPhotoCount: entry.totalPhotoCount,
+            anniversaryYearCount: entry.anniversaryYearCount
+        )
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .containerBackground(for: .widget) {
-            Color(red: 0.97, green: 0.95, blue: 0.91)
+            ZStack {
+                widgetBackground
+                LinearGradient(
+                    colors: [.black.opacity(0.25), .clear, .black.opacity(0.55)],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+            }
         }
     }
 
-    private func publishButtonLabel(_ titleKey: LocalizedStringKey, symbol: String) -> some View {
-        HStack(spacing: 8) {
-            Image(systemName: symbol)
-                .font(.system(size: 14, weight: .semibold))
-            Text(titleKey)
-                .font(.system(size: 13, weight: .semibold))
-                .lineLimit(1)
-                .minimumScaleFactor(0.85)
+    @ViewBuilder
+    private var widgetBackground: some View {
+        if let data = entry.heroImageData,
+           let uiImage = UIImage(data: data) {
+            Image(uiImage: uiImage)
+                .resizable()
+                .widgetAccentedRenderingMode(.fullColor)
+                .scaledToFill()
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .clipped()
+        } else {
+            ZStack {
+                Color(red: 0.22, green: 0.24, blue: 0.28)
+                Image("Unknown")
+                    .resizable()
+                    .scaledToFill()
+                    .opacity(0.45)
+            }
         }
-        .foregroundStyle(.white)
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 11)
-        .background(accent, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 }
 
 private struct PublishQuickWidget: Widget {
     var body: some WidgetConfiguration {
-        StaticConfiguration(kind: "Hetkia.PublishQuick", provider: PublishQuickProvider()) { _ in
-            PublishQuickWidgetView()
+        StaticConfiguration(kind: "Hetkia.PublishQuick", provider: PublishQuickProvider()) { entry in
+            PublishQuickWidgetView(entry: entry)
         }
         .configurationDisplayName("widget.publish.displayName")
         .description("widget.publish.description")
         .supportedFamilies([.systemSmall])
-        .contentMarginsDisabled()
     }
 }
 

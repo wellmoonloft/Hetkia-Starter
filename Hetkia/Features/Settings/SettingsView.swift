@@ -63,7 +63,7 @@ struct SettingsView: View {
         }
         .tint(HetkiaPalette.amber)
         .onChange(of: includeScreenshotsAndScreenRecordings) { _, _ in
-            WidgetCenter.shared.reloadTimelines(ofKind: "Hetkia.OnThisDay")
+            HetkiaWidgetTimelineReloader.reloadVisibleKinds()
         }
     }
 

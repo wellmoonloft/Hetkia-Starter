@@ -148,6 +148,12 @@ enum OnThisDayWidgetIndexStore {
         let assetModificationDate: Date?
     }
 
+    struct Summary: Codable, Equatable {
+        let totalPhotoCount: Int
+        let anniversaryYearCount: Int
+        let heroAssetIdentifier: String?
+    }
+
     struct Snapshot: Codable {
         let schemaVersion: Int
         let year: Int
@@ -157,10 +163,21 @@ enum OnThisDayWidgetIndexStore {
         let includesScreenshotsAndScreenRecordings: Bool
         let refreshedAt: Date
         let entries: [Entry]
+        let totalPhotoCount: Int?
+        let anniversaryYearCount: Int?
+        let heroAssetIdentifier: String?
         let contentFingerprint: String
+
+        var summary: Summary {
+            Summary(
+                totalPhotoCount: totalPhotoCount ?? 0,
+                anniversaryYearCount: anniversaryYearCount ?? entries.count,
+                heroAssetIdentifier: heroAssetIdentifier
+            )
+        }
     }
 
-    private static let schemaVersion = 1
+    private static let schemaVersion = 2
     private static let fileName = "on-this-day-widget-index.json"
     private static let fingerprintDefaultsKey = "hetkia.widget.lastReloadedFingerprint"
     private static let groupIdentifier = PhotoAssetEligibility.appGroupIdentifier
@@ -170,29 +187,29 @@ enum OnThisDayWidgetIndexStore {
               let data = try? Data(contentsOf: url),
               let snapshot = try? JSONDecoder().decode(Snapshot.self, from: data),
               isCurrent(snapshot, today: today),
-              snapshot.contentFingerprint == fingerprint(for: snapshot.entries, today: today) else {
+              snapshot.contentFingerprint == fingerprint(for: snapshot.entries, summary: snapshot.summary, today: today) else {
             return nil
         }
         return snapshot
     }
 
     /// Replaces the complete index after a full historical scan.
-    static func replace(with entries: [Entry], today: Date = .now) {
-        guard let snapshot = makeSnapshot(entries: entries, today: today) else { return }
+    static func replace(with entries: [Entry], summary: Summary, today: Date = .now) {
+        guard let snapshot = makeSnapshot(entries: entries, summary: summary, today: today) else { return }
         write(snapshot)
     }
 
     /// Updates the current anniversary year only when a complete shared index
     /// already exists. If it does not, the widget performs its legacy scan once
     /// and seeds the shared index itself.
-    static func updateCurrentYear(with entry: Entry?, today: Date = .now) {
+    static func updateCurrentYear(with entry: Entry?, summary: Summary, today: Date = .now) {
         guard let existing = load(today: today) else { return }
         let calendar = Calendar.autoupdatingCurrent
         let currentYear = calendar.component(.year, from: today)
         var entries = existing.entries.filter { calendar.component(.year, from: $0.date) != currentYear }
         if let entry { entries.append(entry) }
         entries.sort { $0.date > $1.date }
-        guard let snapshot = makeSnapshot(entries: entries, today: today) else { return }
+        guard let snapshot = makeSnapshot(entries: entries, summary: summary, today: today) else { return }
         write(snapshot)
     }
 
@@ -222,11 +239,12 @@ enum OnThisDayWidgetIndexStore {
             && snapshot.includesScreenshotsAndScreenRecordings == PhotoAssetEligibility.includesScreenshotsAndScreenRecordings
     }
 
-    private static func makeSnapshot(entries: [Entry], today: Date) -> Snapshot? {
+    private static func makeSnapshot(entries: [Entry], summary: Summary, today: Date) -> Snapshot? {
         let calendar = Calendar.autoupdatingCurrent
         let parts = calendar.dateComponents([.year, .month, .day], from: today)
         guard let year = parts.year, let month = parts.month, let day = parts.day else { return nil }
         let orderedEntries = entries.sorted { $0.date > $1.date }
+        let contentFingerprint = fingerprint(for: orderedEntries, summary: summary, today: today)
         return Snapshot(
             schemaVersion: schemaVersion,
             year: year,
@@ -236,17 +254,22 @@ enum OnThisDayWidgetIndexStore {
             includesScreenshotsAndScreenRecordings: PhotoAssetEligibility.includesScreenshotsAndScreenRecordings,
             refreshedAt: .now,
             entries: orderedEntries,
-            contentFingerprint: fingerprint(for: orderedEntries, today: today)
+            totalPhotoCount: summary.totalPhotoCount,
+            anniversaryYearCount: summary.anniversaryYearCount,
+            heroAssetIdentifier: summary.heroAssetIdentifier,
+            contentFingerprint: contentFingerprint
         )
     }
 
-    private static func fingerprint(for entries: [Entry], today: Date) -> String {
+    private static func fingerprint(for entries: [Entry], summary: Summary, today: Date) -> String {
         let calendar = Calendar.autoupdatingCurrent
         let parts = calendar.dateComponents([.year, .month, .day], from: today)
+        let summaryLine = "photos:\(summary.totalPhotoCount):years:\(summary.anniversaryYearCount):hero:\(summary.heroAssetIdentifier ?? "none")"
         let canonical = ([
             "\(parts.year ?? 0)-\(parts.month ?? 0)-\(parts.day ?? 0)",
             calendar.timeZone.identifier,
-            PhotoAssetEligibility.includesScreenshotsAndScreenRecordings ? "1" : "0"
+            PhotoAssetEligibility.includesScreenshotsAndScreenRecordings ? "1" : "0",
+            summaryLine
         ] + entries.sorted { $0.date > $1.date }.map { entry in
             let year = calendar.component(.year, from: entry.date)
             let modification = entry.assetModificationDate.map { String($0.timeIntervalSinceReferenceDate.bitPattern) } ?? "none"
@@ -359,10 +382,38 @@ enum OnThisDayLibrary {
     @MainActor
     static func persist(_ payload: OnThisDayScanPayload) {
         OnThisDayCacheStore.save(payload.entries, today: payload.today)
+        let summary = widgetIndexSummary(from: payload.entries, today: payload.today)
         switch payload.widgetUpdate {
-        case .replace(let entries): OnThisDayWidgetIndexStore.replace(with: entries, today: payload.today)
-        case .updateCurrentYear(let entry): OnThisDayWidgetIndexStore.updateCurrentYear(with: entry, today: payload.today)
+        case .replace(let entries):
+            OnThisDayWidgetIndexStore.replace(with: entries, summary: summary, today: payload.today)
+        case .updateCurrentYear(let entry):
+            OnThisDayWidgetIndexStore.updateCurrentYear(with: entry, summary: summary, today: payload.today)
         }
+    }
+
+    static func widgetIndexSummary(from entries: [OnThisDayEntry], today: Date) -> OnThisDayWidgetIndexStore.Summary {
+        let totalPhotoCount = entries.reduce(0) { partial, entry in
+            partial + JournalPhotoSelection.displayAssets(from: entry.assets).count
+        }
+        let anniversaryYearCount = entries.count
+        let calendar = Calendar.autoupdatingCurrent
+        let currentYear = calendar.component(.year, from: today)
+        let heroAssetIdentifier: String? = {
+            if let current = entries.first(where: { calendar.component(.year, from: $0.date) == currentYear }),
+               let asset = widgetRepresentativeAsset(from: current.assets) {
+                return asset.localIdentifier
+            }
+            if let newest = entries.sorted(by: { $0.date > $1.date }).first,
+               let asset = widgetRepresentativeAsset(from: newest.assets) {
+                return asset.localIdentifier
+            }
+            return nil
+        }()
+        return OnThisDayWidgetIndexStore.Summary(
+            totalPhotoCount: totalPhotoCount,
+            anniversaryYearCount: anniversaryYearCount,
+            heroAssetIdentifier: heroAssetIdentifier
+        )
     }
 
     private static func fetchEntry(start: Date, end: Date) -> (entry: OnThisDayEntry, widgetEntry: OnThisDayWidgetIndexStore.Entry?)? {

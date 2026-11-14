@@ -465,7 +465,7 @@ struct TimelineHomeView: View {
         }
         isLoading = false
         if OnThisDayWidgetIndexStore.needsTimelineReload(force: forceFullScan) {
-            WidgetCenter.shared.reloadTimelines(ofKind: "Hetkia.OnThisDay")
+            HetkiaWidgetTimelineReloader.reloadVisibleKinds()
         }
         if let pendingWidgetRoute, entries.contains(where: { $0.id == pendingWidgetRoute }) {
             rootTab = .onThisDay

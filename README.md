@@ -4,10 +4,6 @@ English \| [简体中文](README_CN.MD)
 
 This project is licensed under the [MIT License](LICENSE).
 
-The screenshots are from a fairly old version. I'll take new ones when I
-feel motivated to do so. Back then, Hugo integration and the image
-hosting service had not yet been integrated.
-
 ### Why I Built This
 
 When WeChat started accessing personal information, I became concerned
@@ -129,12 +125,11 @@ things out.
     their returned CDN URLs are inserted into the post using Markdown
     syntax. The text editor does not provide Markdown shortcuts, so
     Markdown formatting must be entered manually if needed.
--   There are two types of home screen widgets:
-    1.  **Large square widget:** Displays a collage of On This Day
-        photos, with up to nine images. It can be placed on the home
-        screen or in StandBy.
-    2.  **Small square widget:** Provides two buttons: Publish an Essay
-        (with images) and Publish a Quick Post (without images).
+-   There are three home screen widgets: a **large On This Day** collage
+    with summary stats and publish shortcuts; a **small dashboard** with
+    the day's hero photo, stats, and publish shortcuts; and a **small
+    collage-only** widget for StandBy that shows up to nine anniversary
+    photos.
 -   If your device supports Apple Foundation Models (iOS 26 or later),
     you can use AI on the journal detail page to analyze photos and
     generate journal text based on their content. Generation uses the AI
@@ -206,20 +201,20 @@ widget and the main app.
 
 ## Screenshots
 
-| Empty home state | Journal details |
+| On This Day home | Journal detail |
 | --- | --- |
-| ![On This Day empty state](screenshot/home-empty-state.jpg) | ![Journal detail](screenshot/journal-detail.jpg) |
+| ![On This Day home](screenshot/首页.jpg) | ![Journal detail](screenshot/日记详情.jpg) |
 
-| Home Screen widget | Shared journal image |
+| Home Screen widgets | Shared journal image |
 | --- | --- |
-| ![Widget on the Home Screen](screenshot/widget-home-screen.jpg) | ![Shared journal image](screenshot/share-journal.jpg) |
+| ![Home Screen widgets](screenshot/桌面小工具.jpg) | ![Shared journal image](screenshot/分享日记图片.jpeg) |
 
-| Saved Journals | Settings |
+| Saved journals | Settings |
 | --- | --- |
-| ![Saved Journals](screenshot/saved-journals.jpg) | ![Settings](screenshot/settings.jpg) |
+| ![Saved journals](screenshot/历史日记.jpg) | ![Settings](screenshot/设置.jpg) |
 
-Additional reference images, including widget collage layouts and
-detail-page actions, are available in [`screenshot/`](screenshot/).
+Additional reference images (StandBy widget, empty home state, Hugo
+publish flow, and site preview) are in [`screenshot/`](screenshot/).
 
 ## Build
 

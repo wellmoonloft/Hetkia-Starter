@@ -1,5 +1,57 @@
 import SwiftUI
 
+private struct PublishProgressStatusView: View {
+  let stage: PublishProgressStage?
+  var errorMessage: String?
+  var openSettings: (() -> Void)?
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 8) {
+      if let stage {
+        HStack(spacing: 10) {
+          ProgressView()
+          publishProgressText(stage)
+            .font(.system(size: 13, weight: .medium))
+            .foregroundStyle(HetkiaPalette.ink)
+        }
+      }
+      if let errorMessage {
+        Text(errorMessage)
+          .font(.system(size: 13))
+          .foregroundStyle(.red)
+        if let openSettings {
+          Button("publish.open.settings", action: openSettings)
+            .font(.system(size: 13, weight: .medium))
+        }
+      }
+    }
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .padding(.horizontal, 16)
+    .padding(.vertical, 10)
+    .background(.bar)
+  }
+
+  @ViewBuilder
+  private func publishProgressText(_ stage: PublishProgressStage) -> some View {
+    switch stage {
+    case .checkingConnectivity:
+      Text("publish.progress.connectivity")
+    case .validatingGitHub:
+      Text("publish.progress.github")
+    case .validatingR2:
+      Text("publish.progress.r2")
+    case .uploadingImage(let current, let total):
+      Text(String(format: HetkiaSystemLanguage.localizedString("publish.progress.images", comment: ""), current, total))
+    case .preparingMarkdown:
+      Text("publish.progress.markdown")
+    case .uploadingGitHub:
+      Text("publish.progress.github.upload")
+    case .succeeded:
+      Text("publish.progress.success")
+    }
+  }
+}
+
 struct PublishSettingsView: View {
   @State private var github = PublishConfiguration.loadGitHub()
   @State private var r2 = PublishConfiguration.loadR2()
@@ -265,20 +317,6 @@ struct EssayPublishSheet: View {
             )
           }
         }
-        if let stage = coordinator.stage {
-          Section {
-            publishProgress(stage)
-          }
-        }
-        if let errorMessage {
-          Section {
-            Text(errorMessage)
-              .font(.system(size: 13))
-              .foregroundStyle(.red)
-            Button("publish.open.settings", action: openSettings)
-              .font(.system(size: 13, weight: .medium))
-          }
-        }
       }
       .navigationTitle(Text("publish.essay.title"))
       .navigationBarTitleDisplayMode(.inline)
@@ -289,6 +327,15 @@ struct EssayPublishSheet: View {
         ToolbarItem(placement: .confirmationAction) {
           Button("publish.action.submit") { submit() }
             .disabled(coordinator.isPublishing)
+        }
+      }
+      .safeAreaInset(edge: .top, spacing: 0) {
+        if coordinator.stage != nil || errorMessage != nil {
+          PublishProgressStatusView(
+            stage: coordinator.stage,
+            errorMessage: errorMessage,
+            openSettings: errorMessage == nil ? nil : openSettings
+          )
         }
       }
 #if !os(macOS)
@@ -368,25 +415,6 @@ struct EssayPublishSheet: View {
     }
   }
 
-  @ViewBuilder
-  private func publishProgress(_ stage: PublishProgressStage) -> some View {
-    switch stage {
-    case .checkingConnectivity:
-      Text("publish.progress.connectivity")
-    case .validatingGitHub:
-      Text("publish.progress.github")
-    case .validatingR2:
-      Text("publish.progress.r2")
-    case .uploadingImage(let current, let total):
-      Text(String(format: HetkiaSystemLanguage.localizedString("publish.progress.images", comment: ""), current, total))
-    case .preparingMarkdown:
-      Text("publish.progress.markdown")
-    case .uploadingGitHub:
-      Text("publish.progress.github.upload")
-    case .succeeded:
-      Text("publish.progress.success")
-    }
-  }
 }
 
 struct MomentPublishSheet: View {
@@ -422,15 +450,6 @@ struct MomentPublishSheet: View {
           TextEditor(text: $bodyText)
             .frame(minHeight: 160)
         }
-        if let stage = coordinator.stage {
-          Section { publishProgress(stage) }
-        }
-        if let errorMessage {
-          Section {
-            Text(errorMessage).foregroundStyle(.red)
-            Button("publish.open.settings", action: openSettings)
-          }
-        }
       }
       .navigationTitle(Text("publish.moment.title"))
       .navigationBarTitleDisplayMode(.inline)
@@ -441,6 +460,15 @@ struct MomentPublishSheet: View {
         ToolbarItem(placement: .confirmationAction) {
           Button("publish.action.submit") { submit() }
             .disabled(coordinator.isPublishing)
+        }
+      }
+      .safeAreaInset(edge: .top, spacing: 0) {
+        if coordinator.stage != nil || errorMessage != nil {
+          PublishProgressStatusView(
+            stage: coordinator.stage,
+            errorMessage: errorMessage,
+            openSettings: errorMessage == nil ? nil : openSettings
+          )
         }
       }
     }
@@ -472,25 +500,6 @@ struct MomentPublishSheet: View {
     }
   }
 
-  @ViewBuilder
-  private func publishProgress(_ stage: PublishProgressStage) -> some View {
-    switch stage {
-    case .checkingConnectivity:
-      Text("publish.progress.connectivity")
-    case .validatingGitHub:
-      Text("publish.progress.github")
-    case .validatingR2:
-      Text("publish.progress.r2")
-    case .uploadingImage(let current, let total):
-      Text(String(format: HetkiaSystemLanguage.localizedString("publish.progress.images", comment: ""), current, total))
-    case .preparingMarkdown:
-      Text("publish.progress.markdown")
-    case .uploadingGitHub:
-      Text("publish.progress.github.upload")
-    case .succeeded:
-      Text("publish.progress.success")
-    }
-  }
 }
 
 private struct PublishPhotoSelectionGrid: View {

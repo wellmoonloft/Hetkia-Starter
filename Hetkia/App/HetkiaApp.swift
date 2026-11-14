@@ -37,7 +37,7 @@ final class HetkiaApplicationDelegate: NSObject, UIApplicationDelegate {
         let work = Task { @MainActor in
             _ = await OnThisDayScanCoordinator.shared.fullScan()
             if OnThisDayWidgetIndexStore.needsTimelineReload() {
-                WidgetCenter.shared.reloadTimelines(ofKind: "Hetkia.OnThisDay")
+                HetkiaWidgetTimelineReloader.reloadVisibleKinds()
             }
             task.setTaskCompleted(success: !Task.isCancelled)
         }

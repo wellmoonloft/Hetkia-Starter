@@ -66,10 +66,10 @@
 
 - `Hetkia/App/HetkiaApp.swift` 注册 `com.hetkia.app.onthisday-refresh`，请求 `BGAppRefreshTask` 在下一次本地午夜之后运行；任务使用主 App 扫描协调器执行完整 PhotoKit 查询，仅在小组件索引变化时请求 WidgetKit 刷新。
 - 系统只承诺在允许时机执行后台任务；`earliestBeginDate` 是最早运行时间而非准点保证。App 每次前台激活都会补做当日查询。
-- `HetkiaWidget/HetkiaWidget.swift` 自行按同一日期、资格、排序和数量规则读取 PhotoKit，并为 WidgetKit 时间线生成系统管理的图像快照。声明 `.systemLarge` 供桌面主样式使用，另声明 `.systemSmall`；大尺寸显示满版拼图，标题和品牌名以白字叠在顶部渐层上，小尺寸仅渲染无内边距的满版拼图，不显示文字。WidgetKit 的 family 不能区分 StandBy 与桌面小尺寸，因此两处小尺寸都采用纯图片布局。拼贴图块间距为 0、背景透明，以避免白色缝隙和组件底色露边。
-- Widget 生成一个固定画布的静态拼图：从同日年份倒序取最新的最多九组，再按较早到较新排列；每组首图优先取带 GPS 坐标的普通拍摄照片，坐标相同优先级时截图/录屏靠后。`WidgetMosaicLayout` 为 1–9 张提供三等分网格模板并填满画布；两张时以一张满版图为底，在角落叠加 1/3 宽高的小图。每张图分别使用 `hetkia://onthisday/YYYY-MM-DD` 深链打开对应详情。大尺寸顶部左侧是“历史上的今天”，右侧是品牌名；拼图中每张图只叠加年份，不显示横线或月日，年份在所属图块几何中心水平和垂直居中，文本区域宽度限制为图块的三分之二。无滚动或翻页。
-- Widget 内容使用透明 `containerBackground`，并通过 `contentMarginsDisabled()` 取消系统默认内容缩进，让拼图图片铺满组件，由系统容器处理外缘。大尺寸在图片上叠加顶部暗色渐层和白色标题/品牌名；小尺寸不叠加文字。Widget 不使用滚动、分页按钮或时间线轮播；系统仍决定快照刷新的实际时机。
-- StandBy 使用 `.systemSmall` family（Apple 当前 StandBy 组件上下文采用小尺寸系统组件）；WidgetKit 会按 StandBy 外观处理背景与色彩，因此系统呈现可能与桌面全彩样式不同。StandBy 小尺寸直接铺满照片拼图，不显示标题、品牌或日期。两种 family 使用相同时间线、图片选择和逐图深链。
+- `HetkiaWidget/HetkiaWidget.swift` 注册两个 kind：`Hetkia.OnThisDay`（`.systemSmall` 与 `.systemLarge`）与 `Hetkia.PublishQuick`（仅 `.systemSmall`）。`OnThisDay` 小尺寸为无内边距满版拼图（StandBy 与桌面拼图样式共用）；大尺寸在拼图上叠磨砂顶栏（日期/品牌）与底栏（统计 + 横排发布按钮）。`PublishQuick` 在 `containerBackground` 铺当年代表图，前景为系统 content margins 内的标题/统计与底部固定发布按钮，深链 `hetkia://publish/*`。拼图块间距为 0、背景透明。
+- Widget 生成固定画布静态拼图：从同日年份倒序取最多九组，再按较早到较新排列；代表图规则与主 App `widgetRepresentativeAsset` 一致。`WidgetMosaicLayout` 为 1–9 张提供三等分网格；每格 `hetkia://onthisday/YYYY-MM-DD` 深链。主 App 扫描经 App Group 写入 `on-this-day-widget-index.json`（含总张数、年数、hero 图标识）；指纹变化时同时 reload `Hetkia.OnThisDay` 与 `Hetkia.PublishQuick`。
+- `OnThisDay` 拼图使用 `contentMarginsDisabled()` 铺满；`PublishQuick` 保留系统 content margins。Widget 无滚动/轮播；刷新由午夜 BG 与系统 WidgetKit 时间线调度。
+- StandBy 应使用 `OnThisDay` 小尺寸拼图；桌面「时光仪表盘」使用 `PublishQuick` 小尺寸。
 - 主 App URL handler 接受该深链，并在当前 PhotoKit 查询完成后导航到对应日期。
 
 ## 3. 权限与隐私
@@ -94,10 +94,10 @@ xcodebuild -project Hetkia.xcodeproj -scheme Hetkia -configuration Debug -destin
 
 ## 5. 目前限制与验证清单
 
-- README 中的代表性界面截图使用仓库 `screenshot/` 下按内容命名的 JPEG；文件经过尺寸缩放和质量压缩，每张不超过 500 KB。其余截图用于界面参考，不要求全部嵌入 README。
+- README 中的代表性界面截图使用仓库 `screenshot/` 下按内容命名的 JPEG（`首页.jpg`、`日记详情.jpg`、`桌面小工具.jpg`、`分享日记图片.jpeg`、`历史日记.jpg`、`设置.jpg` 等）。文件经缩放与质量压缩，单张不超过 512 KB；发布流程演示保留为 `发布到github的hugo仓库.gif`（压缩后同限）。其余截图（如 `待机小工具.jpg`、`home-empty-state.jpg`、`hugo已发文展示.jpg`）用于参考，不要求全部嵌入 README。
 
 - BGTaskScheduler 与 WidgetKit 时间线是最佳努力刷新，无法承诺每天 00:00 准时运行。
-- Widget 不使用普通滚动手势、分页按钮或轮播；静态拼图展示最多九篇同日记录首图，按三等分网格适配照片数量并避免留白。优先选择带 GPS 的拍摄照片，大尺寸含标题/品牌，小尺寸满版纯图片；每张图片分别提供对应日期的深链。
+- Widget 不使用普通滚动手势、分页按钮或轮播。`OnThisDay` 大图含统计与发布按钮，小图纯拼图；`PublishQuick` 小图含代表图与发布入口。拼图每格提供对应日期深链。
 - 逐年 PhotoKit 全量查询仍从 1900 年至当前年，不因本地已有日记而跳过年份；这是为发现次年/后续新增照片并保留日记任务所需照片集合而接受的成本。缓存优先、当年增量查询、并发扫描合并和按变化更新 Widget 已减少常规启动及重复后台工作。继续评估应以真机实测为依据，不改变现有首页、详情或持久化语义。
 - 完成真机检查：iOS 18 完整授权/拒绝/有限授权；仅查看后 SwiftData 与 `JournalImages` 无新记录；生成/编辑/留言会保存当前照片；次年同日新增照片并入详情；截图/录屏优先规则；Live Photo/视频首帧；满版图片卡片的文字对比与裁切；Widget 静态拼图、每张图的深链、StandBy 外观及后台刷新时机。
 - 尚未验证既有安装数据的 SwiftData schema 迁移、App Store 签名与实际后台刷新表现。
