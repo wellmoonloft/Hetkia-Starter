@@ -112,7 +112,7 @@ StandBy 组件依据 Apple 的 [StandBy WidgetKit 指南](https://developer.appl
 
 - 设置页提供「发布服务」：用户填写 GitHub 仓库（owner、repository、branch、随笔/说说内容目录）、Personal Access Token，以及 Cloudflare R2（Account ID、桶名、CDN 域名、Access Key、Secret）。敏感项只存 Keychain；可分别测试 GitHub/R2 连接，成功提示显示在对应卡片下方并说明设置已保存。
 - **发布随笔**：标题必填；正文来自当前日记；可选勾选多张配图（从当前日记照片列表）。可选发布日期：**现在**（提交时刻）或 **当年**（已选照片中最早拍摄时间，无则回退日记展示用拍摄日）。图片经 JPEG 压缩上传至 R2 `essay/` 前缀；Markdown 通过 GitHub 提交到用户配置的随笔目录。公开图片 URL 使用 CDN 根路径，不在链接中重复桶名。
-- **发布说说**：仅纯文字，不得附带图片；提交到用户配置的说说目录。
+- **发布说说**：无标题；正文与最多一张配图可选（至少一项非空）。有图时经 JPEG 上传至 R2 `moment/` 前缀，Markdown 末尾 `![](CDN URL)`；提交到用户配置的说说目录。首页/深链与随笔同样预载当日可选照片列表。
 - 发布过程展示阶段进度；全部成功后关闭发布页。失败保留在当前页并提示错误，可跳转发布设置。
 - 产品与 Hugo 站点约定：Front Matter 含 `categories`（`essay` / `moment`）、`date` 等；站点侧需对应当前 Hugo 模板与 CI 分支（由用户自行维护，应用不捆绑固定域名）。
 

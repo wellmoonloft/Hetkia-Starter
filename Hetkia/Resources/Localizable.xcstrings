@@ -9692,6 +9692,29 @@
         }
       }
     },
+    "publish.error.moment.empty" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enter text or choose a photo."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请填写正文或选择一张图片。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "請填寫正文或選擇一張圖片。"
+          }
+        }
+      }
+    },
     "publish.error.moment.noPhotos" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -9723,6 +9746,29 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "說說不能包含圖片。"
+          }
+        }
+      }
+    },
+    "publish.error.moment.tooManyPhotos" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Moments can include at most one photo."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "说说最多只能附带一张图片。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "說說最多只能附帶一張圖片。"
           }
         }
       }
@@ -10308,6 +10354,50 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "說說正文"
+          }
+        }
+      }
+    },
+    "publish.moment.photos.hint" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You can attach one photo at most."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最多选择一张照片。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最多選擇一張照片。"
+          }
+        }
+      }
+    },
+    "publish.moment.photos.section" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Photo (optional)"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "配图（可选）"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "配圖（可選）"
           }
         }
       }

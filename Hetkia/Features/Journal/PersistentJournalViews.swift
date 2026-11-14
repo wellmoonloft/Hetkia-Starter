@@ -101,6 +101,8 @@ struct PersistentJournalDetailView: View {
     @State private var essayPublishPhotos: [JournalPhotoRecord] = []
     @State private var essayPublishSheetToken = UUID()
     @State private var showMomentPublishSheet = false
+    @State private var momentPublishPhotos: [JournalPhotoRecord] = []
+    @State private var momentPublishSheetToken = UUID()
     @State private var showPublishSettings = false
     @FocusState private var focusedInput: InputTarget?
     @ScaledMetric(relativeTo: .body) private var bodyFontSize: CGFloat = 16
@@ -290,14 +292,18 @@ struct PersistentJournalDetailView: View {
         }
         .sheet(isPresented: $showMomentPublishSheet) {
             MomentPublishSheet(
+                publishPhotos: $momentPublishPhotos,
                 initialBody: record.bodyText,
                 contentCreatedAt: record.createdAt,
                 sourceJournalDayKey: record.dayKey,
+                savedOnly: savedOnly,
+                allowsInAppCamera: record.dayKey == PhotoDayGrouping.key(for: .now),
                 openSettings: {
                     showMomentPublishSheet = false
                     showPublishSettings = true
                 }
             )
+            .id(momentPublishSheetToken)
         }
         .sheet(isPresented: $showPublishSettings) {
             NavigationStack {
@@ -500,6 +506,8 @@ struct PersistentJournalDetailView: View {
                     Text("detail.share.upload-journal")
                 }
                 Button {
+                    momentPublishPhotos = selectedPhotos
+                    momentPublishSheetToken = UUID()
                     showMomentPublishSheet = true
                 } label: {
                     Text("detail.share.post-moment")

@@ -41,10 +41,10 @@ enum HugoMarkdownBuilder {
   return assemble(frontMatter: frontMatter, body: body, imageURLs: imageURLs)
   }
 
-  static func buildMomentMarkdown(createdAt: Date, body: String, uniqueSuffix: String? = nil) -> String {
+  static func buildMomentMarkdown(createdAt: Date, body: String, imageURLs: [String] = [], uniqueSuffix: String? = nil) -> String {
     let title = momentTitle(for: createdAt, uniqueSuffix: uniqueSuffix)
     let frontMatter = momentFrontMatter(title: title, createdAt: createdAt)
-    return assemble(frontMatter: frontMatter, body: body, imageURLs: [])
+    return assemble(frontMatter: frontMatter, body: body, imageURLs: imageURLs)
   }
 
   private static func essayFrontMatter(title: String, createdAt: Date) -> String {

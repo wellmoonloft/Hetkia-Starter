@@ -312,6 +312,7 @@ struct EssayPublishSheet: View {
             PublishPhotoSelectionGrid(
               photos: publishPhotos,
               selectedPhotoIDs: $selectedPhotoIDs,
+              maxSelection: nil,
               showsCamera: showsInAppCamera,
               onCameraTap: { Task { await openInAppCameraIfPermitted() } }
             )
@@ -422,25 +423,47 @@ struct MomentPublishSheet: View {
   @Environment(\.modelContext) private var modelContext
   @StateObject private var coordinator = PublishCoordinator()
 
-  let initialBody: String
   let contentCreatedAt: Date
   let sourceJournalDayKey: String?
+  let savedOnly: Bool
+  let allowsInAppCamera: Bool
   let openSettings: () -> Void
 
+  @Binding var publishPhotos: [JournalPhotoRecord]
   @State private var bodyText: String
+  @State private var selectedPhotoIDs: Set<UUID>
   @State private var errorMessage: String?
+  @State private var showCameraCapture = false
 
   init(
+    publishPhotos: Binding<[JournalPhotoRecord]>,
     initialBody: String,
     contentCreatedAt: Date,
     sourceJournalDayKey: String?,
+    savedOnly: Bool,
+    allowsInAppCamera: Bool,
     openSettings: @escaping () -> Void
   ) {
-    self.initialBody = initialBody
     self.contentCreatedAt = contentCreatedAt
     self.sourceJournalDayKey = sourceJournalDayKey
+    self.savedOnly = savedOnly
+    self.allowsInAppCamera = allowsInAppCamera
     self.openSettings = openSettings
+    _publishPhotos = publishPhotos
     _bodyText = State(initialValue: initialBody)
+    _selectedPhotoIDs = State(initialValue: [])
+  }
+
+  private var showsInAppCamera: Bool {
+#if os(macOS)
+    false
+#else
+    allowsInAppCamera
+#endif
+  }
+
+  private var showsPhotoSection: Bool {
+    showsInAppCamera || !publishPhotos.isEmpty
   }
 
   var body: some View {
@@ -448,7 +471,24 @@ struct MomentPublishSheet: View {
       Form {
         Section("publish.moment.body.section") {
           TextEditor(text: $bodyText)
-            .frame(minHeight: 160)
+            .frame(minHeight: 140)
+        }
+        if showsPhotoSection {
+          Section {
+            PublishPhotoSelectionGrid(
+              photos: publishPhotos,
+              selectedPhotoIDs: $selectedPhotoIDs,
+              maxSelection: 1,
+              showsCamera: showsInAppCamera,
+              onCameraTap: { Task { await openInAppCameraIfPermitted() } }
+            )
+          } header: {
+            Text("publish.moment.photos.section")
+          } footer: {
+            Text("publish.moment.photos.hint")
+              .font(.system(size: 11))
+              .foregroundStyle(HetkiaPalette.secondaryInk)
+          }
         }
       }
       .navigationTitle(Text("publish.moment.title"))
@@ -471,24 +511,54 @@ struct MomentPublishSheet: View {
           )
         }
       }
+#if !os(macOS)
+      .fullScreenCover(isPresented: $showCameraCapture) {
+        InAppCameraCaptureView(
+          onCancel: { showCameraCapture = false },
+          onCaptured: { record in
+            publishPhotos.append(record)
+            selectedPhotoIDs = [record.id]
+            showCameraCapture = false
+          }
+        )
+        .ignoresSafeArea()
+      }
+#endif
     }
   }
 
+#if !os(macOS)
+  @MainActor
+  private func openInAppCameraIfPermitted() async {
+    guard allowsInAppCamera else { return }
+    if CapturePermissionStatus.isCameraAuthorized {
+      showCameraCapture = true
+      return
+    }
+    let granted = await CapturePermissionStatus.requestCameraAccess()
+    if granted {
+      showCameraCapture = true
+    }
+  }
+#endif
+
   private func submit() {
     errorMessage = nil
+    let photoIDs = Array(selectedPhotoIDs.prefix(1))
     let draft = RemotePublishDraft(
       contentType: .moment,
       title: "",
       body: bodyText,
       contentCreatedAt: contentCreatedAt,
       sourceJournalDayKey: sourceJournalDayKey,
-      photoIDs: []
+      photoIDs: photoIDs
     )
+    let map = Dictionary(uniqueKeysWithValues: publishPhotos.map { ($0.id, $0) })
     Task {
       let result = await coordinator.publish(
         draft: draft,
-        photosByID: [:],
-        savedOnly: false,
+        photosByID: map,
+        savedOnly: savedOnly,
         modelContext: modelContext
       )
       switch result {
@@ -505,6 +575,7 @@ struct MomentPublishSheet: View {
 private struct PublishPhotoSelectionGrid: View {
   let photos: [JournalPhotoRecord]
   @Binding var selectedPhotoIDs: Set<UUID>
+  var maxSelection: Int?
   var showsCamera: Bool
   var onCameraTap: () -> Void
 
@@ -536,8 +607,13 @@ private struct PublishPhotoSelectionGrid: View {
       ForEach(photos) { photo in
         let selected = selectedPhotoIDs.contains(photo.id)
         Button {
-          if selected { selectedPhotoIDs.remove(photo.id) }
-          else { selectedPhotoIDs.insert(photo.id) }
+          if selected {
+            selectedPhotoIDs.remove(photo.id)
+          } else if maxSelection == 1 {
+            selectedPhotoIDs = [photo.id]
+          } else {
+            selectedPhotoIDs.insert(photo.id)
+          }
         } label: {
           GeometryReader { proxy in
             ZStack(alignment: .topTrailing) {

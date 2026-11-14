@@ -38,6 +38,12 @@ struct TimelineHomeView: View {
     @State private var essayPublishCaptureDate = Date()
     @State private var essayPublishDayKey = ""
     @State private var pendingPublishEssay = false
+    @State private var momentPublishSheetToken = UUID()
+    @State private var momentPublishPhotos: [JournalPhotoRecord] = []
+    @State private var momentPublishBody = ""
+    @State private var momentPublishDayKey = ""
+    @State private var momentPublishCreatedAt = Date()
+    @State private var pendingPublishMoment = false
     @State private var activeCalendarDay = PhotoDayGrouping.key(for: .now)
     @State private var pendingWidgetRoute: String?
     private let minuteTicker = Timer.publish(every: 30, on: .main, in: .common).autoconnect()
@@ -104,14 +110,18 @@ struct TimelineHomeView: View {
         .sheet(isPresented: $showSettings) { SettingsView() }
         .sheet(isPresented: $showMomentPublishSheet) {
             MomentPublishSheet(
-                initialBody: "",
-                contentCreatedAt: .now,
-                sourceJournalDayKey: activeCalendarDay,
+                publishPhotos: $momentPublishPhotos,
+                initialBody: momentPublishBody,
+                contentCreatedAt: momentPublishCreatedAt,
+                sourceJournalDayKey: momentPublishDayKey,
+                savedOnly: false,
+                allowsInAppCamera: true,
                 openSettings: {
                     showMomentPublishSheet = false
                     showPublishSettings = true
                 }
             )
+            .id(momentPublishSheetToken)
         }
         .sheet(isPresented: $showEssayPublishSheet) {
             EssayPublishSheet(
@@ -217,12 +227,20 @@ struct TimelineHomeView: View {
 
     private func openMomentPublishFromDeepLink() {
         rootTab = .onThisDay
+        pendingPublishMoment = true
         Task { @MainActor in
             if hasBlockingSheetForPublishDeepLink {
                 dismissSheetsBlockingPublishDeepLink()
                 try? await Task.sleep(for: .milliseconds(350))
             }
-            showMomentPublishSheet = true
+            guard pendingPublishMoment else { return }
+            if hasResolvedInitialCache {
+                presentMomentPublishSheet()
+            } else {
+                await refresh(isInitialLoad: false)
+                guard pendingPublishMoment else { return }
+                presentMomentPublishSheet()
+            }
         }
     }
 
@@ -278,6 +296,18 @@ struct TimelineHomeView: View {
             captureDate,
             dayKey
         )
+    }
+
+    private func presentMomentPublishSheet() {
+        rootTab = .onThisDay
+        let context = todayEssayPublishContext()
+        momentPublishPhotos = context.photos
+        momentPublishBody = context.body
+        momentPublishCreatedAt = .now
+        momentPublishDayKey = context.dayKey
+        pendingPublishMoment = false
+        momentPublishSheetToken = UUID()
+        showMomentPublishSheet = true
     }
 
     private var header: some View {
@@ -347,7 +377,7 @@ struct TimelineHomeView: View {
                 .fixedSize(horizontal: false, vertical: true)
             HStack(spacing: 10) {
                 Button {
-                    showMomentPublishSheet = true
+                    presentMomentPublishSheet()
                 } label: {
                     Text("onthisday.empty.publish-moment")
                         .font(.system(size: 14, weight: .medium))

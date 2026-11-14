@@ -43,7 +43,7 @@ final class PublishCoordinator: ObservableObject {
     if let validationError { return .failure(validationError) }
 
     let selectedPhotos: [JournalPhotoRecord] = draft.photoIDs.compactMap { photosByID[$0] }
-    let requiresR2 = draft.contentType == .essay && !selectedPhotos.isEmpty
+    let requiresR2 = !selectedPhotos.isEmpty
 
     stage = .checkingConnectivity
     if let probeError = await PublishConnectivityProbe.probeBeforePublish(requiresR2: requiresR2, r2: r2Config) {
@@ -98,7 +98,11 @@ final class PublishCoordinator: ObservableObject {
         }
         do {
           let jpeg = try await PublishImageEncoder.jpegData(from: photo, savedOnly: savedOnly)
-          let key = uniqueObjectKey(prefix: "essay", stem: HugoMarkdownBuilder.uniqueFileStem(contentType: .essay, createdAt: draft.contentCreatedAt))
+          let r2Prefix = draft.contentType == .essay ? "essay" : "moment"
+          let key = uniqueObjectKey(
+            prefix: r2Prefix,
+            stem: HugoMarkdownBuilder.uniqueFileStem(contentType: draft.contentType, createdAt: draft.contentCreatedAt)
+          )
           try await r2.putJPEG(
             data: jpeg,
             objectKey: key,
@@ -167,7 +171,11 @@ final class PublishCoordinator: ObservableObject {
         imageURLs: imageURLs
       )
     case .moment:
-      markdown = HugoMarkdownBuilder.buildMomentMarkdown(createdAt: draft.contentCreatedAt, body: draft.body)
+      markdown = HugoMarkdownBuilder.buildMomentMarkdown(
+        createdAt: draft.contentCreatedAt,
+        body: draft.body,
+        imageURLs: imageURLs
+      )
     }
     task.markdownDraft = markdown
     task.githubPath = targetPath
@@ -205,18 +213,22 @@ final class PublishCoordinator: ObservableObject {
 
   private func validateDraft(_ draft: RemotePublishDraft) -> PublishError? {
     let body = draft.body.trimmingCharacters(in: .whitespacesAndNewlines)
-    guard !body.isEmpty else {
-      return .validation(localized("publish.error.body.empty"))
-    }
+    let hasPhoto = !draft.photoIDs.isEmpty
     switch draft.contentType {
     case .essay:
+      guard !body.isEmpty else {
+        return .validation(localized("publish.error.body.empty"))
+      }
       let title = draft.title.trimmingCharacters(in: .whitespacesAndNewlines)
       guard !title.isEmpty else {
         return .validation(localized("publish.error.title.empty"))
       }
     case .moment:
-      if !draft.photoIDs.isEmpty {
-        return .validation(localized("publish.error.moment.noPhotos"))
+      guard !body.isEmpty || hasPhoto else {
+        return .validation(localized("publish.error.moment.empty"))
+      }
+      if draft.photoIDs.count > 1 {
+        return .validation(localized("publish.error.moment.tooManyPhotos"))
       }
     }
     return nil

@@ -52,13 +52,13 @@
 
 ### 远程发布（Hugo + GitHub + R2）
 
-- 实现位于 `Hetkia/Features/Publishing/`：`PublishCoordinator` 串行执行连通性探测 → GitHub/R2 校验 →（随笔）R2 上传 JPEG → 生成 Markdown → GitHub Contents API `PUT` 提交。
+- 实现位于 `Hetkia/Features/Publishing/`：`PublishCoordinator` 串行执行连通性探测 → GitHub/R2 校验 →（有配图时）R2 上传 JPEG → 生成 Markdown → GitHub Contents API `PUT` 提交。
 - `PublishSecretsStore` 将 GitHub PAT 与 R2 Access Key / Secret 写入 Keychain（`UserDefaults` 仅保存非敏感配置）。仓库内不包含任何真实令牌或密钥。
 - `PublishConfiguration` 保存 owner、repository、branch、`essayDirectory`、`momentsDirectory`、R2 account、bucket、CDN 域名；多语言 Hugo 站点需配置带语言前缀的路径（例如 `content/cn/essay`）。
 - `GitHubPublishClient` 使用 Contents API 创建/更新单文件，不实现 Git Database 七步流。
-- `R2S3Client` 使用 SigV4 向 `https://{account}.r2.cloudflarestorage.com` 上传；`publicCDNURL(forStorageKey:)` 生成公开图片 URL 时去掉桶名及 CDN 域名中多余的 `/{bucket}` 前缀，使 Markdown 中的地址与自定义域名根路径一致（例如 `https://images.example.com/essay/…`）。
+- `R2S3Client` 使用 SigV4 向 `https://{account}.r2.cloudflarestorage.com` 上传；对象键按类型使用 `essay/` 或 `moment/` 前缀。`publicCDNURL(forStorageKey:)` 生成公开图片 URL 时去掉桶名及 CDN 域名中多余的 `/{bucket}` 前缀，使 Markdown 中的地址与自定义域名根路径一致（例如 `https://images.example.com/moment/…`）。
 - `HugoMarkdownBuilder` 输出随笔/说说 Front Matter（`categories`、`date` 等）。随笔文件名 `essay-{yyyyMMddHHmmss}-{uuid8}.md`，说说 `moment-{…}.md`；时间戳来自 `RemotePublishDraft.contentCreatedAt`。
-- `EssayPublishSheet` 提供「现在 / 当年」日期模式：现在使用提交时刻；当年取已勾选照片中最早的 `capturedAt`，否则回退详情页的 `displayedCaptureDate`。`MomentPublishSheet` 仅正文，不得带图。
+- `EssayPublishSheet` 提供「现在 / 当年」日期模式：现在使用提交时刻；当年取已勾选照片中最早的 `capturedAt`，否则回退详情页的 `displayedCaptureDate`。`MomentPublishSheet` 无标题，正文与单张配图可选（至少一项非空）；配图上传至 R2 `moment/` 前缀，Markdown 正文末尾 `![](url)` 与随笔一致。
 - 发布成功自动 `dismiss` 发布 sheet；设置页 GitHub/R2「测试连接」在各自卡片下方展示结果（成功文案含「设置已保存」），测试前会先 `persist`。
 - `PublishTask`（SwiftData）记录任务状态与错误；成功发布不调用 `commitJournalForUserAction()`。
 
