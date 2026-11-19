@@ -18,9 +18,10 @@ struct TimelineHomeView: View {
     @State private var path: [TimelineRootRoute] = []
     @State private var rootTab: TimelineRootTab = .onThisDay
     @State private var savedJournalsBrowse: SavedJournalsBrowseMode = .all
-    @State private var savedJournalsMonthScope: SavedJournalsMonthScope?
     @State private var onThisDayScrollMetrics = TimelineScrollMetrics()
     @State private var savedJournalsScrollMetrics = TimelineScrollMetrics()
+    @State private var savedJournalsScrollAnchors: [String: CGFloat] = [:]
+    @State private var savedJournalsScrollToID: String?
     @State private var isLoading = true
     @State private var hasResolvedInitialCache = false
     @State private var progress = 0.0
@@ -576,17 +577,32 @@ struct TimelineHomeView: View {
     }
 
     private var savedJournalsRootScroll: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 14) {
-                savedJournalsHeader
-                savedJournalsBrowseBody
+        ScrollViewReader { proxy in
+            ScrollView {
+                VStack(alignment: .leading, spacing: 14) {
+                    savedJournalsHeader
+                    savedJournalsBrowseBody
+                }
+                .padding(.top, 16)
+                .padding(.bottom, listBottomInset)
             }
-            .padding(.top, 16)
-            .padding(.bottom, listBottomInset)
-        }
+            .coordinateSpace(name: "savedJournalsScroll")
+            .onPreferenceChange(SavedJournalScrollAnchorPreference.self) { anchors in
+                savedJournalsScrollAnchors = anchors
+            }
+            .onChange(of: savedJournalsScrollToID) { _, target in
+                guard let target else { return }
+                DispatchQueue.main.async {
+                    withAnimation(.easeInOut(duration: 0.25)) {
+                        proxy.scrollTo(target, anchor: .top)
+                    }
+                    savedJournalsScrollToID = nil
+                }
+            }
 #if !os(macOS)
-        .timelineTracksScrollMetrics($savedJournalsScrollMetrics)
+            .timelineTracksScrollMetrics($savedJournalsScrollMetrics)
 #endif
+        }
     }
 
     @ViewBuilder
@@ -605,74 +621,70 @@ struct TimelineHomeView: View {
         case .year:
             SavedJournalsYearsBrowseView(records: records) { year in
                 savedJournalsBrowse = .month
-                savedJournalsMonthScope = .monthsInYear(year)
+                let month = SavedJournalIndex.monthsWithPhotoDays(inYear: year, from: records).first
+                    ?? SavedJournalIndex.monthsWithEntries(inYear: year, from: records).first
+                if let month {
+                    savedJournalsScrollToID = SavedJournalScrollAnchorID.month(year: year, month: month)
+                }
             }
         case .month:
-            if case .monthsInYear(let year) = savedJournalsMonthScope {
-                SavedJournalsMonthsInYearWaterfallView(
-                    year: year,
-                    records: records,
-                    onSelectMonth: { y, m in
-                        savedJournalsMonthScope = .entries(year: y, month: m)
-                    }
-                )
-            } else if case .entries(let year, let month) = savedJournalsMonthScope {
-                SavedJournalsMonthEntriesWaterfallView(
-                    year: year,
-                    month: month,
-                    records: records,
-                    onSelectRecord: openRecord
-                )
-            } else if let year = SavedJournalIndex.latestMonthWithEntries(from: records)?.year {
-                SavedJournalsMonthsInYearWaterfallView(
-                    year: year,
-                    records: records,
-                    onSelectMonth: { y, m in
-                        savedJournalsMonthScope = .entries(year: y, month: m)
-                    }
-                )
-                .onAppear {
-                    savedJournalsMonthScope = .monthsInYear(year)
-                }
-            } else {
-                ContentUnavailableView("settings.saved-journals.empty", systemImage: "book.closed")
-                    .padding(.horizontal, 18)
-            }
+            SavedJournalsAllMonthsBrowseView(
+                records: records,
+                onSelectRecord: openRecord
+            )
         }
     }
 
     private func resetSavedJournalsBrowseToAll() {
         savedJournalsBrowse = .all
-        savedJournalsMonthScope = nil
     }
 
     private func selectSavedJournalsAll() {
+        let records = meaningfulSavedJournalRecords
+        let anchor = contextualSavedJournalAnchor(records: records)
         savedJournalsBrowse = .all
-        savedJournalsMonthScope = nil
-    }
-
-    private func selectSavedJournalsYear() {
-        savedJournalsBrowse = .year
-        savedJournalsMonthScope = nil
-    }
-
-    private func selectSavedJournalsMonth() {
-        switch savedJournalsMonthScope {
-        case .entries(let year, _):
-            savedJournalsBrowse = .month
-            savedJournalsMonthScope = .monthsInYear(year)
-        case .monthsInYear:
-            break
-        case nil:
-            savedJournalsBrowse = .month
-            applyDefaultSavedJournalsMonthsInYear()
+        if let dayKey = anchorDayKey(from: anchor, records: records) {
+            savedJournalsScrollToID = SavedJournalScrollAnchorID.day(dayKey)
         }
     }
 
-    private func applyDefaultSavedJournalsMonthsInYear() {
+    private func selectSavedJournalsYear() {
         let records = meaningfulSavedJournalRecords
-        guard let latest = SavedJournalIndex.latestMonthWithEntries(from: records) else { return }
-        savedJournalsMonthScope = .monthsInYear(latest.year)
+        let anchor = contextualSavedJournalAnchor(records: records)
+        savedJournalsBrowse = .year
+        savedJournalsScrollToID = SavedJournalScrollAnchorID.year(anchor.year)
+    }
+
+    private func selectSavedJournalsMonth() {
+        if savedJournalsBrowse == .month { return }
+        let records = meaningfulSavedJournalRecords
+        let anchor = contextualSavedJournalAnchor(records: records)
+        savedJournalsBrowse = .month
+        savedJournalsScrollToID = SavedJournalScrollAnchorID.month(year: anchor.year, month: anchor.month)
+    }
+
+    private func contextualSavedJournalAnchor(records: [JournalRecord]) -> (year: Int, month: Int) {
+        let metrics = savedJournalsScrollMetrics
+        let notScrolled = !metrics.contentExceedsViewport || metrics.offset < 28
+        let viewportCenterY = metrics.offset + metrics.viewportHeight / 2
+        let centerID: String? =
+            notScrolled ? nil : SavedJournalScrollAnchorResolver.centeredAnchorID(
+                anchors: savedJournalsScrollAnchors,
+                viewportCenterY: viewportCenterY
+            )
+        if let centerID, let resolved = SavedJournalScrollAnchorResolver.yearMonth(from: centerID, records: records) {
+            return resolved
+        }
+        return SavedJournalIndex.latestMonthWithEntries(from: records)
+            ?? (Calendar.autoupdatingCurrent.component(.year, from: .now),
+                Calendar.autoupdatingCurrent.component(.month, from: .now))
+    }
+
+    private func anchorDayKey(from anchor: (year: Int, month: Int), records: [JournalRecord]) -> String? {
+        SavedJournalIndex.records(inYear: anchor.year, month: anchor.month, from: records)
+            .sorted { $0.localDay > $1.localDay }
+            .first?.dayKey
+            ?? records.first?.dayKey
     }
 
     private var savedJournalsHeader: some View {
@@ -741,9 +753,13 @@ private struct OnThisDayCard: View {
             .buttonStyle(.plain)
             .accessibilityLabel(entry.date.formatted(date: .long, time: .omitted))
 
-            OnThisDayPhotoGrid(assets: entry.assets) { index in
-                photoGallery = PhotoGallerySession(initialIndex: index)
-            }
+            OnThisDayPhotoGrid(
+                assets: entry.assets,
+                onPhotoSelected: { index in
+                    photoGallery = PhotoGallerySession(initialIndex: index)
+                },
+                onShowMore: onOpenDetail
+            )
 
             Button(action: onOpenDetail) {
                 VStack(alignment: .leading, spacing: 10) {
@@ -796,27 +812,45 @@ private struct OnThisDayCard: View {
 private struct OnThisDayPhotoGrid: View {
     let assets: [PHAsset]
     let onPhotoSelected: (Int) -> Void
+    let onShowMore: () -> Void
     private let gap: CGFloat = 5
 
     private var photos: [PHAsset] { JournalPhotoSelection.displayAssets(from: assets) }
+    private var layoutTileCount: Int { PhotoMosaicPreviewLimits.layoutTileCount(totalPhotoCount: photos.count) }
+    private var visiblePhotoCount: Int { PhotoMosaicPreviewLimits.visiblePhotoCount(totalPhotoCount: photos.count) }
+    private var showsMore: Bool { PhotoMosaicPreviewLimits.showsMoreIndicator(totalPhotoCount: photos.count) }
     private var heightRatio: CGFloat {
-        PhotoMosaicLayout.height(width: 1_000, count: photos.count, gap: gap) / 1_000
+        guard layoutTileCount > 0 else { return 1 }
+        return PhotoMosaicLayout.height(width: 1_000, count: layoutTileCount, gap: gap) / 1_000
     }
 
     var body: some View {
         GeometryReader { geometry in
-            let tiles = PhotoMosaicLayout.tiles(width: geometry.size.width, count: photos.count, gap: gap)
+            let tiles = PhotoMosaicLayout.tiles(width: geometry.size.width, count: layoutTileCount, gap: gap)
             ZStack(alignment: .topLeading) {
                 ForEach(tiles) { tile in
-                    Button {
-                        onPhotoSelected(tile.index)
-                    } label: {
-                        assetTile(photos[tile.index], width: tile.rect.width, height: tile.rect.height)
+                    if showsMore, tile.index == layoutTileCount - 1 {
+                        Button(action: onShowMore) {
+                            PhotoMosaicMoreTile(
+                                hiddenCount: PhotoMosaicPreviewLimits.hiddenPhotoCount(totalPhotoCount: photos.count),
+                                cornerRadius: 9
+                            )
+                            .frame(width: tile.rect.width, height: tile.rect.height)
+                        }
+                        .buttonStyle(.plain)
+                        .frame(width: tile.rect.width, height: tile.rect.height)
+                        .position(x: tile.rect.midX, y: tile.rect.midY)
+                    } else {
+                        Button {
+                            onPhotoSelected(tile.index)
+                        } label: {
+                            assetTile(photos[tile.index], width: tile.rect.width, height: tile.rect.height)
+                        }
+                        .buttonStyle(.plain)
+                        .frame(width: tile.rect.width, height: tile.rect.height)
+                        .position(x: tile.rect.midX, y: tile.rect.midY)
+                        .accessibilityLabel(Text("photos.open.fullscreen"))
                     }
-                    .buttonStyle(.plain)
-                    .frame(width: tile.rect.width, height: tile.rect.height)
-                    .position(x: tile.rect.midX, y: tile.rect.midY)
-                    .accessibilityLabel(Text("photos.open.fullscreen"))
                 }
             }
             .frame(width: geometry.size.width, height: geometry.size.height, alignment: .topLeading)

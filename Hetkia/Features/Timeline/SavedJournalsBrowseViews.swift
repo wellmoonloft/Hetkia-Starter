@@ -7,9 +7,16 @@ enum SavedJournalsBrowseMode: Equatable {
     case month
 }
 
-enum SavedJournalsMonthScope: Equatable {
-    case monthsInYear(Int)
-    case entries(year: Int, month: Int)
+struct SavedJournalYearMonth: Hashable, Identifiable {
+    let year: Int
+    let month: Int
+    var id: String { "\(year)-\(month)" }
+}
+
+struct SavedJournalMonthDayItem: Identifiable {
+    let record: JournalRecord
+    let photo: JournalPhotoRecord
+    var id: String { record.dayKey }
 }
 
 enum SavedJournalIndex {
@@ -46,6 +53,12 @@ enum SavedJournalIndex {
         return Array(Set(months)).sorted(by: >)
     }
 
+    static func monthsWithPhotoDays(inYear year: Int, from records: [JournalRecord]) -> [Int] {
+        monthsWithEntries(inYear: year, from: records).filter { month in
+            !monthDayItems(year: year, month: month, from: records).isEmpty
+        }
+    }
+
     static func latestMonthWithEntries(from records: [JournalRecord]) -> (year: Int, month: Int)? {
         guard let latest = records.first else { return nil }
         let calendar = Calendar.autoupdatingCurrent
@@ -55,7 +68,50 @@ enum SavedJournalIndex {
     }
 
     static func coverPhoto(for record: JournalRecord) -> JournalPhotoRecord? {
-        JournalPhotoSelection.selected(from: record.photos).first
+        representativePhoto(for: record)
+    }
+
+    /// One thumbnail per saved day: geotagged and everyday media ahead of screenshots/recordings.
+    static func representativePhoto(for record: JournalRecord) -> JournalPhotoRecord? {
+        let ordered = JournalPhotoSelection.displayPhotos(from: record.photos)
+        return ordered.sorted { lhs, rhs in
+            let lhsHasLocation = lhs.latitude != nil && lhs.longitude != nil
+            let rhsHasLocation = rhs.latitude != nil && rhs.longitude != nil
+            if lhsHasLocation != rhsHasLocation { return lhsHasLocation && !rhsHasLocation }
+            if lhs.isPriorityPhoto != rhs.isPriorityPhoto { return lhs.isPriorityPhoto && !rhs.isPriorityPhoto }
+            return (lhs.capturedAt ?? .distantPast) < (rhs.capturedAt ?? .distantPast)
+        }.first
+    }
+
+    static func representativeRecord(inYear year: Int, from records: [JournalRecord]) -> JournalRecord? {
+        Self.records(inYear: year, from: records)
+            .sorted { $0.localDay > $1.localDay }
+            .first { representativePhoto(for: $0) != nil }
+    }
+
+    static func monthDayItems(year: Int, month: Int, from records: [JournalRecord]) -> [SavedJournalMonthDayItem] {
+        Self.records(inYear: year, month: month, from: records)
+            .sorted { $0.localDay < $1.localDay }
+            .compactMap { record in
+                guard let photo = representativePhoto(for: record) else { return nil }
+                return SavedJournalMonthDayItem(record: record, photo: photo)
+            }
+    }
+
+    /// All year-month buckets that have at least one day with a preview photo (newest first).
+    static func allMonthsWithPhotoDays(from records: [JournalRecord]) -> [SavedJournalYearMonth] {
+        let calendar = Calendar.autoupdatingCurrent
+        let keys = Set(records.map { record in
+            let parts = calendar.dateComponents([.year, .month], from: record.localDay)
+            return (parts.year ?? 0) * 100 + (parts.month ?? 0)
+        })
+        return keys.sorted(by: >).compactMap { key in
+            let year = key / 100
+            let month = key % 100
+            guard year > 0, month > 0 else { return nil }
+            guard !monthDayItems(year: year, month: month, from: records).isEmpty else { return nil }
+            return SavedJournalYearMonth(year: year, month: month)
+        }
     }
 }
 
@@ -63,7 +119,6 @@ struct SavedJournalsYearsBrowseView: View {
     let records: [JournalRecord]
     let onSelectYear: (Int) -> Void
 
-    private let columns = [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)]
     private var years: [Int] { SavedJournalIndex.years(from: records) }
 
     var body: some View {
@@ -71,13 +126,21 @@ struct SavedJournalsYearsBrowseView: View {
             ContentUnavailableView("settings.saved-journals.empty", systemImage: "book.closed")
                 .padding(.top, 40)
         } else {
-            LazyVGrid(columns: columns, spacing: 12) {
+            LazyVStack(spacing: 14) {
                 ForEach(years, id: \.self) { year in
                     let yearRecords = SavedJournalIndex.records(inYear: year, from: records)
+                    let representative = SavedJournalIndex.representativeRecord(inYear: year, from: records)
                     Button { onSelectYear(year) } label: {
-                        SavedJournalsYearTile(year: year, record: yearRecords.first, count: yearRecords.count)
+                        SavedJournalsYearTile(
+                            year: year,
+                            record: representative,
+                            count: yearRecords.count
+                        )
+                        .contentShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
                     }
                     .buttonStyle(.plain)
+                    .id(SavedJournalScrollAnchorID.year(year))
+                    .savedJournalReportsScrollAnchor(id: SavedJournalScrollAnchorID.year(year))
                 }
             }
             .padding(.horizontal, 18)
@@ -87,15 +150,16 @@ struct SavedJournalsYearsBrowseView: View {
     }
 }
 
-struct SavedJournalsMonthsInYearWaterfallView: View {
-    let year: Int
+/// Full month browse: every month in history as one day-mosaic block (newest first).
+struct SavedJournalsAllMonthsBrowseView: View {
     let records: [JournalRecord]
-    let onSelectMonth: (Int, Int) -> Void
+    let onSelectRecord: (JournalRecord) -> Void
 
     @Environment(\.locale) private var locale
-    private let columns = [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)]
 
-    private var months: [Int] { SavedJournalIndex.monthsWithEntries(inYear: year, from: records) }
+    private var months: [SavedJournalYearMonth] {
+        SavedJournalIndex.allMonthsWithPhotoDays(from: records)
+    }
 
     var body: some View {
         Group {
@@ -103,21 +167,17 @@ struct SavedJournalsMonthsInYearWaterfallView: View {
                 ContentUnavailableView("settings.saved-journals.empty", systemImage: "book.closed")
                     .padding(.top, 20)
             } else {
-                LazyVGrid(columns: columns, spacing: 12) {
-                    ForEach(months, id: \.self) { month in
-                        let monthRecords = SavedJournalIndex.records(inYear: year, month: month, from: records)
-                        let monthDate = Calendar.autoupdatingCurrent.date(
-                            from: DateComponents(year: year, month: month, day: 1, hour: 12)
-                        ) ?? .now
-                        Button { onSelectMonth(year, month) } label: {
-                            SavedJournalsMonthBucketCard(
-                                title: monthDate.formatted(.dateTime.year().month(.wide).locale(locale)),
-                                record: monthRecords.first,
-                                entryCount: monthRecords.count,
-                                locale: locale
-                            )
-                        }
-                        .buttonStyle(.plain)
+                LazyVStack(alignment: .leading, spacing: 22) {
+                    ForEach(months) { bucket in
+                        SavedJournalsMonthDayMosaicSection(
+                            year: bucket.year,
+                            month: bucket.month,
+                            items: SavedJournalIndex.monthDayItems(year: bucket.year, month: bucket.month, from: records),
+                            locale: locale,
+                            onSelectRecord: onSelectRecord
+                        )
+                        .id(SavedJournalScrollAnchorID.month(year: bucket.year, month: bucket.month))
+                        .savedJournalReportsScrollAnchor(id: SavedJournalScrollAnchorID.month(year: bucket.year, month: bucket.month))
                     }
                 }
             }
@@ -128,39 +188,80 @@ struct SavedJournalsMonthsInYearWaterfallView: View {
     }
 }
 
-struct SavedJournalsMonthEntriesWaterfallView: View {
+struct SavedJournalsMonthDayMosaicSection: View {
     let year: Int
     let month: Int
-    let records: [JournalRecord]
+    let items: [SavedJournalMonthDayItem]
+    let locale: Locale
     let onSelectRecord: (JournalRecord) -> Void
 
-    @Environment(\.locale) private var locale
-    private let columns = [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)]
+    private var monthDate: Date {
+        Calendar.autoupdatingCurrent.date(from: DateComponents(year: year, month: month, day: 1, hour: 12)) ?? .now
+    }
 
-    private var monthRecords: [JournalRecord] {
-        SavedJournalIndex.records(inYear: year, month: month, from: records)
-            .sorted { $0.localDay > $1.localDay }
+    private var monthTitle: String {
+        monthDate.formatted(.dateTime.year().month(.wide).locale(locale))
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            if monthRecords.isEmpty {
-                ContentUnavailableView("calendar.no-entry", systemImage: "book.closed")
-                    .padding(.top, 20)
-            } else {
-                LazyVGrid(columns: columns, spacing: 12) {
-                    ForEach(monthRecords, id: \.persistentModelID) { record in
-                        Button { onSelectRecord(record) } label: {
-                            SavedJournalCard(record: record, locale: locale)
+        ZStack(alignment: .bottomLeading) {
+            SavedJournalsDayMosaicGrid(items: items, onSelectRecord: onSelectRecord)
+            SavedJournalsBottomScrim()
+            SavedJournalsOverlayCaption(
+                title: monthTitle,
+                subtitle: String(format: HetkiaSystemLanguage.localizedString("timeline.entry-count", comment: ""), items.count)
+            )
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .accessibilityLabel(Text(monthTitle))
+    }
+}
+
+struct SavedJournalsDayMosaicGrid: View {
+    let items: [SavedJournalMonthDayItem]
+    let onSelectRecord: (JournalRecord) -> Void
+
+    private let gap: CGFloat = 3
+
+    private var heightRatio: CGFloat {
+        PhotoMosaicLayout.height(width: 1_000, count: items.count, gap: gap) / 1_000
+    }
+
+    var body: some View {
+        GeometryReader { geometry in
+            let width = max(1, geometry.size.width)
+            let tiles = PhotoMosaicLayout.tiles(width: width, count: items.count, gap: gap)
+            ZStack(alignment: .topLeading) {
+                ForEach(tiles) { tile in
+                    let item = items[tile.index]
+                    let day = Calendar.autoupdatingCurrent.component(.day, from: item.record.localDay)
+                    Button {
+                        onSelectRecord(item.record)
+                    } label: {
+                        ZStack(alignment: .topLeading) {
+                            PersistedJournalThumbnail(
+                                photo: item.photo,
+                                width: tile.rect.width,
+                                height: tile.rect.height,
+                                cornerRadius: 6
+                            )
+                            Text(verbatim: "\(day)")
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundStyle(.white)
+                                .shadow(color: .black.opacity(0.45), radius: 2, x: 0, y: 1)
+                                .padding(6)
                         }
-                        .buttonStyle(.plain)
+                        .frame(width: tile.rect.width, height: tile.rect.height)
+                        .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
                     }
+                    .buttonStyle(.plain)
+                    .position(x: tile.rect.midX, y: tile.rect.midY)
                 }
             }
+            .frame(width: geometry.size.width, height: geometry.size.height, alignment: .topLeading)
+            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
         }
-        .padding(.horizontal, 18)
-        .frame(maxWidth: 620)
-        .frame(maxWidth: .infinity)
+        .aspectRatio(1 / heightRatio, contentMode: .fit)
     }
 }
 
@@ -184,63 +285,15 @@ struct SavedJournalsYearTile: View {
                 HetkiaPalette.paper
                     .overlay(Image(systemName: "book.closed").foregroundStyle(HetkiaPalette.secondaryInk))
             }
-            LinearGradient(colors: [.clear, .black.opacity(0.6)], startPoint: .center, endPoint: .bottom)
-            VStack(alignment: .leading, spacing: 3) {
-                Text(String(year))
-                    .font(.system(size: 15, weight: .medium, design: .serif))
-                Text(String(format: HetkiaSystemLanguage.localizedString("timeline.entry-count", comment: ""), count))
-                    .font(.system(size: 10))
-            }
-            .foregroundStyle(.white)
-            .padding(11)
+            SavedJournalsBottomScrim()
+            SavedJournalsOverlayCaption(
+                title: String(year),
+                subtitle: String(format: HetkiaSystemLanguage.localizedString("timeline.entry-count", comment: ""), count)
+            )
         }
-        .frame(height: 156)
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .frame(height: 220)
+        .contentShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
         .accessibilityLabel(Text(String(year)))
-    }
-}
-
-struct SavedJournalsMonthBucketCard: View {
-    let title: String
-    let record: JournalRecord?
-    let entryCount: Int
-    let locale: Locale
-
-    var body: some View {
-        GeometryReader { geometry in
-            ZStack(alignment: .topLeading) {
-                if let record, let cover = SavedJournalIndex.coverPhoto(for: record) {
-                    PersistedJournalThumbnail(
-                        photo: cover,
-                        width: geometry.size.width,
-                        height: geometry.size.height,
-                        cornerRadius: 0
-                    )
-                } else {
-                    HetkiaPalette.secondaryInk
-                        .overlay(Image(systemName: "photo").foregroundStyle(.white.opacity(0.8)))
-                }
-                LinearGradient(
-                    colors: [.black.opacity(0.56), .black.opacity(0.12), .clear],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-                .allowsHitTesting(false)
-                VStack(alignment: .leading, spacing: 5) {
-                    Text(title)
-                        .font(.system(size: 14, weight: .semibold, design: .serif))
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.75)
-                    Text(String(format: HetkiaSystemLanguage.localizedString("timeline.entry-count", comment: ""), entryCount))
-                        .font(.system(size: 11, weight: .medium))
-                }
-                .foregroundStyle(.white)
-                .shadow(color: .black.opacity(0.4), radius: 4, x: 0, y: 1)
-                .padding(12)
-            }
-            .clipShape(RoundedRectangle(cornerRadius: 17, style: .continuous))
-        }
-        .aspectRatio(1, contentMode: .fit)
-        .contentShape(RoundedRectangle(cornerRadius: 17, style: .continuous))
     }
 }

@@ -7,51 +7,25 @@ struct SavedJournalsRootContent: View {
     let onSelectRecord: (JournalRecord) -> Void
     @Environment(\.locale) private var locale
 
-    private let columns = [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)]
-
-    private var monthGroups: [SavedJournalMonthGroup] {
-        let perDay = Dictionary(grouping: savedRecords, by: \.dayKey).values.compactMap { records in
-            records.max { $0.updatedAt < $1.updatedAt }
-        }
-        let meaningful = perDay.filter { record in
-            !record.title.isEmpty || !record.bodyText.isEmpty || record.aiDraftBody?.isEmpty == false
-                || !record.messagePosts.isEmpty || !record.photos.isEmpty
-        }
-        let grouped = Dictionary(grouping: meaningful) { record in
-            let parts = Calendar.autoupdatingCurrent.dateComponents([.year, .month], from: record.localDay)
-            return (parts.year ?? 0) * 100 + (parts.month ?? 0)
-        }
-        return grouped.keys.sorted(by: >).compactMap { key in
-            guard let entries = grouped[key]?.sorted(by: { $0.localDay > $1.localDay }),
-                  let first = entries.first else { return nil }
-            return SavedJournalMonthGroup(id: key, date: first.localDay, entries: entries)
-        }
+    private var dayEntries: [JournalRecord] {
+        SavedJournalIndex.meaningfulRecords(from: savedRecords)
     }
 
     var body: some View {
         Group {
-            if monthGroups.isEmpty {
+            if dayEntries.isEmpty {
                 ContentUnavailableView("settings.saved-journals.empty", systemImage: "book.closed")
                     .padding(.top, 60)
             } else {
-                LazyVStack(alignment: .leading, spacing: 22) {
-                    ForEach(monthGroups) { group in
-                        VStack(alignment: .leading, spacing: 11) {
-                            Text(group.date.formatted(.dateTime.year().month(.wide).locale(locale)))
-                                .font(.system(size: 16, weight: .medium, design: .serif))
-                                .foregroundStyle(HetkiaPalette.secondaryInk)
-
-                            LazyVGrid(columns: columns, spacing: 12) {
-                                ForEach(group.entries, id: \.persistentModelID) { record in
-                                    Button {
-                                        onSelectRecord(record)
-                                    } label: {
-                                        SavedJournalCard(record: record, locale: locale)
-                                    }
-                                    .buttonStyle(.plain)
-                                }
-                            }
-                        }
+                LazyVStack(spacing: 16) {
+                    ForEach(dayEntries, id: \.persistentModelID) { record in
+                        SavedJournalEntryPreview(
+                            record: record,
+                            locale: locale,
+                            onOpen: { onSelectRecord(record) }
+                        )
+                        .id(SavedJournalScrollAnchorID.day(record.dayKey))
+                        .savedJournalReportsScrollAnchor(id: SavedJournalScrollAnchorID.day(record.dayKey))
                     }
                 }
                 .padding(.horizontal, 18)
@@ -79,10 +53,98 @@ struct SavedJournalsView: View {
     }
 }
 
-struct SavedJournalMonthGroup: Identifiable {
-    let id: Int
-    let date: Date
-    let entries: [JournalRecord]
+struct SavedJournalEntryPreview: View {
+    let record: JournalRecord
+    let locale: Locale
+    let onOpen: () -> Void
+
+    private var photos: [JournalPhotoRecord] {
+        JournalPhotoSelection.displayPhotos(from: record.photos)
+    }
+
+    private var dateTitle: String {
+        record.localDay.formatted(.dateTime.year().month(.wide).day().locale(locale))
+    }
+
+    var body: some View {
+        ZStack(alignment: .bottomLeading) {
+            if photos.isEmpty {
+                Button(action: onOpen) {
+                    HetkiaPalette.paper
+                        .frame(height: 160)
+                        .overlay {
+                            Image(systemName: "book.closed")
+                                .foregroundStyle(HetkiaPalette.secondaryInk)
+                        }
+                }
+                .buttonStyle(.plain)
+            } else {
+                SavedJournalPersistedMosaicGrid(
+                    photos: photos,
+                    onPhotoSelected: { _ in onOpen() },
+                    onShowMore: onOpen
+                )
+            }
+            SavedJournalsBottomScrim()
+            SavedJournalsOverlayCaption(title: dateTitle)
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .contentShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .accessibilityLabel(Text(dateTitle))
+    }
+}
+
+struct SavedJournalPersistedMosaicGrid: View {
+    let photos: [JournalPhotoRecord]
+    let onPhotoSelected: (Int) -> Void
+    let onShowMore: () -> Void
+
+    private let gap: CGFloat = 5
+    private var layoutTileCount: Int { PhotoMosaicPreviewLimits.layoutTileCount(totalPhotoCount: photos.count) }
+    private var showsMore: Bool { PhotoMosaicPreviewLimits.showsMoreIndicator(totalPhotoCount: photos.count) }
+    private var heightRatio: CGFloat {
+        guard layoutTileCount > 0 else { return 1 }
+        return PhotoMosaicLayout.height(width: 1_000, count: layoutTileCount, gap: gap) / 1_000
+    }
+
+    var body: some View {
+        GeometryReader { geometry in
+            let tiles = PhotoMosaicLayout.tiles(width: geometry.size.width, count: layoutTileCount, gap: gap)
+            ZStack(alignment: .topLeading) {
+                ForEach(tiles) { tile in
+                    if showsMore, tile.index == layoutTileCount - 1 {
+                        Button(action: onShowMore) {
+                            PhotoMosaicMoreTile(
+                                hiddenCount: PhotoMosaicPreviewLimits.hiddenPhotoCount(totalPhotoCount: photos.count),
+                                cornerRadius: 9
+                            )
+                            .frame(width: tile.rect.width, height: tile.rect.height)
+                        }
+                        .buttonStyle(.plain)
+                        .frame(width: tile.rect.width, height: tile.rect.height)
+                        .position(x: tile.rect.midX, y: tile.rect.midY)
+                    } else {
+                        Button {
+                            onPhotoSelected(tile.index)
+                        } label: {
+                            PersistedJournalThumbnail(
+                                photo: photos[tile.index],
+                                width: tile.rect.width,
+                                height: tile.rect.height,
+                                cornerRadius: 9
+                            )
+                            .frame(width: tile.rect.width, height: tile.rect.height)
+                        }
+                        .buttonStyle(.plain)
+                        .frame(width: tile.rect.width, height: tile.rect.height)
+                        .position(x: tile.rect.midX, y: tile.rect.midY)
+                    }
+                }
+            }
+            .frame(width: geometry.size.width, height: geometry.size.height, alignment: .topLeading)
+        }
+        .aspectRatio(1 / heightRatio, contentMode: .fit)
+    }
 }
 
 struct SavedJournalCard: View {
