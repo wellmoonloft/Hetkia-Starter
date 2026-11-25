@@ -10,7 +10,7 @@ enum PublishImageEncoder {
     if savedOnly {
       image = await PhotoAssetResolver.thumbnailImage(relativePath: photo.thumbnailRelativePath, targetSize: targetSize)
     } else {
-      image = await PhotoAssetResolver.displayImage(for: photo, targetSize: targetSize)
+      image = await PhotoAssetResolver.publishUploadImage(for: photo, targetSize: targetSize)
     }
     guard let image, let data = privacySafeJPEG(from: image) else {
       throw PublishError.imageEncoding(localized("publish.error.image.encode"))

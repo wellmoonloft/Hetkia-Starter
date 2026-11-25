@@ -82,6 +82,26 @@ enum PhotoAssetResolver {
         await displayImage(for: photo, targetSize: CGSize(width: 1100, height: 1100))
     }
 
+    /// Remote publish / persisted JPEG encoding: keep original aspect (`aspectFit`), unlike collage `displayImage`.
+    @MainActor
+    static func publishUploadImage(for photo: JournalPhotoRecord, targetSize: CGSize) async -> CGImage? {
+        if let identifier = photo.assetLocalIdentifier {
+            let status = PHPhotoLibrary.authorizationStatus(for: .readWrite)
+            if status == .authorized || status == .limited,
+               let asset = PHAsset.fetchAssets(withLocalIdentifiers: [identifier], options: nil).firstObject {
+                if asset.mediaType == .image,
+                   let original = await requestFullFrameImage(for: asset, targetSize: targetSize) {
+                    return original
+                }
+                if asset.mediaType == .video,
+                   let frame = await previewImage(for: asset, targetSize: targetSize) {
+                    return frame
+                }
+            }
+        }
+        return await thumbnailImage(relativePath: photo.thumbnailRelativePath, targetSize: targetSize)
+    }
+
     static func thumbnailURL(relativePath: String) throws -> URL {
         let support = try FileManager.default.url(for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: false)
         return support.appendingPathComponent(relativePath)
